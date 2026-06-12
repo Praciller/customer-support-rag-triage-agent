@@ -1,6 +1,7 @@
-from typing import Any
+import secrets
+from typing import Annotated, Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.schemas import IngestRequest, SearchRequest, TriageRequest, TriageResponse
@@ -8,8 +9,11 @@ from src.api.services import ApplicationServices, build_services
 from src.config.settings import get_settings
 
 
-def create_app(services: ApplicationServices | Any | None = None) -> FastAPI:
-    settings = get_settings()
+def create_app(
+    services: ApplicationServices | Any | None = None,
+    settings: Any | None = None,
+) -> FastAPI:
+    settings = settings or get_settings()
     service = services or build_services(settings)
     app = FastAPI(
         title="Customer Support RAG Triage Agent",
@@ -37,7 +41,17 @@ def create_app(services: ApplicationServices | Any | None = None) -> FastAPI:
         return service.provider_health()
 
     @app.post("/ingest")
-    def ingest(request: IngestRequest) -> dict[str, Any]:
+    def ingest(
+        request: IngestRequest,
+        x_admin_api_key: Annotated[str | None, Header()] = None,
+    ) -> dict[str, Any]:
+        if settings.app_env.lower() == "production":
+            valid_key = bool(settings.admin_api_key) and bool(x_admin_api_key)
+            if not valid_key or not secrets.compare_digest(
+                x_admin_api_key,
+                settings.admin_api_key,
+            ):
+                raise HTTPException(status_code=403, detail="Admin API key required")
         return service.ingest(request.recreate, request.sample_size)
 
     @app.post("/triage", response_model=TriageResponse)

@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from src.api.main import create_app
+from src.config.settings import Settings
 
 
 class FakeServices:
@@ -61,3 +62,23 @@ def test_api_exposes_required_read_endpoints() -> None:
     assert client.get("/dataset-info").json()["name"] == "PolyAI/banking77"
     assert client.get("/provider-health").status_code == 200
     assert client.get("/eval/results").status_code == 200
+
+
+def test_production_ingest_requires_admin_key() -> None:
+    settings = Settings(
+        _env_file=None,
+        app_env="production",
+        admin_api_key="deploy-secret",
+    )
+    client = TestClient(create_app(services=FakeServices(), settings=settings))
+
+    denied = client.post("/ingest", json={"recreate": True, "sample_size": 10})
+    allowed = client.post(
+        "/ingest",
+        json={"recreate": True, "sample_size": 10},
+        headers={"X-Admin-API-Key": "deploy-secret"},
+    )
+
+    assert denied.status_code == 403
+    assert allowed.status_code == 200
+    assert allowed.json()["indexed"] == 10

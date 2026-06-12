@@ -100,6 +100,9 @@ Invoke-RestMethod http://localhost:8000/triage -Method Post `
 Required endpoints: `/health`, `/dataset-info`, `/provider-health`, `/ingest`, `/triage`,
 `/search-similar`, and `/eval/results`.
 
+In production, `/ingest` requires the `X-Admin-API-Key` header. Configure
+`QDRANT_API_KEY` when using Qdrant Cloud.
+
 ## Frontend
 
 The operations console includes overview, ticket triage, semantic search, seven-node trace,

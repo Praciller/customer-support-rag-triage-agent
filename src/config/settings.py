@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     frontend_origin: str = "http://localhost:5173"
+    admin_api_key: str = ""
     log_level: str = "INFO"
 
     dataset_provider: str = "huggingface"
@@ -31,6 +32,7 @@ class Settings(BaseSettings):
     source_field: str = "source"
 
     qdrant_url: str = "http://localhost:6333"
+    qdrant_api_key: str = ""
     qdrant_host: str = "localhost"
     qdrant_port: int = 6333
     qdrant_collection: str = "support_tickets"

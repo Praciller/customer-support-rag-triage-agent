@@ -133,7 +133,11 @@ class ApplicationServices:
 
 def build_services(settings: Settings | None = None) -> ApplicationServices:
     settings = settings or get_settings()
-    client = QdrantClient(url=settings.qdrant_url, timeout=settings.llm_timeout_seconds)
+    client = QdrantClient(
+        url=settings.qdrant_url,
+        api_key=settings.qdrant_api_key or None,
+        timeout=settings.llm_timeout_seconds,
+    )
     embedder = SentenceTransformerEmbedder(
         settings.embedding_model,
         device=settings.embedding_device,
