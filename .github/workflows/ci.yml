@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -r requirements.txt
+      - run: sh scripts/install-cpu-deps.sh
       - run: ruff check src tests
       - run: python -m pytest
 
