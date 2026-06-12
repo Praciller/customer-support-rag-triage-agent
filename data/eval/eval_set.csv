@@ -1,0 +1,9 @@
+message,intent,urgency
+My card has still not arrived and I travel tomorrow,delivery_issue,medium
+I want a refund for this payment,refund_request,high
+Why was I charged an extra fee,billing_issue,low
+The mobile payment feature is not working,technical_issue,medium
+I forgot my passcode and cannot sign in,account_access,low
+Which countries support this card,product_question,low
+This transaction is not mine and my card may be stolen,complaint,critical
+Please cancel my transfer immediately,cancellation,high

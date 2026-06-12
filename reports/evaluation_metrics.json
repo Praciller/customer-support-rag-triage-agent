@@ -1,0 +1,19 @@
+{
+  "retrieval_precision_at_k": 0.9,
+  "retrieval_recall_at_k": 1.0,
+  "retrieval_examples": 8,
+  "top_k": 5,
+  "intent_accuracy": 1.0,
+  "intent_macro_f1": 1.0,
+  "urgency_accuracy": 1.0,
+  "groundedness_pass_rate": 1.0,
+  "average_latency_ms": 4245.327162498143,
+  "cache_hit_rate": 0.0,
+  "provider_fallback_rate": 0.0,
+  "fallback_count": 0,
+  "provider_usage": {
+    "mock": 8
+  },
+  "examples": 8,
+  "mock_mode": true
+}
