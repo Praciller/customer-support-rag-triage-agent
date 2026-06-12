@@ -64,6 +64,8 @@ cd ..
 Set provider keys only in `.env`. Use `MOCK_LLM_MODE=true` for a key-free deterministic demo.
 CPU-only Linux deployments should install dependencies with
 `sh scripts/install-cpu-deps.sh` to avoid CUDA runtime packages.
+The Hugging Face CPU deployment uses `Dockerfile.hf` and
+`requirements.production.txt` to exclude training and test-only packages.
 
 ## Data Loading and Indexing
 
