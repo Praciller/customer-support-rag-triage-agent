@@ -21,11 +21,13 @@ class KeywordEmbedder:
 
 
 class FakeFastEmbedModel:
-    def passage_embed(self, texts: list[str]):
+    def passage_embed(self, texts: list[str], **kwargs):
+        assert kwargs == {"batch_size": 4, "parallel": None}
         for text in texts:
             yield FakeVector([float(len(text)), 1.0])
 
-    def query_embed(self, text: str):
+    def query_embed(self, text: str, **kwargs):
+        assert kwargs == {"batch_size": 1, "parallel": None}
         yield FakeVector([float(len(text)), 2.0])
 
 
@@ -35,7 +37,7 @@ class FakeVector(list):
 
 
 def test_fastembedder_uses_passage_and_query_encoders() -> None:
-    embedder = FastEmbedder("BAAI/bge-small-en-v1.5", dimension=2)
+    embedder = FastEmbedder("BAAI/bge-small-en-v1.5", dimension=2, batch_size=4)
     embedder._model = FakeFastEmbedModel()
 
     assert embedder.embed_documents(["card"]) == [[4.0, 1.0]]

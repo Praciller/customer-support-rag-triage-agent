@@ -55,9 +55,11 @@ class FastEmbedder:
         self,
         model_name: str,
         dimension: int = 384,
+        batch_size: int = 32,
     ) -> None:
         self.model_name = model_name
         self.dimension = dimension
+        self.batch_size = batch_size
         self._model = None
 
     @property
@@ -72,10 +74,23 @@ class FastEmbedder:
         return self.embed_documents(texts)
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        return [vector.tolist() for vector in self.model.passage_embed(texts)]
+        return [
+            vector.tolist()
+            for vector in self.model.passage_embed(
+                texts,
+                batch_size=self.batch_size,
+                parallel=None,
+            )
+        ]
 
     def embed_query(self, text: str) -> list[float]:
-        return next(self.model.query_embed(text)).tolist()
+        return next(
+            self.model.query_embed(
+                text,
+                batch_size=1,
+                parallel=None,
+            )
+        ).tolist()
 
 
 @dataclass(frozen=True)

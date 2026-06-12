@@ -143,6 +143,7 @@ def build_services(settings: Settings | None = None) -> ApplicationServices:
         embedder = FastEmbedder(
             settings.embedding_model,
             dimension=settings.qdrant_vector_size,
+            batch_size=settings.embedding_batch_size,
         )
     else:
         embedder = SentenceTransformerEmbedder(
