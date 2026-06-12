@@ -13,6 +13,7 @@ from src.llm.http_clients import GeminiProvider, OpenAICompatibleProvider
 from src.llm.mock import MockProvider
 from src.llm.router import ProviderRouter
 from src.retrieval.retriever import (
+    FastEmbedder,
     QdrantRetriever,
     SentenceTransformerEmbedder,
     SupportDocument,
@@ -138,12 +139,18 @@ def build_services(settings: Settings | None = None) -> ApplicationServices:
         api_key=settings.qdrant_api_key or None,
         timeout=settings.llm_timeout_seconds,
     )
-    embedder = SentenceTransformerEmbedder(
-        settings.embedding_model,
-        device=settings.embedding_device,
-        batch_size=settings.embedding_batch_size,
-        normalize=settings.normalize_embeddings,
-    )
+    if settings.embedding_provider.lower() == "fastembed":
+        embedder = FastEmbedder(
+            settings.embedding_model,
+            dimension=settings.qdrant_vector_size,
+        )
+    else:
+        embedder = SentenceTransformerEmbedder(
+            settings.embedding_model,
+            device=settings.embedding_device,
+            batch_size=settings.embedding_batch_size,
+            normalize=settings.normalize_embeddings,
+        )
     retriever = QdrantRetriever(
         client,
         settings.qdrant_collection,

@@ -50,6 +50,34 @@ class SentenceTransformerEmbedder:
         return vectors.tolist()
 
 
+class FastEmbedder:
+    def __init__(
+        self,
+        model_name: str,
+        dimension: int = 384,
+    ) -> None:
+        self.model_name = model_name
+        self.dimension = dimension
+        self._model = None
+
+    @property
+    def model(self):
+        if self._model is None:
+            from fastembed import TextEmbedding
+
+            self._model = TextEmbedding(model_name=self.model_name)
+        return self._model
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        return self.embed_documents(texts)
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [vector.tolist() for vector in self.model.passage_embed(texts)]
+
+    def embed_query(self, text: str) -> list[float]:
+        return next(self.model.query_embed(text)).tolist()
+
+
 @dataclass(frozen=True)
 class SupportDocument:
     ticket_id: str
@@ -103,7 +131,8 @@ class QdrantRetriever:
         if not documents:
             return 0
 
-        vectors = self.embedder.embed([document.message for document in documents])
+        embed_documents = getattr(self.embedder, "embed_documents", self.embedder.embed)
+        vectors = embed_documents([document.message for document in documents])
         points = [
             models.PointStruct(
                 id=str(uuid.uuid5(uuid.NAMESPACE_URL, document.ticket_id)),
@@ -137,9 +166,11 @@ class QdrantRetriever:
                     )
                 ]
             )
+        embed_query = getattr(self.embedder, "embed_query", None)
+        query_vector = embed_query(query) if embed_query else self.embedder.embed([query])[0]
         response = self.client.query_points(
             collection_name=self.collection_name,
-            query=self.embedder.embed([query])[0],
+            query=query_vector,
             query_filter=query_filter,
             limit=top_k,
             score_threshold=self.min_score,

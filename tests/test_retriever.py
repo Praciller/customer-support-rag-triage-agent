@@ -1,6 +1,6 @@
 from qdrant_client import QdrantClient
 
-from src.retrieval.retriever import QdrantRetriever, SupportDocument
+from src.retrieval.retriever import FastEmbedder, QdrantRetriever, SupportDocument
 
 
 class KeywordEmbedder:
@@ -18,6 +18,28 @@ class KeywordEmbedder:
                 ]
             )
         return vectors
+
+
+class FakeFastEmbedModel:
+    def passage_embed(self, texts: list[str]):
+        for text in texts:
+            yield FakeVector([float(len(text)), 1.0])
+
+    def query_embed(self, text: str):
+        yield FakeVector([float(len(text)), 2.0])
+
+
+class FakeVector(list):
+    def tolist(self) -> list[float]:
+        return list(self)
+
+
+def test_fastembedder_uses_passage_and_query_encoders() -> None:
+    embedder = FastEmbedder("BAAI/bge-small-en-v1.5", dimension=2)
+    embedder._model = FakeFastEmbedModel()
+
+    assert embedder.embed_documents(["card"]) == [[4.0, 1.0]]
+    assert embedder.embed_query("refund") == [6.0, 2.0]
 
 
 def test_retriever_returns_scores_and_applies_intent_filter() -> None:

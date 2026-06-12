@@ -20,7 +20,7 @@ See [docs/data_source.md](docs/data_source.md).
 ## Tech Stack
 
 - Python 3.12, FastAPI, Pydantic, LangGraph
-- Qdrant and local `BAAI/bge-small-en-v1.5` embeddings
+- Qdrant and local `BAAI/bge-small-en-v1.5` embeddings via SentenceTransformers or FastEmbed
 - Gemini, Groq, Cerebras, SQLite LLM cache
 - React 19, Vite 8, TypeScript, Tailwind CSS
 - Pytest, Vitest, Ruff, Docker Compose, GitHub Actions
