@@ -125,15 +125,10 @@ def create_app(
         if valid_key:
             valid_key = secrets.compare_digest(x_admin_api_key, settings.admin_api_key)
         local_public_ingest = (
-            settings.app_env.lower() in {"development", "test"}
-            and settings.allow_public_ingest
+            settings.app_env.lower() in {"development", "test"} and settings.allow_public_ingest
         )
         if not valid_key and not local_public_ingest:
-            detail = (
-                "Admin API key required"
-                if settings.admin_api_key
-                else "Ingestion is disabled"
-            )
+            detail = "Admin API key required" if settings.admin_api_key else "Ingestion is disabled"
             raise HTTPException(status_code=403, detail=detail)
         return service.ingest(request.recreate, request.sample_size)
 
@@ -146,6 +141,14 @@ def create_app(
         return service.triage(request.message, request.top_k)
 
     @app.post(
+        "/answer",
+        response_model=TriageResponse,
+        dependencies=[Depends(triage_limit)],
+    )
+    def answer(request: TriageRequest) -> dict[str, Any]:
+        return service.triage(request.message, request.top_k)
+
+    @app.post(
         "/search-similar",
         response_model=list[SimilarCaseResponse],
         dependencies=[Depends(search_limit)],
@@ -155,6 +158,14 @@ def create_app(
 
     @app.get("/eval/results")
     def evaluation_results() -> dict[str, Any]:
+        return service.evaluation_results()
+
+    @app.post("/evaluate")
+    def evaluate() -> dict[str, Any]:
+        return service.evaluation_results()
+
+    @app.get("/metrics/sample")
+    def sample_metrics() -> dict[str, Any]:
         return service.evaluation_results()
 
     frontend_dist = Path("frontend/dist")

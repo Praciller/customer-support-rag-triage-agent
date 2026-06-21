@@ -70,6 +70,19 @@ def test_api_exposes_required_read_endpoints() -> None:
     assert client.get("/eval/results").status_code == 200
 
 
+def test_api_exposes_portfolio_brief_compatibility_endpoints() -> None:
+    client = TestClient(create_app(services=FakeServices()))
+
+    answer = client.post("/answer", json={"message": "refund please", "top_k": 5})
+    evaluation = client.post("/evaluate")
+    metrics = client.get("/metrics/sample")
+
+    assert answer.status_code == 200
+    assert answer.json()["suggested_response"] == "Please share the transaction ID."
+    assert evaluation.json()["intent_accuracy"] == 0.9
+    assert metrics.json()["intent_accuracy"] == 0.9
+
+
 def test_production_ingest_requires_admin_key() -> None:
     settings = Settings(
         _env_file=None,

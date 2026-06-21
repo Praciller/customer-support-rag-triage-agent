@@ -1,5 +1,7 @@
 # Deterministic Evaluation Summary
 
+Generated: 2026-06-21T16:47:15.130308+00:00
+Command: `python -m src.evaluation.evaluate_triage`
 Mode: `deterministic_mock`
 Dataset: Banking77-derived deterministic evaluation fixture
 Sample size: 8
@@ -19,8 +21,17 @@ Sample size: 8
 | Workflow success rate | 100.0% |
 | Fallback rate | 0.0% |
 | Cache hit rate | 0.0% |
-| Average latency | 15.8 ms |
-| P50 / P95 latency | 11.0 / 40.2 ms |
+| Average latency | 9.1 ms |
+| P50 / P95 latency | 7.9 / 13.5 ms |
+
+## Failed examples
+
+- None.
+
+## Recommendations
+
+- Expand the human-labeled fixture before treating these metrics as production evidence.
+- Add reranking or metadata filters to improve precision@k.
 
 ## Method and limitations
 

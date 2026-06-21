@@ -19,13 +19,8 @@ jobs:
       - run: sh scripts/install-cpu-deps.sh
       - run: ruff check src tests
       - run: python -m pytest
-      - run: python -m src.evaluation.evaluate_triage
+      - run: make demo
         env:
-          DEMO_MODE: "true"
-          MOCK_LLM_MODE: "true"
-          QDRANT_MODE: memory
-          EMBEDDING_PROVIDER: hashing
-          LLM_CACHE_ENABLED: "false"
           EVAL_OUTPUT_PATH: /tmp/evaluation/results.json
 
   frontend:

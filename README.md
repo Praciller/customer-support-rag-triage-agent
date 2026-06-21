@@ -139,6 +139,32 @@ The default contract is `DEMO_MODE=true`, `MOCK_LLM_MODE=true`,
 `BOOTSTRAP_DEMO_DATA=true`, and `ALLOW_PUBLIC_INGEST=false`. Startup indexes only missing fixture
 records, so restarts do not duplicate data. See [docs/demo_mode.md](docs/demo_mode.md).
 
+## Commands
+
+| Command | Purpose |
+| --- | --- |
+| `make setup` | Install Python dependencies |
+| `make lint` | Run Ruff lint and formatting checks |
+| `make format` | Apply Ruff fixes and formatting |
+| `make test` | Run the backend test suite |
+| `make eval` | Run deterministic offline evaluation and write reports |
+| `make demo` | Run the offline evaluation demo and print API examples |
+| `make api` | Start the local FastAPI service |
+| `make clean` | Remove generated local caches, indexes, and build output |
+
+## API examples
+
+```powershell
+curl.exe http://localhost:8000/health
+curl.exe -X POST http://localhost:8000/triage -H "Content-Type: application/json" -d '{"message":"My card has not arrived","top_k":5}'
+curl.exe -X POST http://localhost:8000/answer -H "Content-Type: application/json" -d '{"message":"I need a refund","top_k":5}'
+curl.exe -X POST http://localhost:8000/evaluate
+curl.exe http://localhost:8000/metrics/sample
+```
+
+`/answer` reuses the grounded triage workflow. `/evaluate` and `/metrics/sample` return the latest
+offline evaluation artifact; run `make eval` to refresh it without external provider calls.
+
 ## Optional real-provider mode
 
 Set `DEMO_MODE=false`, `MOCK_LLM_MODE=false`, configure provider keys only in `.env`, and choose

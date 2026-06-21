@@ -1,5 +1,6 @@
 import json
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,7 @@ def evaluate_triage(
     expected_urgencies: list[str] = []
     predicted_urgencies: list[str] = []
     results: list[dict[str, Any]] = []
+    failed_examples: list[dict[str, str]] = []
     latencies: list[float] = []
     provider_usage: dict[str, int] = {}
 
@@ -38,6 +40,16 @@ def evaluate_triage(
         predicted_intents.append(str(result["intent"]))
         expected_urgencies.append(str(row["urgency"]))
         predicted_urgencies.append(str(result["urgency"]))
+        if result["intent"] != row["intent"] or result["urgency"] != row["urgency"]:
+            failed_examples.append(
+                {
+                    "message": str(row["message"]),
+                    "expected_intent": str(row["intent"]),
+                    "predicted_intent": str(result["intent"]),
+                    "expected_urgency": str(row["urgency"]),
+                    "predicted_urgency": str(result["urgency"]),
+                }
+            )
         provider = str(result["provider_used"])
         provider_usage[provider] = provider_usage.get(provider, 0) + 1
         results.append(result)
@@ -59,6 +71,8 @@ def evaluate_triage(
     mock_mode = services.provider_names == ["mock"]
 
     metrics = {
+        "generated_at": datetime.now(UTC).isoformat(),
+        "command": "python -m src.evaluation.evaluate_triage",
         "evaluation_mode": "deterministic_mock" if mock_mode else "real_provider",
         "dataset": {
             "name": "Banking77-derived deterministic evaluation fixture",
@@ -88,6 +102,7 @@ def evaluate_triage(
             "Relevance uses mapped intent labels, not human-graded policy relevance.",
             "Mock generation measures workflow determinism, not real-model answer quality.",
         ],
+        "failed_examples": failed_examples,
         "retrieval_precision_at_k": retrieval["precision_at_k"],
         "retrieval_recall_at_k": retrieval["recall_at_k"],
         "retrieval_mrr": retrieval["mrr"],
@@ -114,6 +129,7 @@ def evaluate_triage(
         "examples": sample_size,
         "mock_mode": mock_mode,
     }
+    metrics["recommendations"] = _recommendations(metrics)
     _write_artifacts(metrics, settings.eval_output_path)
     return metrics
 
@@ -147,29 +163,50 @@ def _summary(metrics: dict[str, Any]) -> str:
         return f"{value * 100:.1f}%"
 
     workflow = metrics["grounding_workflow"]
+    failures = metrics["failed_examples"]
+    failed_examples = (
+        "\n".join(
+            f"- `{item['message']}`: expected {item['expected_intent']}/"
+            f"{item['expected_urgency']}, got {item['predicted_intent']}/"
+            f"{item['predicted_urgency']}"
+            for item in failures
+        )
+        or "- None."
+    )
+    recommendations = "\n".join(f"- {item}" for item in metrics["recommendations"])
     return f"""# Deterministic Evaluation Summary
 
-Mode: `{metrics['evaluation_mode']}`
-Dataset: {metrics['dataset']['name']}
-Sample size: {metrics['dataset']['sample_size']}
+Generated: {metrics["generated_at"]}
+Command: `{metrics["command"]}`
+Mode: `{metrics["evaluation_mode"]}`
+Dataset: {metrics["dataset"]["name"]}
+Sample size: {metrics["dataset"]["sample_size"]}
 
 | Metric | Measured result |
 | --- | ---: |
-| Intent accuracy | {percent(metrics['intent_accuracy'])} |
-| Intent macro F1 | {percent(metrics['intent_macro_f1'])} |
-| Urgency accuracy | {percent(metrics['urgency_accuracy'])} |
-| Precision@{metrics['top_k']} | {percent(metrics['retrieval_precision_at_k'])} |
-| Recall@{metrics['top_k']} | {percent(metrics['retrieval_recall_at_k'])} |
-| MRR | {metrics['retrieval_mrr']:.3f} |
-| nDCG@{metrics['top_k']} | {metrics['retrieval_ndcg_at_k']:.3f} |
-| Zero-result rate | {percent(metrics['retrieval_zero_result_rate'])} |
-| Grounded response rate | {percent(metrics['groundedness_pass_rate'])} |
-| Unsupported-claim rate | {percent(metrics['unsupported_claim_rate'])} |
-| Workflow success rate | {percent(metrics['workflow_success_rate'])} |
-| Fallback rate | {percent(metrics['provider_fallback_rate'])} |
-| Cache hit rate | {percent(metrics['cache_hit_rate'])} |
-| Average latency | {workflow['average_latency_ms']:.1f} ms |
-| P50 / P95 latency | {workflow['p50_latency_ms']:.1f} / {workflow['p95_latency_ms']:.1f} ms |
+| Intent accuracy | {percent(metrics["intent_accuracy"])} |
+| Intent macro F1 | {percent(metrics["intent_macro_f1"])} |
+| Urgency accuracy | {percent(metrics["urgency_accuracy"])} |
+| Precision@{metrics["top_k"]} | {percent(metrics["retrieval_precision_at_k"])} |
+| Recall@{metrics["top_k"]} | {percent(metrics["retrieval_recall_at_k"])} |
+| MRR | {metrics["retrieval_mrr"]:.3f} |
+| nDCG@{metrics["top_k"]} | {metrics["retrieval_ndcg_at_k"]:.3f} |
+| Zero-result rate | {percent(metrics["retrieval_zero_result_rate"])} |
+| Grounded response rate | {percent(metrics["groundedness_pass_rate"])} |
+| Unsupported-claim rate | {percent(metrics["unsupported_claim_rate"])} |
+| Workflow success rate | {percent(metrics["workflow_success_rate"])} |
+| Fallback rate | {percent(metrics["provider_fallback_rate"])} |
+| Cache hit rate | {percent(metrics["cache_hit_rate"])} |
+| Average latency | {workflow["average_latency_ms"]:.1f} ms |
+| P50 / P95 latency | {workflow["p50_latency_ms"]:.1f} / {workflow["p95_latency_ms"]:.1f} ms |
+
+## Failed examples
+
+{failed_examples}
+
+## Recommendations
+
+{recommendations}
 
 ## Method and limitations
 
@@ -177,6 +214,19 @@ Sample size: {metrics['dataset']['sample_size']}
 - Generation and grounding use the deterministic mock provider; no external API is called.
 - The small fixture is intended for reproducibility and regression detection, not an SLA.
 """
+
+
+def _recommendations(metrics: dict[str, Any]) -> list[str]:
+    recommendations = [
+        "Expand the human-labeled fixture before treating these metrics as production evidence."
+    ]
+    if metrics["retrieval_precision_at_k"] < 0.5:
+        recommendations.append("Add reranking or metadata filters to improve precision@k.")
+    if metrics["failed_examples"]:
+        recommendations.append("Review failed classifications and add representative labels.")
+    if metrics["unsupported_claim_rate"]:
+        recommendations.append("Tighten grounding checks before enabling real-provider responses.")
+    return recommendations
 
 
 def main() -> None:
