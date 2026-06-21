@@ -140,14 +140,6 @@ def _write_artifacts(metrics: dict[str, Any], output_path: Path) -> None:
     )
     summary_path = output_path.parent / "summary.md"
     summary_path.write_text(_summary(metrics), encoding="utf-8")
-    Path("reports/evaluation_metrics.json").write_text(
-        json.dumps(metrics, indent=2),
-        encoding="utf-8",
-    )
-    Path("reports/evaluation_report.md").write_text(
-        _summary(metrics),
-        encoding="utf-8",
-    )
 
 
 def _summary(metrics: dict[str, Any]) -> str:
