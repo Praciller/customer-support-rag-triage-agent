@@ -1,153 +1,193 @@
 # Customer Support RAG Triage Agent
 
-A support operations assistant that classifies a ticket, detects urgency, retrieves related
-public support queries, drafts a response, verifies grounding, and exposes the complete
-LangGraph trace.
+[![CI](https://github.com/Praciller/customer-support-rag-triage-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Praciller/customer-support-rag-triage-agent/actions/workflows/ci.yml)
+![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB)
+![React 19](https://img.shields.io/badge/React-19-149ECA)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Demo cost](https://img.shields.io/badge/demo%20cost-%240-26735F)
 
-## Why This Is Not a Generic Chatbot
+**[Open the live zero-key demo](https://pracill-customer-support-rag-triage-agent.hf.space/)**
 
-The product executes a fixed support workflow with typed state, vector retrieval, escalation
-logic, cache-first multi-provider routing, grounding checks, and measurable evaluation. It
-returns a recommended human action, not an autonomous conversation.
+A local-first support operations system that classifies incoming tickets, detects urgency,
+retrieves related public examples, drafts a grounded response, verifies the draft, recommends a
+human action, and exposes every LangGraph node in an inspectable trace. The default demo requires
+no API keys and makes no external LLM calls.
 
-## Dataset Source
+![Ticket triage result](docs/screenshots/triage-result.png)
 
-[mteb/banking77](https://huggingface.co/datasets/mteb/banking77) is the script-free mirror of
-PolyAI Banking77: 13,069 English banking support queries, 77 original intents, CC BY 4.0.
-Original labels remain in metadata while the application maps them to nine operational intents.
-See [docs/data_source.md](docs/data_source.md).
+## Why this is not a generic chatbot
 
-## Tech Stack
+The application executes a fixed, typed seven-stage workflow. It returns evidence, confidence,
+grounding status, provider/cache/fallback metadata, and a human-review action instead of running
+an open-ended autonomous conversation.
 
-- Python 3.12, FastAPI, Pydantic, LangGraph
-- Qdrant and local `BAAI/bge-small-en-v1.5` embeddings via SentenceTransformers or FastEmbed
-- Gemini, Groq, Cerebras, SQLite LLM cache
-- React 19, Vite 8, TypeScript, Tailwind CSS
-- Pytest, Vitest, Ruff, Docker Compose, GitHub Actions
+## 30-second reviewer path
+
+1. Open the [live demo](https://pracill-customer-support-rag-triage-agent.hf.space/) and choose an example ticket.
+2. Run triage and inspect the retrieved cases plus all seven trace nodes.
+3. Open Evaluation to review the checked-in deterministic artifact.
+4. Review [architecture](docs/architecture.md), [evaluation](docs/evaluation.md), and
+   [security](docs/security.md).
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  Customer --> React --> FastAPI --> LangGraph
-  LangGraph --> Qdrant --> BGE[Local BGE embeddings]
-  LangGraph --> Cache[SQLite cache]
-  LangGraph --> Router --> Gemini
-  Router --> Groq
-  Router --> Cerebras
+  UI[React operations console] --> API[FastAPI]
+  API --> G[Typed LangGraph workflow]
+  G --> Q[Qdrant]
+  Q --> E[Local BGE embeddings]
+  G --> C[SQLite response cache]
+  G --> R[Provider router]
+  R --> M[Deterministic mock]
+  R -. optional .-> P[Gemini / Groq / Cerebras]
 ```
 
-LangGraph runs `normalize_message`, `classify_intent`, `detect_urgency`,
-`retrieve_similar_cases`, `generate_support_response`, `grounding_check`, and
-`suggest_next_action`. Qdrant applies semantic top-k search with score threshold and optional
-intent filtering.
+The public demo bootstraps 27 bounded Banking77-derived records into Qdrant idempotently. Provider
+credentials remain backend-only and are optional. See [docs/architecture.md](docs/architecture.md).
 
-## LLM Routing, Caching, and Fallback
+## Workflow stages
 
-Small models handle classification; Gemini handles generation and verification. Every request
-uses a provider/model/task-aware cache key. Providers have bounded retries and priority fallback.
-Total failure returns a safe manual-review response with `degraded_mode=true`.
-See [docs/model_routing.md](docs/model_routing.md).
+1. `normalize_message`
+2. `classify_intent`
+3. `detect_urgency`
+4. `retrieve_similar_cases`
+5. `generate_support_response`
+6. `grounding_check`
+7. `suggest_next_action`
 
-## Setup
+Each trace step includes status, duration, bounded input/output summaries, component,
+provider/model where applicable, cache/fallback/degraded flags, retrieval count, and grounding
+result.
+
+![Seven-node workflow trace](docs/screenshots/workflow-trace.png)
+
+## Measured deterministic evaluation
+
+Generated on June 21, 2026 with local `BAAI/bge-small-en-v1.5` FastEmbed embeddings, the mock
+provider, 27 indexed demo records, and 8 labeled evaluation tickets.
+
+| Metric | Result |
+| --- | ---: |
+| Intent accuracy / macro F1 | 100.0% / 100.0% |
+| Urgency accuracy | 100.0% |
+| Precision@5 / Recall@5 | 37.5% / 100.0% |
+| MRR / nDCG@5 | 0.771 / 0.814 |
+| Zero-result rate | 0.0% |
+| Grounded response rate | 100.0% |
+| Unsupported-claim rate | 0.0% |
+| Workflow success rate | 100.0% |
+| P50 / P95 latency | 11.0 ms / 40.2 ms |
+
+These are regression results for a small deterministic fixture, not production quality or latency
+claims. See [the full artifact](reports/evaluation/summary.md) and
+[methodology](docs/evaluation.md).
+
+## Verified public smoke test
+
+On June 21, 2026, the public deterministic mock demo returned 3 retrieval matches, an 86%
+grounding result, and a complete 7/7 LangGraph trace for the card-delivery ticket. The final
+browser check found no application console errors. This single-ticket smoke result is deployment
+evidence; it does not replace the evaluation metrics above.
+
+![Evaluation dashboard](docs/screenshots/evaluation.png)
+
+## Tech stack
+
+- Python 3.12, FastAPI, Pydantic, LangGraph
+- Qdrant and local `BAAI/bge-small-en-v1.5` embeddings via FastEmbed
+- SQLite cache; optional Gemini, Groq, and Cerebras routing
+- React 19, Vite, TypeScript, Tailwind CSS
+- Pytest, Vitest, Ruff, ESLint, Docker Compose, GitHub Actions
+
+## Local quick start
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 Copy-Item .env.example .env
-cd frontend
-npm install
-cd ..
+uvicorn src.api.main:app --reload --port 8000
 ```
 
-Set provider keys only in `.env`. Use `MOCK_LLM_MODE=true` for a key-free deterministic demo.
-CPU-only Linux deployments should install dependencies with
-`sh scripts/install-cpu-deps.sh` to avoid CUDA runtime packages.
-The Hugging Face CPU deployment uses `Dockerfile.hf` and
-`requirements.production.txt` to exclude training and test-only packages.
-
-## Data Loading and Indexing
+In another terminal:
 
 ```powershell
-python -m src.data.load_dataset
-python -m src.data.clean_dataset
-python -m src.indexing.build_documents
-python -m src.indexing.embed_documents
-python -m src.indexing.build_qdrant_index
+cd frontend
+npm ci
+npm run dev
 ```
 
-## Run
+Open `http://localhost:5173`. The Vite development proxy targets `http://localhost:8000`.
+
+## Docker quick start
 
 ```powershell
 docker compose up --build
 ```
 
-Or run services separately:
+No `.env` file is required for the deterministic demo. Services:
 
-```powershell
-uvicorn src.api.main:app --reload --port 8000
-cd frontend
-npm run dev
-```
+- Console: `http://localhost:5173`
+- API docs: `http://localhost:8000/docs`
+- Readiness: `http://localhost:8000/ready`
+- Qdrant: `http://localhost:6333/dashboard`
 
-Frontend: `http://localhost:5173`; Swagger: `http://localhost:8000/docs`.
+## Demo mode
 
-## API Usage
+The default contract is `DEMO_MODE=true`, `MOCK_LLM_MODE=true`,
+`BOOTSTRAP_DEMO_DATA=true`, and `ALLOW_PUBLIC_INGEST=false`. Startup indexes only missing fixture
+records, so restarts do not duplicate data. See [docs/demo_mode.md](docs/demo_mode.md).
 
-```powershell
-Invoke-RestMethod http://localhost:8000/triage -Method Post `
-  -ContentType application/json `
-  -Body '{"message":"My card has not arrived and I need help","top_k":5}'
-```
+## Optional real-provider mode
 
-Required endpoints: `/health`, `/dataset-info`, `/provider-health`, `/ingest`, `/triage`,
-`/search-similar`, and `/eval/results`.
+Set `DEMO_MODE=false`, `MOCK_LLM_MODE=false`, configure provider keys only in `.env`, and choose
+models through environment variables. Real-provider evaluation is intentionally excluded from CI.
+Provider catalogs and free quotas can change; verify configured model IDs before use.
 
-In production, `/ingest` requires the `X-Admin-API-Key` header. Configure
-`QDRANT_API_KEY` when using Qdrant Cloud.
+## Data source and license
 
-## Frontend
+The bounded fixture derives from [mteb/banking77](https://huggingface.co/datasets/mteb/banking77),
+a mirror of PolyAI Banking77. The fixture records CC BY 4.0, upstream/source identifiers,
+`demo-fixture-v1`, normalization, intended use, and limitations. Banking77 contains intent-labeled
+questions, not real company policy or approved responses. See [docs/data_source.md](docs/data_source.md).
 
-The operations console includes overview, ticket triage, semantic search, seven-node trace,
-evaluation charts, dataset exploration, and provider/infrastructure status.
+Source code is licensed under [MIT](LICENSE). Banking77-derived data remains under CC BY 4.0;
+the dataset license is separate from the source-code license.
 
-## Screenshots
+## Security
 
-Design and implementation reference:
-
-![dashboard concept](docs/design/dashboard-concept.png)
-
-## Evaluation and Tests
-
-```powershell
-$env:MOCK_LLM_MODE="true"
-python -m src.evaluation.evaluate_triage
-pytest
-ruff check src tests
-cd frontend
-npm test
-npm run build
-```
-
-Metrics include retrieval precision/recall, intent accuracy and macro F1, urgency accuracy,
-groundedness, latency, cache hit rate, provider use, and fallback rate.
-
-## Limitations
-
-- Free-tier limits and model names can change.
-- Banking77 does not represent every domain or real company policy.
-- Retrieval similarity does not guarantee policy correctness.
+- Request schemas reject extra fields and bound message length, `top_k`, and ingestion batch size.
+- `/triage`, `/search-similar`, and `/ingest` use configurable in-memory rate limits.
+- Public ingestion is disabled; non-local ingestion requires `X-Admin-API-Key`.
+- Provider status never returns keys; API failures return controlled messages without stack traces.
 - Generated responses require human review.
-- This portfolio demo is not an autonomous support replacement.
 
-## Future Improvements
+See [docs/security.md](docs/security.md).
 
-Add a reranker, multilingual support, help-center ingestion, human feedback and response ratings,
-ticket assignment, collaboration integrations, OpenTelemetry tracing, and managed Qdrant.
+## Known limitations
 
-## Resume Bullet
+- The demo dataset is small and is not authoritative company policy.
+- Mock accuracy reflects deterministic rules matched to the fixture, not general model quality.
+- The rate limiter and local Qdrant/SQLite state are per-process and unsuitable for horizontal scale.
+- Free CPU hosts may cold-start or exceed memory limits while loading the embedding model.
+- The public Space is a manually maintained Hugging Face Git repository, not an automatic GitHub
+  deployment; source changes require an explicit Space rebuild.
 
-Built a retrieval-grounded customer support triage agent with LangGraph, Qdrant, local BGE
-embeddings, cache-first Gemini/Groq/Cerebras routing, FastAPI, React, offline evaluation,
-Docker Compose, and CI.
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [Demo mode](docs/demo_mode.md)
+- [Model routing](docs/model_routing.md)
+- [Data source](docs/data_source.md)
+- [Evaluation](docs/evaluation.md)
+- [Deployment](docs/deployment.md)
+- [Security](docs/security.md)
+- [Runbook](docs/runbook.md)
+- [Portfolio review](PORTFOLIO_REVIEW.md)
+
+## Resume bullet
+
+Built a key-free, retrieval-grounded support triage system using typed LangGraph orchestration,
+Qdrant and local BGE embeddings, deterministic offline evaluation, protected FastAPI endpoints,
+provider fallback/cache controls, React workflow observability, Docker, and CI.

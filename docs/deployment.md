@@ -1,16 +1,66 @@
 # Deployment
 
-Version 1 is local-first:
+## Docker Compose
 
 ```powershell
-Copy-Item .env.example .env
 docker compose up --build
 ```
 
-- Frontend: `http://localhost:5173`
-- API: `http://localhost:8000`
-- Swagger: `http://localhost:8000/docs`
-- Qdrant: `http://localhost:6333`
+The command requires no `.env` file. Compose defaults to demo/mock mode, blocks public ingestion,
+loads FastEmbed on CPU, starts Qdrant, waits for `/ready`, and then starts the React console.
 
-A static frontend may be deployed to Vercel or Netlify, but the API and Qdrant should remain
-private unless authentication, rate limiting, managed secrets, and persistence are added.
+```powershell
+Invoke-RestMethod http://localhost:8000/ready
+Invoke-RestMethod http://localhost:8000/triage -Method Post `
+  -ContentType application/json `
+  -Body '{"message":"My card has not arrived","top_k":5}'
+```
+
+## Hugging Face Spaces CPU
+
+Live demo: https://pracill-customer-support-rag-triage-agent.hf.space/
+
+`Dockerfile.hf` is the canonical single-container image. It builds the React app, installs only
+production Python dependencies, serves UI and API from FastAPI on port 7860, uses a non-root user,
+and writes embedded Qdrant/SQLite data under `/tmp`.
+
+Repository-side verification:
+
+```powershell
+docker build -f Dockerfile.hf -t support-rag-hf .
+docker run --rm -p 7860:7860 support-rag-hf
+```
+
+Upload the repository to a Docker Space and select free CPU hardware. No secret is required for
+demo mode. A deployment is only considered verified after the live UI loads, `/ready` returns 200,
+and a live deterministic triage request returns seven trace nodes.
+
+Verified June 21, 2026: the public free-CPU Space loaded the UI, reported API connectivity, returned
+3 retrieval matches, produced an 86% grounding result, completed all 7 trace nodes, and ended with
+no browser application errors. This is a single-ticket smoke result, separate from the deterministic
+evaluation report.
+
+### GitHub and Space synchronization
+
+The Space is a separate Hugging Face Git repository and is updated manually; pushing GitHub does
+not rebuild it automatically. `Dockerfile.hf` is the canonical source build. The current browser
+upload used `deploy/huggingface/Dockerfile.bundle` plus an `app.tar.gz` generated from reviewed,
+tracked source files. A reproducible bundle after committing is:
+
+```powershell
+git archive --format=tar.gz --output=app.tar.gz HEAD src frontend prompts data/demo data/eval reports/evaluation requirements.production.txt
+```
+
+Upload `app.tar.gz` with `deploy/huggingface/Dockerfile.bundle` renamed to `Dockerfile`, or clone the
+Space and copy the GitHub repository with `Dockerfile.hf` renamed to `Dockerfile`.
+
+## Resource controls
+
+- 27-record startup fixture; no full dataset download.
+- FastEmbed BGE model with batch size 8.
+- CPU-only production dependencies; no CUDA packages.
+- No paid database, vector service, or LLM required.
+- Embedded Qdrant and SQLite are ephemeral on free hosts unless persistent storage is added.
+
+Free hosts can still exceed RAM or cold-start limits while loading the embedding model. Do not
+claim a live deployment from a successful image build alone.

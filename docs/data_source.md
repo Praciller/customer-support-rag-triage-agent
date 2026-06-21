@@ -1,16 +1,28 @@
-# Data Source
+# Data source
 
-The primary dataset is [mteb/banking77](https://huggingface.co/datasets/mteb/banking77),
-a script-free mirror of the upstream [PolyAI Banking77 dataset](https://huggingface.co/datasets/PolyAI/banking77).
-It contains 13,069 English online-banking support queries across 77 fine-grained intents and
-is distributed under CC BY 4.0.
+## Public source
 
-The project uses the mirror because current `datasets` releases reject the upstream legacy
-loading script. `label_text` is deterministically mapped into the nine portfolio-level support
-intents. The fields used are `text`, `label`, and `label_text`; the original label is retained
-in `metadata.original_intent`. The checked baseline shuffles with seed 42 and samples 1,000
-training records before whitespace normalization and intent mapping.
+- Dataset: `mteb/banking77`
+- Upstream: `PolyAI/banking77`
+- Source: <https://huggingface.co/datasets/mteb/banking77>
+- License recorded by the fixture: CC BY 4.0
+- Full upstream size: 13,069 English banking support queries across 77 labels
 
-Banking77 contains customer questions and intent labels, not authoritative policy responses.
-Retrieved examples are therefore similarity evidence, not business-policy truth.
-CSV import remains available through `DATASET_PROVIDER=csv`.
+## Demo fixture
+
+`data/demo/support_cases.json` contains 27 bounded records and metadata revision
+`demo-fixture-v1`. Whitespace is normalized, each upstream intent remains in
+`metadata.original_intent`, and records are mapped into nine operational intents used by the
+workflow. Stable ticket IDs produce stable Qdrant UUID5 point IDs.
+
+The fixture is committed so startup, CI, and evaluation do not download or embed the full dataset.
+The index bootstrap embeds only records missing from the target collection.
+
+## Intended use and limitations
+
+The data demonstrates support-intent retrieval and workflow behavior. It contains no private
+tickets, credentials, or personal company data. Banking77 contains customer questions and labels,
+not approved responses or real company policy. Retrieved records are similarity evidence only and
+must not be treated as policy truth.
+
+CSV/full-dataset ingestion remains an optional local workflow. Public demo ingestion is disabled.

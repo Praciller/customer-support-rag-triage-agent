@@ -1,16 +1,25 @@
-# Model Routing
+# Model routing
 
-| Task | Primary | Default model |
+## Demo route
+
+When `DEMO_MODE=true` or `MOCK_LLM_MODE=true`, all four model-backed tasks use
+`mock/mock-small`. No provider key is read and no external LLM request is made. The mock provider
+uses deterministic rules and JSON outputs suitable for tests, CI, screenshots, and public demos.
+
+## Optional provider route
+
+| Task | Configured primary | Configured model variable |
 | --- | --- | --- |
-| Intent classification | Groq | `llama-3.1-8b-instant` |
-| Urgency detection | Groq | `llama-3.1-8b-instant` |
-| Response generation | Gemini | `gemini-3.1-flash-lite` |
-| Grounding check | Gemini | `gemini-3.1-flash-lite` |
-| Provider fallback | Cerebras | `gpt-oss-120b` |
+| Intent classification | Groq | `INTENT_MODEL_NAME` |
+| Urgency detection | Groq | `URGENCY_MODEL_NAME` |
+| Response generation | Gemini | `RESPONSE_MODEL_NAME` |
+| Grounding check | Gemini | `GROUNDING_MODEL_NAME` |
 
-The router checks SQLite cache before each provider call, retries with bounded exponential
-backoff, then advances through `LLM_PROVIDER_PRIORITY`. If no provider succeeds, it returns a
-safe response with `degraded_mode=true`.
+`LLM_PROVIDER_PRIORITY` controls fallback order. Provider/model/task, prompt, context,
+temperature, and token limit are hashed into the SQLite cache key. Each provider receives bounded
+retries and timeout configuration. Exhaustion returns a safe manual-review response with
+`fallback_used=true` and `degraded_mode=true`.
 
-Model defaults were updated on June 12, 2026 because provider catalogs changed after the
-original requirement was written. All IDs remain environment-configurable.
+Model names and provider catalogs change. The values in `.env.example` are configuration defaults,
+not availability guarantees. Keys stay in backend environment variables and are never returned by
+`/provider-health`.

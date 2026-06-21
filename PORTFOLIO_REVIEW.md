@@ -1,25 +1,63 @@
-# Portfolio Review
+# Portfolio review
 
-## Skills Demonstrated
+## Skills demonstrated
 
-- Designed a typed seven-stage LangGraph workflow with inspectable node traces.
-- Built semantic retrieval with local sentence-transformer embeddings and Qdrant filters.
-- Implemented Gemini, Groq, and Cerebras routing with cache-first execution, retries, fallback,
-  safe degradation, and provider metadata.
-- Exposed validated FastAPI endpoints and a responsive React/Vite support operations console.
-- Added deterministic offline evaluation, Docker Compose, CI, tests, and operational docs.
+- Typed seven-node LangGraph orchestration with inspectable node-level execution evidence.
+- Local semantic retrieval using BGE embeddings and Qdrant with idempotent fixture bootstrap.
+- Deterministic no-key generation, grounding, provider routing, cache, retry, fallback, and safe
+  degraded behavior.
+- FastAPI trust-boundary validation, protected ingestion, configurable CORS/timeouts/rate limits,
+  readiness, and secret-safe status output.
+- Responsive React operations console with triage, retrieval, trace, evaluation, data, and
+  infrastructure views.
+- Reproducible offline metrics, tests, lint, container builds, and CI without external LLM calls.
 
-## Reviewer Path
+## Reviewer path
 
-1. Read the architecture and model-routing sections in `README.md`.
-2. Run `docker compose up --build`.
-3. Ingest the real dataset with `POST /ingest`.
-4. Submit a ticket in the triage page and inspect retrieved cases plus the seven-node trace.
-5. Run the test and evaluation commands.
+1. Read the first screen and measured-results table in `README.md`.
+2. Open the [public demo](https://pracill-customer-support-rag-triage-agent.hf.space/).
+3. Select **Card not arrived**, run triage, and inspect three retrieved cases plus seven trace nodes.
+4. Open **Evaluation** and compare the UI with `reports/evaluation/results.json`.
+5. Review `docs/security.md` and `docs/deployment.md` for production trade-offs.
 
-## Honest Readiness
+## Strongest engineering evidence
 
-This is a strong portfolio demonstration of RAG orchestration and reliability patterns. It is
-not production-ready customer support automation: Banking77 does not contain company policy,
-generated replies require human review, and public deployment needs authentication and abuse
-controls.
+- Stable UUID5 IDs make demo bootstrap idempotent instead of recreating the index on every start.
+- All model-backed nodes use a common provider/cache/fallback contract while preserving
+  task-specific routing.
+- The public demo is useful without credentials and labels mock behavior honestly.
+- Trace responses expose operational metadata without prompts, secrets, environment values, or
+  stack traces.
+- The same bounded fixture supports startup, integration tests, evaluation, and screenshots.
+
+## Measured evidence
+
+The June 21, 2026 FastEmbed evaluation used 8 labeled queries and 27 indexed records. Intent and
+urgency accuracy were 100%; Precision@5 was 37.5%, Recall@5 100%, MRR 0.771, nDCG@5 0.814, and
+workflow success 100%. These are deterministic regression measurements, not production claims.
+
+The separate June 21 public smoke test returned 3 retrieval matches, 86% grounding, and a complete
+7/7 trace with no final browser application errors. It validates deployment behavior for one
+ticket; it is not an aggregate evaluation metric.
+
+## Cost-conscious decisions
+
+- Deterministic mock provider by default; real providers optional.
+- Local embeddings, embedded/server Qdrant, and SQLite cache.
+- In-memory rate limiting instead of Redis for a single-instance demo.
+- Small committed fixture instead of repeated full-dataset downloads.
+- CPU-only Hugging Face image with no billing-enabled dependency.
+
+## Honest readiness
+
+The repository and public deterministic demo are reviewable. It is not autonomous production
+support: the dataset is not policy, responses require human review, and in-memory controls do not
+scale across instances. Free CPU hosting may cold-start.
+
+## Interview talking points
+
+- Why a fixed graph is easier to evaluate and govern than an open-ended agent loop.
+- How stable fixture IDs prevent duplicate vector ingestion.
+- Why retrieval recall is strong while Precision@5 remains the clearest improvement opportunity.
+- How mock mode separates workflow reliability from provider availability and cost.
+- Which controls must change for multi-tenant, sensitive, or horizontally scaled use.

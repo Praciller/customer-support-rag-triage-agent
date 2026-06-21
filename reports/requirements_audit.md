@@ -1,35 +1,34 @@
-# Requirements Audit
+# Requirements audit
 
-Audit date: June 12, 2026
+Audit date: June 21, 2026
 
 | Area | Status | Evidence |
 | --- | --- | --- |
-| Real public dataset | Pass | 1,000 seeded samples from `mteb/banking77`; source and license documented |
-| Data and indexing CLIs | Pass | Load, clean, document, embed, and Qdrant build commands execute |
-| Local embeddings | Pass | `BAAI/bge-small-en-v1.5`, 384 dimensions |
-| Qdrant | Pass | Docker service healthy; 1,000 points; filtered semantic search returns scores and metadata |
-| LangGraph | Pass | Seven required nodes execute in order with durations and status |
-| Provider routing | Pass | Gemini, Groq, Cerebras clients; task models, retry, fallback order, safe degradation |
-| Cache | Pass | SQLite TTL cache checked before provider calls; disable switch tested |
-| FastAPI | Pass | Seven required endpoints, validation, CORS, metadata, Swagger |
-| Frontend | Pass | Overview, triage, search, trace, evaluation, dataset, and provider views |
-| Evaluation | Pass | Retrieval, intent, macro F1, urgency, grounding, latency, cache, and fallback metrics |
-| Docker Compose | Pass | API, frontend, and Qdrant build and run together |
-| CI and tests | Pass | GitHub Actions; Pytest, Ruff, Vitest, TypeScript build, npm audit |
-| Documentation | Pass | README, architecture, data, routing, Qdrant, workflow, evaluation, deployment, portfolio review |
-| Security | Pass | `.env` ignored; keys stay backend-only and are not logged or returned |
+| Key-free demo | Pass | Demo/mock defaults; no provider keys required |
+| Demo bootstrap | Pass | 27-record fixture, stable IDs, missing-only indexing, readiness metadata |
+| Seven-node workflow | Pass | Typed LangGraph state and ordered trace |
+| Retrieval | Pass | Local BGE FastEmbed plus Qdrant and bounded top-k |
+| Evaluation | Pass | JSON, Markdown, confusion matrix, deterministic CI command |
+| API hardening | Pass | Strict requests, limits, timeouts, controlled errors, configurable CORS |
+| Ingestion protection | Pass | Disabled by default; constant-time admin key comparison |
+| Rate limiting | Pass | Bounded in-memory limiter on triage/search/ingest |
+| Frontend | Pass | Triage, search, trace, evaluation, dataset, provider, responsive views |
+| CI | Pass | Ruff, Pytest, deterministic evaluation, ESLint, Vitest, TypeScript/Vite build |
+| Docker Compose | Pass | No-key defaults, 27-record index, healthy Qdrant/API, working UI and triage |
+| Hugging Face image | Pass | Non-root CPU image; UI, readiness, and seven-node triage verified on port 7860 |
+| Screenshots | Pass | Eight reproducible desktop/mobile implementation captures |
+| Documentation | Pass | Required architecture, routing, data, evaluation, deploy, security, demo, runbook docs |
+| Public deployment | Pass | Public Hugging Face Space verified with API-connected UI, grounded retrieval, and seven trace nodes |
 
-## Verification Snapshot
+## Current measured snapshot
 
-- Backend: 15 tests passed; Ruff passed.
-- Frontend: Vitest passed; production build passed; zero npm vulnerabilities.
-- Evaluation: precision@5 90%, recall@5 100%, intent accuracy 100%, macro F1 100%,
-  urgency accuracy 100%, groundedness 100% in deterministic mock mode.
-- Runtime: API health `ok`, Qdrant health `ok`, Swagger HTTP 200, frontend HTTP 200.
+- Backend: 27 tests passed.
+- Frontend: 4 tests passed; ESLint and production build passed.
+- Evaluation: Precision@5 37.5%, Recall@5 100%, MRR 0.771, nDCG@5 0.814, intent
+  accuracy/macro F1 100%, urgency accuracy 100%, workflow success 100%.
+- Browser: desktop/mobile local flows and the public Hugging Face triage flow verified; public smoke
+  returned 3 matches, 86% grounding, 7/7 trace nodes, and no final application console errors.
 
-## Residual Limitations
+## Live deployment
 
-- Banking77 is intent data, not authoritative company policy.
-- Provider catalogs and free-tier limits can change.
-- Generated responses require human review.
-- Browser automation verification depends on a working Codex Chrome Extension connection.
+https://pracill-customer-support-rag-triage-agent.hf.space/
