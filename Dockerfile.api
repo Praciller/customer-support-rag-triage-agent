@@ -5,9 +5,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
-COPY requirements.txt .
-COPY scripts/install-cpu-deps.sh scripts/install-cpu-deps.sh
-RUN sh scripts/install-cpu-deps.sh
+COPY requirements.production.txt .
+RUN python -m pip install --upgrade pip \
+    && python -m pip install -r requirements.production.txt
 
 COPY . .
 EXPOSE 8000

@@ -30,11 +30,12 @@ ENV PATH="/home/user/.local/bin:$PATH" \
     TOKENIZERS_PARALLELISM=false
 
 WORKDIR /home/user/app
-COPY --chown=user:user requirements.production.txt .
+COPY --chown=user:user requirements.production.txt ./
 RUN python -m pip install --upgrade pip \
     && python -m pip install -r requirements.production.txt
 
 COPY --chown=user:user . .
 COPY --from=frontend --chown=user:user /frontend/dist frontend/dist
+
 EXPOSE 7860
 CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "7860"]

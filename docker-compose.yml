@@ -16,12 +16,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api
-    env_file:
-      - .env
     environment:
+      APP_ENV: production
+      DEMO_MODE: "true"
+      MOCK_LLM_MODE: "true"
+      BOOTSTRAP_DEMO_DATA: "true"
+      ALLOW_PUBLIC_INGEST: "false"
+      QDRANT_MODE: server
       QDRANT_URL: http://qdrant:6333
-      FRONTEND_ORIGIN: http://localhost:5173
-      MOCK_LLM_MODE: ${MOCK_LLM_MODE:-true}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      EMBEDDING_PROVIDER: fastembed
+      EMBEDDING_BATCH_SIZE: "8"
+      EVAL_OUTPUT_PATH: reports/evaluation/results.json
     ports:
       - "8000:8000"
     volumes:
@@ -31,6 +37,11 @@ services:
     depends_on:
       qdrant:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
 
   frontend:
     build:
@@ -40,7 +51,8 @@ services:
     ports:
       - "5173:5173"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
 volumes:
   qdrant_data:
