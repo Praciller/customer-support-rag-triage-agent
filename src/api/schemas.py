@@ -1,11 +1,13 @@
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.config.settings import get_settings
 
 
 class TriageRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     message: str
     top_k: int = Field(default=5, ge=1)
 
@@ -32,17 +34,50 @@ class SearchRequest(TriageRequest):
 
 
 class IngestRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     recreate: bool = False
-    sample_size: int | None = Field(default=None, ge=1, le=50_000)
+    sample_size: int | None = Field(default=None, ge=1, le=1000)
+
+
+class TraceStepResponse(BaseModel):
+    node: str
+    detail: str
+    duration_ms: float = Field(ge=0)
+    status: str
+    input_summary: str
+    output_summary: str
+    component: str
+    provider: str | None = None
+    model: str | None = None
+    cache_hit: bool
+    fallback: bool
+    degraded_mode: bool
+    retrieved_document_count: int = Field(ge=0)
+    grounding_result: bool | None = None
+    error_category: str | None = None
+
+
+class SimilarCaseResponse(BaseModel):
+    ticket_id: str
+    message: str
+    intent: str
+    response: str
+    source: str
+    score: float
+    created_at: str | None = None
+    metadata: dict[str, Any]
 
 
 class TriageResponse(BaseModel):
+    normalized_message: str
     intent: str
+    intent_confidence: float = Field(ge=0, le=1)
     urgency: str
     escalate: bool
     escalation_reason: str
     suggested_response: str
-    retrieved_cases: list[dict[str, Any]]
+    retrieved_cases: list[SimilarCaseResponse]
     grounded: bool
     grounding_score: float
     unsupported_claims: list[str] = Field(default_factory=list)
@@ -51,5 +86,7 @@ class TriageResponse(BaseModel):
     provider_used: str
     model_used: str
     cached: bool
+    fallback_used: bool
     degraded_mode: bool
-    trace: list[dict[str, Any]]
+    total_latency_ms: float = Field(ge=0)
+    trace: list[TraceStepResponse]

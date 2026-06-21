@@ -1,12 +1,10 @@
 import json
 from pathlib import Path
 
-from qdrant_client import QdrantClient
-
+from src.api.services import build_embedder, build_qdrant_client
 from src.config.settings import get_settings
 from src.retrieval.retriever import (
     QdrantRetriever,
-    SentenceTransformerEmbedder,
     SupportDocument,
 )
 
@@ -33,14 +31,9 @@ def build_qdrant_index(
         for item in records
     ]
     retriever = QdrantRetriever(
-        QdrantClient(url=settings.qdrant_url),
+        build_qdrant_client(settings),
         settings.qdrant_collection,
-        SentenceTransformerEmbedder(
-            settings.embedding_model,
-            device=settings.embedding_device,
-            batch_size=settings.embedding_batch_size,
-            normalize=settings.normalize_embeddings,
-        ),
+        build_embedder(settings),
         min_score=settings.retrieval_min_score,
     )
     indexed = retriever.index(documents, recreate=settings.qdrant_recreate_collection)

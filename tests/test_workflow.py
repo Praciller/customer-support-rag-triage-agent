@@ -74,3 +74,30 @@ def test_workflow_runs_required_nodes_in_order() -> None:
         "grounding_check",
         "suggest_next_action",
     ]
+
+
+def test_workflow_trace_exposes_safe_node_metadata() -> None:
+    workflow = TriageWorkflow(router=FakeRouter(), retriever=FakeRetriever())
+
+    result = workflow.run("  My card has not arrived.  ", top_k=3)
+
+    assert result["normalized_message"] == "My card has not arrived."
+    assert result["total_latency_ms"] >= 0
+    assert result["intent_confidence"] == 0.96
+    assert all(
+        {
+            "node",
+            "status",
+            "duration_ms",
+            "input_summary",
+            "output_summary",
+            "component",
+            "cache_hit",
+            "fallback",
+            "degraded_mode",
+        }.issubset(step)
+        for step in result["trace"]
+    )
+    retrieval = result["trace"][3]
+    assert retrieval["retrieved_document_count"] == 1
+    assert retrieval["component"] == "qdrant"

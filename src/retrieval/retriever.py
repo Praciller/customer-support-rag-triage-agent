@@ -1,3 +1,6 @@
+import hashlib
+import math
+import re
 import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Any, Protocol
@@ -91,6 +94,31 @@ class FastEmbedder:
                 parallel=None,
             )
         ).tolist()
+
+
+class HashingEmbedder:
+    """Deterministic dependency-free embedder for tests and bounded CI smoke checks."""
+
+    def __init__(self, dimension: int = 384) -> None:
+        self.dimension = dimension
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        return [self._embed_one(text) for text in texts]
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return self.embed(texts)
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._embed_one(text)
+
+    def _embed_one(self, text: str) -> list[float]:
+        vector = [0.0] * self.dimension
+        for token in re.findall(r"[a-z0-9]+", text.lower()):
+            digest = hashlib.blake2b(token.encode("utf-8"), digest_size=8).digest()
+            index = int.from_bytes(digest, "big") % self.dimension
+            vector[index] += 1.0
+        norm = math.sqrt(sum(value * value for value in vector))
+        return [value / norm for value in vector] if norm else vector
 
 
 @dataclass(frozen=True)

@@ -20,5 +20,7 @@ class TriageState(TypedDict, total=False):
     provider_used: str
     model_used: str
     cached: bool
+    fallback_used: bool
     degraded_mode: bool
+    total_latency_ms: float
     trace: list[dict[str, Any]]

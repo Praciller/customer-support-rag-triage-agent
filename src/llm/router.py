@@ -41,7 +41,7 @@ class ProviderRouter:
         preferred_provider: str | None = None,
     ) -> ProviderResponse:
         provider_order = self._provider_order(preferred_provider)
-        for provider_name in provider_order:
+        for provider_index, provider_name in enumerate(provider_order):
             provider = self.providers.get(provider_name)
             if provider is None:
                 continue
@@ -56,6 +56,7 @@ class ProviderRouter:
                     model=cached["model"],
                     cached=True,
                     degraded_mode=False,
+                    fallback_used=provider_index > 0,
                     latency_ms=0,
                 )
 
@@ -70,6 +71,7 @@ class ProviderRouter:
                         model=response.model,
                         cached=False,
                         degraded_mode=False,
+                        fallback_used=provider_index > 0,
                         latency_ms=latency_ms,
                     )
                     self.cache.set(
@@ -87,6 +89,7 @@ class ProviderRouter:
                 provider="safe_fallback",
                 model="none",
                 degraded_mode=True,
+                fallback_used=True,
             )
         raise RuntimeError("All configured LLM providers failed")
 

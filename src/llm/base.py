@@ -22,6 +22,7 @@ class ProviderResponse:
     model: str
     cached: bool = False
     degraded_mode: bool = False
+    fallback_used: bool = False
     latency_ms: float = 0
 
 

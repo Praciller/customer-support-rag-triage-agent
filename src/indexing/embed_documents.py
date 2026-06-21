@@ -4,8 +4,8 @@ from typing import Any
 
 import numpy as np
 
+from src.api.services import build_embedder
 from src.config.settings import get_settings
-from src.retrieval.retriever import SentenceTransformerEmbedder
 
 
 def embed_documents(
@@ -18,12 +18,7 @@ def embed_documents(
         for line in input_path.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
-    embedder = SentenceTransformerEmbedder(
-        settings.embedding_model,
-        device=settings.embedding_device,
-        batch_size=settings.embedding_batch_size,
-        normalize=settings.normalize_embeddings,
-    )
+    embedder = build_embedder(settings)
     vectors = np.asarray(embedder.embed([item["message"] for item in documents]))
     np.save(output_path, vectors)
     metadata = {

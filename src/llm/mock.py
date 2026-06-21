@@ -48,7 +48,20 @@ class MockProvider:
                 "product_question",
                 ("how do", "what is", "can i", "where can", "which countries", "support this"),
             ),
-            ("billing_issue", ("charged", "payment", "billing", "fee", "transaction")),
+            (
+                "billing_issue",
+                (
+                    "charged",
+                    "payment",
+                    "billing",
+                    "fee",
+                    "transaction",
+                    "transfer",
+                    "withdrawal",
+                    "cash",
+                    "pending",
+                ),
+            ),
         ]
         intent = next(
             (label for label, keywords in rules if any(keyword in text for keyword in keywords)),
@@ -95,6 +108,36 @@ class MockProvider:
             response = (
                 "I'm sorry you cannot access your account. Please confirm the sign-in method "
                 "and any error message so the next recovery step can be identified."
+            )
+        elif "complaint" in prompt:
+            response = (
+                "I'm sorry this activity is concerning. Please share the transaction reference "
+                "and avoid posting account credentials so a support specialist can review it."
+            )
+        elif "refund_request" in prompt:
+            response = (
+                "I'm sorry the payment needs review. Please share the transaction reference and "
+                "date so the support team can check the available next steps."
+            )
+        elif "billing_issue" in prompt:
+            response = (
+                "I'm sorry this transaction is unresolved. Please share its reference, date, and "
+                "current status so the support team can investigate."
+            )
+        elif "technical_issue" in prompt:
+            response = (
+                "I'm sorry the feature is not working. Please share the exact error and the last "
+                "step completed so the issue can be investigated."
+            )
+        elif "cancellation" in prompt:
+            response = (
+                "I understand you want to stop this request. Please share the transfer or account "
+                "reference so a support specialist can review what actions remain available."
+            )
+        elif "product_question" in prompt:
+            response = (
+                "Thanks for the question. Please confirm the country and feature you are asking "
+                "about so the relevant public guidance can be checked."
             )
         else:
             response = (

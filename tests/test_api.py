@@ -1,3 +1,5 @@
+import time
+
 from fastapi.testclient import TestClient
 
 from src.api.main import create_app
@@ -16,7 +18,9 @@ class FakeServices:
 
     def triage(self, message: str, top_k: int) -> dict:
         return {
+            "normalized_message": message,
             "intent": "refund_request",
+            "intent_confidence": 0.91,
             "urgency": "high",
             "escalate": True,
             "escalation_reason": "Refund request",
@@ -30,7 +34,9 @@ class FakeServices:
             "provider_used": "mock",
             "model_used": "mock-small",
             "cached": False,
+            "fallback_used": False,
             "degraded_mode": False,
+            "total_latency_ms": 12.5,
             "trace": [],
         }
 
@@ -82,3 +88,47 @@ def test_production_ingest_requires_admin_key() -> None:
     assert denied.status_code == 403
     assert allowed.status_code == 200
     assert allowed.json()["indexed"] == 10
+
+
+def test_public_ingest_is_disabled_by_default() -> None:
+    settings = Settings(_env_file=None, app_env="development", allow_public_ingest=False)
+    client = TestClient(create_app(services=FakeServices(), settings=settings))
+
+    response = client.post("/ingest", json={"sample_size": 10})
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Ingestion is disabled"}
+
+
+def test_triage_rate_limit_returns_retry_after() -> None:
+    settings = Settings(
+        _env_file=None,
+        triage_rate_limit_requests=1,
+        triage_rate_limit_window_seconds=60,
+    )
+    client = TestClient(create_app(services=FakeServices(), settings=settings))
+
+    first = client.post("/triage", json={"message": "refund please", "top_k": 5})
+    blocked = client.post("/triage", json={"message": "refund please", "top_k": 5})
+
+    assert first.status_code == 200
+    assert blocked.status_code == 429
+    assert blocked.headers["Retry-After"] == "60"
+
+
+def test_slow_triage_returns_controlled_timeout() -> None:
+    class SlowServices(FakeServices):
+        def triage(self, message: str, top_k: int) -> dict:
+            time.sleep(0.05)
+            return super().triage(message, top_k)
+
+    settings = Settings(_env_file=None, request_timeout_seconds=0.01)
+    client = TestClient(
+        create_app(services=SlowServices(), settings=settings),
+        raise_server_exceptions=False,
+    )
+
+    response = client.post("/triage", json={"message": "refund please", "top_k": 5})
+
+    assert response.status_code == 504
+    assert response.json() == {"detail": "Request timed out"}

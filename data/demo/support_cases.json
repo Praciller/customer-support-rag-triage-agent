@@ -1,0 +1,204 @@
+{
+  "dataset": {
+    "name": "mteb/banking77",
+    "upstream_dataset": "PolyAI/banking77",
+    "source_url": "https://huggingface.co/datasets/mteb/banking77",
+    "license": "CC BY 4.0",
+    "revision": "demo-fixture-v1",
+    "split": "train",
+    "normalization": "Whitespace collapsed; original intent retained in metadata; mapped to nine operational intents.",
+    "intended_use": "Bounded retrieval evidence for the key-free portfolio demo.",
+    "limitations": "Customer questions and labels are not company policy or verified response guidance."
+  },
+  "records": [
+    {
+      "ticket_id": "demo-billing-pending-topup",
+      "message": "How long is a top up supposed to be pending, because an hour is too long?",
+      "intent": "billing_issue",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "pending_top_up"}
+    },
+    {
+      "ticket_id": "demo-billing-withdrawal-fee",
+      "message": "Why was there a fee for my cash withdrawal?",
+      "intent": "billing_issue",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "cash_withdrawal_charge"}
+    },
+    {
+      "ticket_id": "demo-billing-pending-transfer",
+      "message": "How long will my transfer be pending?",
+      "intent": "billing_issue",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "pending_transfer"}
+    },
+    {
+      "ticket_id": "demo-product-age",
+      "message": "I want to open an account for my child.",
+      "intent": "product_question",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "age_limit"}
+    },
+    {
+      "ticket_id": "demo-product-disposable",
+      "message": "The disposable cards, what are they for?",
+      "intent": "product_question",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "get_disposable_virtual_card"}
+    },
+    {
+      "ticket_id": "demo-product-countries",
+      "message": "Which countries are supported for card use?",
+      "intent": "product_question",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "country_support"}
+    },
+    {
+      "ticket_id": "demo-access-passcode",
+      "message": "I am entering my passcode but getting an error.",
+      "intent": "account_access",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "passcode_forgotten"}
+    },
+    {
+      "ticket_id": "demo-access-verification",
+      "message": "The app failed to verify me.",
+      "intent": "account_access",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "unable_to_verify_identity"}
+    },
+    {
+      "ticket_id": "demo-access-identity",
+      "message": "Why do I need to verify my identity details?",
+      "intent": "account_access",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "why_verify_identity"}
+    },
+    {
+      "ticket_id": "demo-other-currency",
+      "message": "Can I exchange currency to euros?",
+      "intent": "other",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "fiat_currency_support"}
+    },
+    {
+      "ticket_id": "demo-other-atm-card",
+      "message": "How can I get my card out of the ATM?",
+      "intent": "other",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "card_swallowed"}
+    },
+    {
+      "ticket_id": "demo-other-atm",
+      "message": "How do I withdraw money from an ATM?",
+      "intent": "other",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "atm_support"}
+    },
+    {
+      "ticket_id": "demo-delivery-late",
+      "message": "Where is the card I ordered two weeks ago?",
+      "intent": "delivery_issue",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "card_arrival"}
+    },
+    {
+      "ticket_id": "demo-delivery-estimate",
+      "message": "Send me my card now, I need it as soon as possible.",
+      "intent": "delivery_issue",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "card_delivery_estimate"}
+    },
+    {
+      "ticket_id": "demo-delivery-tracking",
+      "message": "Can I track when my card will be delivered?",
+      "intent": "delivery_issue",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "card_arrival"}
+    },
+    {
+      "ticket_id": "demo-refund-policy",
+      "message": "I want to know about your refund process.",
+      "intent": "refund_request",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "request_refund"}
+    },
+    {
+      "ticket_id": "demo-refund-topup",
+      "message": "What happened to the money that I deposited?",
+      "intent": "refund_request",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "top_up_reverted"}
+    },
+    {
+      "ticket_id": "demo-refund-reversed-payment",
+      "message": "It looks like my card payment might have been reversed.",
+      "intent": "refund_request",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "reverted_card_payment"}
+    },
+    {
+      "ticket_id": "demo-complaint-phone",
+      "message": "I lost my phone and need help so someone does not access my account.",
+      "intent": "complaint",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "lost_or_stolen_phone"}
+    },
+    {
+      "ticket_id": "demo-complaint-duplicate",
+      "message": "Why was I charged twice for one transaction?",
+      "intent": "complaint",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "transaction_charged_twice"}
+    },
+    {
+      "ticket_id": "demo-complaint-fraud",
+      "message": "A cash withdrawal was made from my account but I did not make it.",
+      "intent": "complaint",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "cash_withdrawal_not_recognised"}
+    },
+    {
+      "ticket_id": "demo-cancel-transfer",
+      "message": "I made a transfer to the wrong account and need to cancel it.",
+      "intent": "cancellation",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "cancel_transfer"}
+    },
+    {
+      "ticket_id": "demo-cancel-typo",
+      "message": "I sent a payment to an account number with a typo, can it be cancelled?",
+      "intent": "cancellation",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "cancel_transfer"}
+    },
+    {
+      "ticket_id": "demo-cancel-account",
+      "message": "If I am not using my account should I close it?",
+      "intent": "cancellation",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "terminate_account"}
+    },
+    {
+      "ticket_id": "demo-technical-beneficiary",
+      "message": "A transfer to my account was denied.",
+      "intent": "technical_issue",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "beneficiary_not_allowed"}
+    },
+    {
+      "ticket_id": "demo-technical-transfer",
+      "message": "What may be the reason that my transfer did not go through?",
+      "intent": "technical_issue",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "failed_transfer"}
+    },
+    {
+      "ticket_id": "demo-technical-error",
+      "message": "Why does my transfer keep generating an error message?",
+      "intent": "technical_issue",
+      "source": "mteb/banking77",
+      "metadata": {"original_intent": "beneficiary_not_allowed"}
+    }
+  ]
+}
