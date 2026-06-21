@@ -3,7 +3,16 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react()],
-  server: { port: 5173 },
+  server: {
+    port: 5173,
+    proxy: {
+      "/dataset-info": "http://localhost:8000",
+      "/eval": "http://localhost:8000",
+      "/provider-health": "http://localhost:8000",
+      "/search-similar": "http://localhost:8000",
+      "/triage": "http://localhost:8000",
+    },
+  },
   test: {
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts",

@@ -38,11 +38,42 @@ const nav: { id: View; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "providers", label: "Provider status", icon: ServerCog },
 ];
 
-const sample = "My card has still not arrived and I need help before I travel tomorrow.";
+const demoTickets = [
+  {
+    label: "Card not arrived",
+    message: "My card has still not arrived and I need help before I travel tomorrow.",
+  },
+  {
+    label: "Cash withdrawal",
+    message: "My cash withdrawal is still pending and I need to understand why.",
+  },
+  {
+    label: "Transfer pending",
+    message: "My transfer has been pending since yesterday. What should I do?",
+  },
+  {
+    label: "Card stolen",
+    message: "My card was stolen and I need urgent help protecting my account.",
+  },
+  {
+    label: "Account access",
+    message: "I forgot my passcode and cannot sign in to the app.",
+  },
+  {
+    label: "Suspicious transaction",
+    message: "A cash withdrawal was made from my account, but I did not make it. This is urgent.",
+  },
+  {
+    label: "Payment reversed",
+    message: "My card payment was reversed even though I already received the item.",
+  },
+] as const;
+
+const sample = demoTickets[0].message;
 
 export default function App() {
   const [view, setView] = useState<View>("triage");
-  const [message, setMessage] = useState(sample);
+  const [message, setMessage] = useState<string>(sample);
   const [result, setResult] = useState<TriageResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -78,9 +109,9 @@ export default function App() {
           ))}
         </nav>
         <div className="system-card">
-          <span><CircleDot size={14} />System status</span>
-          <strong>Operational</strong>
-          <small>Mock mode works without API keys</small>
+          <span><CircleDot size={14} />Deterministic demo</span>
+          <strong>No API key required</strong>
+          <small>Mock provider and bounded local index</small>
         </div>
       </aside>
       <main>
@@ -152,9 +183,25 @@ function TriageView({
     <div className="workspace">
       <section className="panel composer">
         <div className="section-title"><div><p>Incoming request</p><h2>Customer message</h2></div><code>{message.length}/2000</code></div>
-        <textarea value={message} onChange={(event) => setMessage(event.target.value)} maxLength={2000} />
+        <textarea
+          aria-label="Customer message"
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
+          maxLength={2000}
+        />
+        <div className="example-tickets" aria-label="Example tickets">
+          {demoTickets.map((ticket) => (
+            <button
+              className="example-ticket"
+              key={ticket.label}
+              onClick={() => setMessage(ticket.message)}
+              type="button"
+            >
+              {ticket.label}
+            </button>
+          ))}
+        </div>
         <div className="actions">
-          <button className="secondary" onClick={() => setMessage(sample)}>Load example</button>
           <button className="primary" onClick={run} disabled={loading || !message.trim()}>
             <Send size={16} />{loading ? "Running workflow..." : "Run triage"}
           </button>
@@ -169,8 +216,12 @@ function TriageView({
               <div className="facts">
                 <div><span>Intent</span><strong>{result.intent.replaceAll("_", " ")}</strong></div>
                 <div><span>Urgency</span><strong>{result.urgency}</strong></div>
-                <div><span>Confidence</span><strong>{Math.round(result.confidence * 100)}%</strong></div>
+                <div><span>Intent confidence</span><strong>{Math.round(result.intent_confidence * 100)}%</strong></div>
                 <div><span>Next action</span><strong>{result.next_action.replaceAll("_", " ")}</strong></div>
+              </div>
+              <div className="normalized-output">
+                <span>Normalized message</span>
+                <p>{result.normalized_message}</p>
               </div>
               <div className="response"><span>Suggested response</span><p>{result.suggested_response}</p></div>
               {result.escalation_reason && (
@@ -183,8 +234,20 @@ function TriageView({
                 <Badge>{result.provider_used} / {result.model_used}</Badge>
                 <Badge tone={result.grounded ? "success" : "danger"}>{Math.round(result.grounding_score * 100)}% grounded</Badge>
                 <Badge>{result.cached ? "cache hit" : "fresh"}</Badge>
+                <Badge>{result.total_latency_ms.toFixed(1)} ms total</Badge>
+                {result.fallback_used && <Badge tone="warning">provider fallback</Badge>}
                 {result.degraded_mode && <Badge tone="danger">degraded</Badge>}
               </div>
+              {result.degraded_mode && (
+                <div className="warning" role="status">
+                  A safe fallback was used. Review retrieved evidence and respond manually.
+                </div>
+              )}
+              {!!result.unsupported_claims.length && (
+                <div className="warning">
+                  Unsupported claims: {result.unsupported_claims.join("; ")}
+                </div>
+              )}
             </>
           ) : <div className="empty">Run triage to classify, retrieve, draft, and verify a response.</div>}
         </article>
@@ -192,6 +255,13 @@ function TriageView({
           <div className="section-title"><div><p>Retrieval</p><h2>Similar cases</h2></div><Badge>{result?.retrieved_cases.length ?? 0} found</Badge></div>
           <CaseList cases={result?.retrieved_cases ?? []} />
         </article>
+      </section>
+      <section className="panel inline-trace">
+        <div className="section-title">
+          <div><p>Execution evidence</p><h2>Seven-node execution trace</h2></div>
+          <Badge>{result?.trace.length ?? 0} / 7 complete</Badge>
+        </div>
+        <TraceList trace={result?.trace ?? []} />
       </section>
     </div>
   );
@@ -243,22 +313,47 @@ function TraceView({ trace }: { trace: TriageResult["trace"] }) {
 
 function EvaluationView() {
   const [metrics, setMetrics] = useState<Evaluation>({});
-  useEffect(() => { api.evaluation().then(setMetrics).catch(() => setMetrics({ status: "unavailable" })); }, []);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    api.evaluation()
+      .then(setMetrics)
+      .catch(() => setMetrics({ status: "unavailable" }))
+      .finally(() => setLoading(false));
+  }, []);
   const percent = (value?: number) => value === undefined ? "--" : `${Math.round(value * 100)}%`;
+  const intent = metrics.classification?.intent;
   const chartData = [
     { metric: "Precision", value: (metrics.retrieval_precision_at_k ?? 0) * 100 },
     { metric: "Intent", value: (metrics.intent_accuracy ?? 0) * 100 },
     { metric: "Urgency", value: (metrics.urgency_accuracy ?? 0) * 100 },
     { metric: "Grounded", value: (metrics.groundedness_pass_rate ?? 0) * 100 },
   ];
+  if (loading) {
+    return <section className="panel loading-panel" aria-live="polite">Loading measured evaluation artifacts...</section>;
+  }
+  if (metrics.status === "unavailable") {
+    return <ErrorNotice message="Evaluation artifacts are unavailable. Run the documented evaluation command." />;
+  }
   return (
     <div className="evaluation-layout">
+      <section className="panel evaluation-method">
+        <div>
+          <p className="eyebrow-dark">Measured artifact</p>
+          <h2>{(metrics.evaluation_mode ?? "unknown mode").replaceAll("_", " ")}</h2>
+          <p>Banking77-derived fixture, deterministic provider, mapped-intent relevance labels.</p>
+        </div>
+        <Badge tone="success">No external LLM calls</Badge>
+      </section>
       <div className="metric-grid">
         <MetricCard label="Precision@K" value={percent(metrics.retrieval_precision_at_k)} detail="Relevant cases retrieved" />
         <MetricCard label="Intent accuracy" value={percent(metrics.intent_accuracy)} detail="Triage classification" />
+        <MetricCard label="Intent macro F1" value={percent(metrics.intent_macro_f1)} detail="Balanced class quality" />
         <MetricCard label="Urgency accuracy" value={percent(metrics.urgency_accuracy)} detail="Escalation sensitivity" />
         <MetricCard label="Groundedness" value={percent(metrics.groundedness_pass_rate)} detail="Drafts passing verifier" />
+        <MetricCard label="Workflow success" value={percent(metrics.workflow_success_rate)} detail="All seven nodes completed" />
+        <MetricCard label="MRR" value={metrics.retrieval_mrr?.toFixed(3) ?? "--"} detail={`nDCG ${(metrics.retrieval_ndcg_at_k ?? 0).toFixed(3)}`} />
         <MetricCard label="Avg latency" value={metrics.average_latency_ms ? `${Math.round(metrics.average_latency_ms)} ms` : "--"} detail="End-to-end workflow" />
+        <MetricCard label="P50 / P95" value={`${Math.round(metrics.p50_latency_ms ?? 0)} / ${Math.round(metrics.p95_latency_ms ?? 0)} ms`} detail="Latency distribution" />
         <MetricCard label="Cache hit rate" value={percent(metrics.cache_hit_rate)} detail={`${metrics.fallback_count ?? 0} provider fallbacks`} />
         <MetricCard
           label="Provider usage"
@@ -273,6 +368,36 @@ function EvaluationView() {
       <Suspense fallback={<section className="panel evaluation-chart">Loading chart...</section>}>
         <EvaluationChart data={chartData} />
       </Suspense>
+      {intent && (
+        <section className="panel evaluation-table">
+          <div className="section-title">
+            <div><p>Classification detail</p><h2>Intent metrics by class</h2></div>
+          </div>
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>Intent</th><th>Precision</th><th>Recall</th><th>F1</th><th>Support</th></tr></thead>
+              <tbody>
+                {intent.labels.map((label) => {
+                  const row = intent.per_class[label];
+                  return (
+                    <tr key={label}>
+                      <th scope="row">{label.replaceAll("_", " ")}</th>
+                      <td>{percent(row.precision)}</td>
+                      <td>{percent(row.recall)}</td>
+                      <td>{percent(row.f1)}</td>
+                      <td>{row.support}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+      <section className="panel limitations">
+        <div className="section-title"><div><p>Interpretation</p><h2>Methodology and limitations</h2></div></div>
+        <ul>{(metrics.limitations ?? []).map((item) => <li key={item}>{item}</li>)}</ul>
+      </section>
     </div>
   );
 }

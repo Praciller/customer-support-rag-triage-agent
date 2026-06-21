@@ -1,4 +1,5 @@
 import { CheckCircle2, Clock3, Database, ShieldAlert } from "lucide-react";
+
 import type { SimilarCase, TraceStep } from "./types";
 
 export function Badge({ children, tone = "neutral" }: { children: React.ReactNode; tone?: string }) {
@@ -36,7 +37,7 @@ export function CaseList({ cases }: { cases: SimilarCase[] }) {
             <span className="score">{Math.round(item.score * 100)}% match</span>
           </div>
           <p>{item.message}</p>
-          <small>{item.source} · {item.ticket_id}</small>
+          <small>{item.source} / {item.ticket_id}</small>
         </article>
       ))}
     </div>
@@ -54,7 +55,14 @@ export function TraceList({ trace }: { trace: TraceStep[] }) {
           <span className="trace-icon"><CheckCircle2 size={16} /></span>
           <div>
             <strong>{index + 1}. {step.node.replaceAll("_", " ")}</strong>
-            <p>{step.detail}</p>
+            <p>{step.output_summary || step.detail}</p>
+            <div className="trace-meta">
+              <Badge>{step.component}</Badge>
+              {step.provider && <Badge>{step.provider} / {step.model}</Badge>}
+              {step.cache_hit && <Badge tone="success">cache hit</Badge>}
+              {step.fallback && <Badge tone="warning">fallback</Badge>}
+              {step.degraded_mode && <Badge tone="danger">degraded</Badge>}
+            </div>
           </div>
           <code>{step.duration_ms} ms</code>
         </li>
@@ -64,5 +72,5 @@ export function TraceList({ trace }: { trace: TraceStep[] }) {
 }
 
 export function ErrorNotice({ message }: { message: string }) {
-  return <div className="error"><ShieldAlert size={18} />{message}</div>;
+  return <div className="error" role="alert"><ShieldAlert size={18} />{message}</div>;
 }
