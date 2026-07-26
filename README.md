@@ -76,7 +76,15 @@ Recall and nDCG use the three known relevant fixture records per intent. These a
 
 ### Public deployment smoke evidence
 
-Verified July 19, 2026: `/ready` returned 200 and one live mock triage returned 3 retrieved cases, 7/7 completed trace nodes, a passing mock grounding check, and `ask_for_order_id`. Playwright found no browser warnings or errors. The deployed Evaluation view still serves an earlier June 21 artifact; the checked-in July 19 artifact above is the current local regression evidence. No redeploy was performed in this task.
+Verified July 26, 2026 at 14:43 ICT: Hugging Face Space revision
+`255b7272544c9222e1fde5351598779049615162` synchronizes GitHub `main` at
+`81baa5f727da21e9cd1577ebc4131ace2fbf2b37`. `/ready` returned 200 in demo mode
+with 27 indexed records. One live mock triage returned 3 retrieved cases, 7/7 completed trace
+nodes, a passing 0.86 grounding check, and `ask_for_order_id`, with no fallback or degraded state;
+public ingestion returned 403. The public Evaluation view shows Precision@5 37.5% (rounded 38%),
+Recall@5 62.5% (rounded 63%), MRR 0.771, and nDCG@5 0.611 from the 8-ticket fixture. Playwright
+passed at 1440-pixel desktop and 390-pixel mobile widths with no page-level overflow and no browser
+warnings or errors.
 
 ![Evaluation dashboard](docs/screenshots/evaluation.png)
 
@@ -159,7 +167,8 @@ curl.exe http://localhost:8000/eval/results
 - Retrieved records are untrusted precedent, not company policy. The mock grounding check validates evidence presence and workflow behavior, not semantic entailment.
 - Generated responses require human review. Prompt injection, policy authority, tenant isolation, distributed rate limiting, and sensitive-data retention require controls beyond this demo.
 - The in-memory limiter and local Qdrant/SQLite state are single-process constraints. Free CPU hosts may cold-start or exceed memory limits.
-- The public Space is manually synchronized and may lag this GitHub working tree.
+- The public Space is synchronized manually. The verified revision above matches the recorded
+  GitHub commit; later GitHub commits require a new reviewed synchronization.
 
 See [security details](docs/security.md) and [deployment constraints](docs/deployment.md).
 
