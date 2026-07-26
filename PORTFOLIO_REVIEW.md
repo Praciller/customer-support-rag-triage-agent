@@ -37,10 +37,14 @@ urgency accuracy were 100%; Precision@5 was 37.5%, standard Recall@5 62.5%, MRR 
 0.611, and workflow success 100%. These are deterministic regression measurements, not production
 claims. The mock grounding-verifier pass rate is workflow evidence, not semantic-entailment proof.
 
-The separate July 19 public smoke test returned 3 retrieval matches and a complete 7/7 trace with
-no browser warnings or errors. It validates deployment behavior for one ticket; it is not an
-aggregate evaluation metric. The deployed Evaluation view still served the earlier June 21 artifact,
-so deployment synchronization remains manual work.
+The July 26 public smoke test verified Hugging Face revision
+`255b7272544c9222e1fde5351598779049615162`, synchronized from GitHub
+`81baa5f727da21e9cd1577ebc4131ace2fbf2b37`. `/ready` returned 200 with 27 indexed records; one
+mock triage returned 3 retrieval matches, a complete 7/7 trace, grounded status, and
+`ask_for_order_id`, while public ingestion returned 403. The deployed Evaluation view showed
+Precision@5 37.5% (38% displayed), Recall@5 62.5% (63% displayed), MRR 0.771, and nDCG@5 0.611.
+Desktop and 390-pixel mobile checks had no page-level overflow and no browser warnings or errors.
+The live triage remains a single-ticket deployment smoke result, not an aggregate evaluation metric.
 
 ## Cost-conscious decisions
 

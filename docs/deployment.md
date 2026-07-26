@@ -31,25 +31,34 @@ docker build -f Dockerfile.hf -t support-rag-hf .
 docker run --rm -p 7860:7860 support-rag-hf
 ```
 
-Upload the repository to a Docker Space and select free CPU hardware. No secret is required for
-demo mode. A deployment is only considered verified after the live UI loads, `/ready` returns 200,
-and a live deterministic triage request returns seven trace nodes.
+The existing Docker Space runs on `cpu-basic`. No secret is required for demo mode. A deployment is
+only considered verified after the live UI loads, `/ready` returns 200, and a live deterministic
+triage request returns seven trace nodes.
 
-Verified July 19, 2026: `/ready` returned 200 and the public free-CPU Space returned 3 retrieval
-matches, a passing mock grounding check, `ask_for_order_id`, and all 7 trace nodes. Playwright found
-no browser warnings or errors. This is a single-ticket deployment smoke result, separate from the
-deterministic evaluation report.
+Verified July 26, 2026 at 14:43 ICT:
 
-The deployed Evaluation view still served the earlier June 21 artifact during that check. The
-repository's July 19 artifact contains corrected Recall@5 and nDCG@5 calculations. The Space is not
-claimed current until an explicitly approved manual synchronization and repeat smoke test occur.
+- GitHub governed release: `ac196bddb75527f5d719ca5bbb0775b30700ff49`.
+- GitHub synchronized revision, including the mobile Evaluation containment fix:
+  `81baa5f727da21e9cd1577ebc4131ace2fbf2b37`.
+- Previous Space revision: `1c83ba447b23ff61a0f686816176e580e83ba0a0`.
+- Final Space revision: `255b7272544c9222e1fde5351598779049615162`.
+- `/ready`: HTTP 200, demo mode active, 27 indexed records ready.
+- Triage: 3 retrieval matches, 7/7 trace nodes, grounded score 0.86, `ask_for_order_id`, no fallback
+  or degraded state.
+- Public ingestion: HTTP 403.
+- Evaluation: Precision@5 37.5% (38% displayed), Recall@5 62.5% (63% displayed), MRR 0.771, and
+  nDCG@5 0.611 from 8 labeled tickets.
+- Browser: 1440-pixel desktop and 390-pixel mobile passed without page-level overflow; the console
+  reported no warnings or errors.
+
+This is a single-ticket deployment smoke result, separate from the deterministic evaluation report.
 
 ### GitHub and Space synchronization
 
 The Space is a separate Hugging Face Git repository and is updated manually; pushing GitHub does
-not rebuild it automatically. `Dockerfile.hf` is the canonical source build. The current browser
-upload used `deploy/huggingface/Dockerfile.bundle` plus an `app.tar.gz` generated from reviewed,
-tracked source files. A reproducible bundle after committing is:
+not rebuild it automatically. `Dockerfile.hf` is the canonical source build. The verified Space
+pull requests used `deploy/huggingface/Dockerfile.bundle` plus an `app.tar.gz` generated from exact,
+reviewed GitHub squash commits. A reproducible bundle after committing is:
 
 ```powershell
 git archive --format=tar.gz --output=app.tar.gz HEAD src frontend prompts data/demo data/eval reports/evaluation requirements.production.txt
