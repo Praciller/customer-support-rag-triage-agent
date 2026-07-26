@@ -29,7 +29,7 @@ nav button:hover, nav button.active { background: #25413e; color: #fff; }
 .system-card strong { font-size: 13px; color: #fff; }
 .system-card small { color: #78938e; line-height: 1.4; }
 
-main { padding: 0 34px 40px; max-width: 1600px; width: 100%; margin: auto; }
+main { min-width: 0; padding: 0 34px 40px; max-width: 1600px; width: 100%; margin: auto; }
 .topbar { min-height: 106px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #dce4e1; margin-bottom: 25px; }
 .topbar h1 { margin: 5px 0 0; font-size: 25px; letter-spacing: -.035em; }
 .breadcrumb { display: flex; align-items: center; gap: 3px; margin: 0; font-size: 11px; color: #788582; }
@@ -85,7 +85,8 @@ input, select { min-height: 40px; padding: 0 11px; }
 .trace code { font-size: 10px; color: #65726f; }
 .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
 .evaluation-layout { display: grid; gap: 15px; }
-.evaluation-chart { padding: 22px; }
+.evaluation-layout > * { min-width: 0; }
+.evaluation-chart { padding: 22px; overflow: hidden; }
 .evaluation-method { padding: 20px 22px; display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .evaluation-method h2 { margin: 4px 0; font-size: 18px; text-transform: capitalize; }
 .evaluation-method > div > p:last-child { margin: 0; color: #65736f; font-size: 12px; }
