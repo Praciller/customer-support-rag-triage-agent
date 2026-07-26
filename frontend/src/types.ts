@@ -50,6 +50,7 @@ export type TriageResult = {
 };
 
 export type Evaluation = {
+  top_k?: number;
   retrieval_precision_at_k?: number;
   retrieval_recall_at_k?: number;
   intent_accuracy?: number;
@@ -70,6 +71,11 @@ export type Evaluation = {
   p50_latency_ms?: number;
   p95_latency_ms?: number;
   evaluation_mode?: string;
+  dataset?: {
+    sample_size?: number;
+    retrieval_corpus_size?: number;
+    fixture_revision?: string;
+  };
   classification?: {
     intent?: {
       labels: string[];

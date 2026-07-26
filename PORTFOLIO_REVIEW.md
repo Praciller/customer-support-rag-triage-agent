@@ -32,13 +32,15 @@
 
 ## Measured evidence
 
-The June 21, 2026 FastEmbed evaluation used 8 labeled queries and 27 indexed records. Intent and
-urgency accuracy were 100%; Precision@5 was 37.5%, Recall@5 100%, MRR 0.771, nDCG@5 0.814, and
-workflow success 100%. These are deterministic regression measurements, not production claims.
+The July 19, 2026 FastEmbed evaluation used 8 labeled queries and 27 indexed records. Intent and
+urgency accuracy were 100%; Precision@5 was 37.5%, standard Recall@5 62.5%, MRR 0.771, nDCG@5
+0.611, and workflow success 100%. These are deterministic regression measurements, not production
+claims. The mock grounding-verifier pass rate is workflow evidence, not semantic-entailment proof.
 
-The separate June 21 public smoke test returned 3 retrieval matches, 86% grounding, and a complete
-7/7 trace with no final browser application errors. It validates deployment behavior for one
-ticket; it is not an aggregate evaluation metric.
+The separate July 19 public smoke test returned 3 retrieval matches and a complete 7/7 trace with
+no browser warnings or errors. It validates deployment behavior for one ticket; it is not an
+aggregate evaluation metric. The deployed Evaluation view still served the earlier June 21 artifact,
+so deployment synchronization remains manual work.
 
 ## Cost-conscious decisions
 
@@ -58,6 +60,6 @@ scale across instances. Free CPU hosting may cold-start.
 
 - Why a fixed graph is easier to evaluate and govern than an open-ended agent loop.
 - How stable fixture IDs prevent duplicate vector ingestion.
-- Why retrieval recall is strong while Precision@5 remains the clearest improvement opportunity.
+- Why measured Recall@5 is 62.5% and Precision@5 remains the clearest improvement opportunity.
 - How mock mode separates workflow reliability from provider availability and cost.
 - Which controls must change for multi-tenant, sensitive, or horizontally scaled use.

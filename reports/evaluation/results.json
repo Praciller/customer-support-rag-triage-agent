@@ -1,9 +1,22 @@
 {
+  "generated_at": "2026-07-19T08:49:55.980413+00:00",
+  "command": "python -m src.evaluation.evaluate_triage",
   "evaluation_mode": "deterministic_mock",
   "dataset": {
     "name": "Banking77-derived deterministic evaluation fixture",
     "path": "data\\eval\\eval_set.csv",
-    "sample_size": 8
+    "sample_size": 8,
+    "retrieval_corpus_size": 27,
+    "fixture_revision": "demo-fixture-v1"
+  },
+  "execution": {
+    "embedding_provider": "fastembed",
+    "embedding_model": "BAAI/bge-small-en-v1.5",
+    "provider_names": [
+      "mock"
+    ],
+    "qdrant_mode": "memory",
+    "cache_enabled": false
   },
   "classification": {
     "intent": {
@@ -217,12 +230,12 @@
   },
   "retrieval": {
     "precision_at_k": 0.375,
-    "recall_at_k": 1.0,
+    "recall_at_k": 0.625,
     "mrr": 0.7708333333333334,
-    "ndcg_at_k": 0.8142678301274823,
+    "ndcg_at_k": 0.6106824851964359,
     "zero_result": 0.0,
     "average_score": 0.7343724846664359,
-    "latency_ms": 5.955875001745881,
+    "latency_ms": 11.555587509064935,
     "top_k": 5,
     "sample_size": 8,
     "examples": [
@@ -242,7 +255,7 @@
         "ndcg_at_k": 1.0,
         "zero_result": 0.0,
         "average_score": 0.7481246695830743,
-        "latency_ms": 5.668900004820898
+        "latency_ms": 10.883599985390902
       },
       {
         "message": "I want a refund for this payment",
@@ -255,12 +268,12 @@
           "demo-complaint-duplicate"
         ],
         "precision_at_k": 0.4,
-        "recall_at_k": 1.0,
+        "recall_at_k": 0.6666666666666666,
         "mrr": 1.0,
-        "ndcg_at_k": 0.9197207891481876,
+        "ndcg_at_k": 0.7039180890341347,
         "zero_result": 0.0,
         "average_score": 0.7802156388638991,
-        "latency_ms": 5.308599997079
+        "latency_ms": 11.112700041849166
       },
       {
         "message": "Why was I charged an extra fee",
@@ -273,12 +286,12 @@
           "demo-refund-topup"
         ],
         "precision_at_k": 0.2,
-        "recall_at_k": 1.0,
+        "recall_at_k": 0.3333333333333333,
         "mrr": 0.5,
-        "ndcg_at_k": 0.6309297535714575,
+        "ndcg_at_k": 0.2960819109658652,
         "zero_result": 0.0,
         "average_score": 0.7585768822803503,
-        "latency_ms": 5.403899995144457
+        "latency_ms": 12.040000001434237
       },
       {
         "message": "The mobile payment feature is not working",
@@ -291,12 +304,12 @@
           "demo-delivery-tracking"
         ],
         "precision_at_k": 0.2,
-        "recall_at_k": 1.0,
+        "recall_at_k": 0.3333333333333333,
         "mrr": 0.3333333333333333,
-        "ndcg_at_k": 0.5,
+        "ndcg_at_k": 0.23463936301137822,
         "zero_result": 0.0,
         "average_score": 0.6569871391107422,
-        "latency_ms": 5.910400010179728
+        "latency_ms": 8.263099996838719
       },
       {
         "message": "I forgot my passcode and cannot sign in",
@@ -309,12 +322,12 @@
           "demo-cancel-account"
         ],
         "precision_at_k": 0.4,
-        "recall_at_k": 1.0,
+        "recall_at_k": 0.6666666666666666,
         "mrr": 1.0,
-        "ndcg_at_k": 1.0,
+        "ndcg_at_k": 0.7653606369886217,
         "zero_result": 0.0,
         "average_score": 0.6961826916747039,
-        "latency_ms": 6.495599998743273
+        "latency_ms": 11.191700003109872
       },
       {
         "message": "Which countries support this card",
@@ -327,12 +340,12 @@
           "demo-delivery-estimate"
         ],
         "precision_at_k": 0.4,
-        "recall_at_k": 1.0,
+        "recall_at_k": 0.6666666666666666,
         "mrr": 1.0,
-        "ndcg_at_k": 1.0,
+        "ndcg_at_k": 0.7653606369886217,
         "zero_result": 0.0,
         "average_score": 0.7137124844381623,
-        "latency_ms": 7.003000006079674
+        "latency_ms": 8.914100006222725
       },
       {
         "message": "This transaction is not mine and my card may be stolen",
@@ -345,12 +358,12 @@
           "demo-complaint-phone"
         ],
         "precision_at_k": 0.4,
-        "recall_at_k": 1.0,
+        "recall_at_k": 0.6666666666666666,
         "mrr": 0.3333333333333333,
-        "ndcg_at_k": 0.5437713091520254,
+        "ndcg_at_k": 0.41618115554873086,
         "zero_result": 0.0,
         "average_score": 0.7533344737041447,
-        "latency_ms": 7.5231999944662675
+        "latency_ms": 14.520100026857108
       },
       {
         "message": "Please cancel my transfer immediately",
@@ -363,12 +376,12 @@
           "demo-technical-error"
         ],
         "precision_at_k": 0.4,
-        "recall_at_k": 1.0,
+        "recall_at_k": 0.6666666666666666,
         "mrr": 1.0,
-        "ndcg_at_k": 0.9197207891481876,
+        "ndcg_at_k": 0.7039180890341347,
         "zero_result": 0.0,
         "average_score": 0.7678458976764108,
-        "latency_ms": 4.333400007453747
+        "latency_ms": 15.519400010816753
       }
     ]
   },
@@ -380,9 +393,9 @@
     "fallback_rate": 0.0,
     "cache_hit_rate": 0.0,
     "workflow_success_rate": 1.0,
-    "average_latency_ms": 15.78125,
-    "p50_latency_ms": 10.955,
-    "p95_latency_ms": 40.196999999999974,
+    "average_latency_ms": 18.75375,
+    "p50_latency_ms": 16.19,
+    "p95_latency_ms": 28.77849999999999,
     "provider_usage": {
       "mock": 8
     }
@@ -392,13 +405,14 @@
     "Relevance uses mapped intent labels, not human-graded policy relevance.",
     "Mock generation measures workflow determinism, not real-model answer quality."
   ],
+  "failed_examples": [],
   "retrieval_precision_at_k": 0.375,
-  "retrieval_recall_at_k": 1.0,
+  "retrieval_recall_at_k": 0.625,
   "retrieval_mrr": 0.7708333333333334,
-  "retrieval_ndcg_at_k": 0.8142678301274823,
+  "retrieval_ndcg_at_k": 0.6106824851964359,
   "retrieval_zero_result_rate": 0.0,
   "retrieval_average_score": 0.7343724846664359,
-  "retrieval_latency_ms": 5.955875001745881,
+  "retrieval_latency_ms": 11.555587509064935,
   "top_k": 5,
   "intent_accuracy": 1.0,
   "intent_macro_f1": 1.0,
@@ -407,9 +421,9 @@
   "groundedness_pass_rate": 1.0,
   "unsupported_claim_rate": 0.0,
   "degraded_mode_rate": 0.0,
-  "average_latency_ms": 15.78125,
-  "p50_latency_ms": 10.955,
-  "p95_latency_ms": 40.196999999999974,
+  "average_latency_ms": 18.75375,
+  "p50_latency_ms": 16.19,
+  "p95_latency_ms": 28.77849999999999,
   "cache_hit_rate": 0.0,
   "provider_fallback_rate": 0.0,
   "workflow_success_rate": 1.0,
@@ -418,5 +432,9 @@
     "mock": 8
   },
   "examples": 8,
-  "mock_mode": true
+  "mock_mode": true,
+  "recommendations": [
+    "Expand the human-labeled fixture before treating these metrics as production evidence.",
+    "Add reranking or metadata filters to improve precision@k."
+  ]
 }

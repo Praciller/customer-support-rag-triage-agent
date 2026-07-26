@@ -1,6 +1,6 @@
 # Requirements audit
 
-Audit date: June 21, 2026
+Audit date: July 19, 2026
 
 | Area | Status | Evidence |
 | --- | --- | --- |
@@ -8,12 +8,12 @@ Audit date: June 21, 2026
 | Demo bootstrap | Pass | 27-record fixture, stable IDs, missing-only indexing, readiness metadata |
 | Seven-node workflow | Pass | Typed LangGraph state and ordered trace |
 | Retrieval | Pass | Local BGE FastEmbed plus Qdrant and bounded top-k |
-| Evaluation | Pass | JSON, Markdown, confusion matrix, deterministic CI command |
-| API hardening | Pass | Strict requests, limits, timeouts, controlled errors, configurable CORS |
+| Evaluation | Pass | Corrected standard Recall@5/nDCG@5, JSON, Markdown, confusion matrix, deterministic CI command |
+| API hardening | Pass | Strict requests, bounded confidences, limits, timeouts, controlled errors, configurable CORS |
 | Ingestion protection | Pass | Disabled by default; constant-time admin key comparison |
 | Rate limiting | Pass | Bounded in-memory limiter on triage/search/ingest |
-| Frontend | Pass | Triage, search, trace, evaluation, dataset, provider, responsive views |
-| CI | Pass | Ruff, Pytest, deterministic evaluation, ESLint, Vitest, TypeScript/Vite build |
+| Frontend | Pass | Truthful API state, labeled controls, triage, search, trace, evaluation, dataset, provider, responsive views |
+| CI | Pass | Ruff lint/format, Pytest, deterministic evaluation, ESLint, Vitest, TypeScript/Vite build |
 | Docker Compose | Pass | No-key defaults, 27-record index, healthy Qdrant/API, working UI and triage |
 | Hugging Face image | Pass | Non-root CPU image; UI, readiness, and seven-node triage verified on port 7860 |
 | Screenshots | Pass | Eight reproducible desktop/mobile implementation captures |
@@ -22,12 +22,13 @@ Audit date: June 21, 2026
 
 ## Current measured snapshot
 
-- Backend: 27 tests passed.
-- Frontend: 4 tests passed; ESLint and production build passed.
-- Evaluation: Precision@5 37.5%, Recall@5 100%, MRR 0.771, nDCG@5 0.814, intent
+- Backend: 30 tests passed; Ruff lint and format checks passed.
+- Frontend: 6 tests passed; ESLint and production build passed.
+- Evaluation: Precision@5 37.5%, Recall@5 62.5%, MRR 0.771, nDCG@5 0.611, intent
   accuracy/macro F1 100%, urgency accuracy 100%, workflow success 100%.
-- Browser: desktop/mobile local flows and the public Hugging Face triage flow verified; public smoke
-  returned 3 matches, 86% grounding, 7/7 trace nodes, and no final application console errors.
+- Browser: public desktop/mobile flows verified; public smoke returned 3 matches, 7/7 trace nodes,
+  and no browser warnings or errors. The public Evaluation view still serves the earlier June 21
+  artifact and was not redeployed during this audit.
 
 ## Live deployment
 

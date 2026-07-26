@@ -49,6 +49,7 @@ def retrieval_metrics(
     top_k: int,
     scores: list[float],
     latency_ms: float,
+    relevant_total: int | None = None,
 ) -> dict[str, float]:
     labels = retrieved_labels[:top_k]
     relevance = [label == relevant_label for label in labels]
@@ -57,17 +58,12 @@ def retrieval_metrics(
         (1 / (index + 1) for index, relevant in enumerate(relevance) if relevant),
         0.0,
     )
-    dcg = sum(
-        1 / math.log2(index + 2)
-        for index, relevant in enumerate(relevance)
-        if relevant
-    )
-    ideal_dcg = sum(
-        1 / math.log2(index + 2) for index in range(min(relevant_count, top_k))
-    )
+    dcg = sum(1 / math.log2(index + 2) for index, relevant in enumerate(relevance) if relevant)
+    known_relevant = relevant_count if relevant_total is None else max(0, relevant_total)
+    ideal_dcg = sum(1 / math.log2(index + 2) for index in range(min(known_relevant, top_k)))
     return {
         "precision_at_k": relevant_count / top_k,
-        "recall_at_k": 1.0 if relevant_count else 0.0,
+        "recall_at_k": relevant_count / known_relevant if known_relevant else 0.0,
         "mrr": reciprocal_rank,
         "ndcg_at_k": dcg / ideal_dcg if ideal_dcg else 0.0,
         "zero_result": float(not labels),

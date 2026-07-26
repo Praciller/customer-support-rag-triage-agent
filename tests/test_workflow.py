@@ -20,8 +20,7 @@ class FakeRouter:
                 'status and refund options."}'
             ),
             "grounding_check": (
-                '{"grounded":true,"grounding_score":0.88,'
-                '"unsupported_claims":[],"confidence":0.9}'
+                '{"grounded":true,"grounding_score":0.88,"unsupported_claims":[],"confidence":0.9}'
             ),
         }
         return ProviderResponse(
@@ -50,6 +49,16 @@ class FakeRetriever:
                 metadata={},
             )
         ]
+
+
+class EmptyRetriever:
+    def search(
+        self,
+        query: str,
+        top_k: int,
+        intent: str | None = None,
+    ) -> list[SearchResult]:
+        return []
 
 
 def test_workflow_runs_required_nodes_in_order() -> None:
@@ -101,3 +110,16 @@ def test_workflow_trace_exposes_safe_node_metadata() -> None:
     retrieval = result["trace"][3]
     assert retrieval["retrieved_document_count"] == 1
     assert retrieval["component"] == "qdrant"
+
+
+def test_workflow_cannot_mark_response_grounded_without_retrieved_evidence() -> None:
+    workflow = TriageWorkflow(router=FakeRouter(), retriever=EmptyRetriever())
+
+    result = workflow.run("My card has not arrived.", top_k=3)
+
+    assert result["grounded"] is False
+    assert result["grounding_score"] <= 0.25
+    assert result["confidence"] <= 0.4
+    assert result["unsupported_claims"] == ["No retrieved cases were available."]
+    assert result["next_action"] == "manual_review"
+    assert result["trace"][5]["grounding_result"] is False

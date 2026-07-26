@@ -44,9 +44,7 @@ class ApplicationServices:
     def bootstrap_demo(self) -> dict[str, Any]:
         if not self.settings.demo_mode or not self.settings.bootstrap_demo_data:
             self.bootstrap_status = {
-                "ready": self.retriever.client.collection_exists(
-                    self.settings.qdrant_collection
-                ),
+                "ready": self.retriever.client.collection_exists(self.settings.qdrant_collection),
                 "status": "disabled",
                 "records": 0,
                 "indexed": 0,
@@ -121,7 +119,7 @@ class ApplicationServices:
         }
 
     def provider_health(self) -> dict[str, Any]:
-        routes = {
+        configured_routes = {
             "intent": {
                 "provider": self.settings.intent_model_provider,
                 "model": self.settings.intent_model_name,
@@ -139,15 +137,24 @@ class ApplicationServices:
                 "model": self.settings.grounding_model_name,
             },
         }
+        mock_mode = self.provider_names == ["mock"]
+        routes = (
+            {
+                task: {"provider": "mock", "model": "mock-small"}
+                for task in ("intent", "urgency", "response", "grounding")
+            }
+            if mock_mode
+            else configured_routes
+        )
         return {
             "providers": self.provider_names,
-            "primary_provider": self.settings.llm_default_provider,
-            "fallback_order": self.settings.provider_priority,
+            "primary_provider": "mock" if mock_mode else self.settings.llm_default_provider,
+            "fallback_order": ["mock"] if mock_mode else self.settings.provider_priority,
             "routes": routes,
             "cache_enabled": self.settings.llm_cache_enabled,
             "demo_mode": self.settings.demo_mode,
-            "mock_mode": "mock" in self.provider_names,
-            "live_provider_calls_enabled": "mock" not in self.provider_names,
+            "mock_mode": mock_mode,
+            "live_provider_calls_enabled": not mock_mode,
             "embedding_model": self.settings.embedding_model,
             "embedding_provider": self.settings.embedding_provider,
             "qdrant_collection": self.settings.qdrant_collection,

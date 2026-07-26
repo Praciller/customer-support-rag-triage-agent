@@ -5,12 +5,15 @@ __pycache__/
 .pytest_cache/
 .pytest-tmp/
 .ruff_cache/
+.artifacts/
 .coverage
 htmlcov/
 coverage/
 *.db
 *.sqlite
 *.sqlite3
+*.duckdb
+*.duckdb.wal
 *.log
 .cache/
 data/processed/*

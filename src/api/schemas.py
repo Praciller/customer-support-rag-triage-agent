@@ -79,9 +79,9 @@ class TriageResponse(BaseModel):
     suggested_response: str
     retrieved_cases: list[SimilarCaseResponse]
     grounded: bool
-    grounding_score: float
+    grounding_score: float = Field(ge=0, le=1)
     unsupported_claims: list[str] = Field(default_factory=list)
-    confidence: float
+    confidence: float = Field(ge=0, le=1)
     next_action: str
     provider_used: str
     model_used: str
