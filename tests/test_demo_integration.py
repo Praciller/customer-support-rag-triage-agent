@@ -60,6 +60,23 @@ def test_demo_dataset_info_ignores_stale_full_dataset_metadata(
     assert services.dataset_info()["status"] == "demo_fixture"
 
 
+def test_demo_provider_health_reports_active_mock_routes(tmp_path: Path) -> None:
+    settings = Settings(
+        _env_file=None,
+        demo_mode=True,
+        mock_llm_mode=True,
+        qdrant_mode="memory",
+        embedding_provider="hashing",
+        llm_cache_dir=tmp_path / "cache",
+    )
+    status = build_services(settings).provider_health()
+
+    assert status["primary_provider"] == "mock"
+    assert status["fallback_order"] == ["mock"]
+    assert {route["provider"] for route in status["routes"].values()} == {"mock"}
+    assert status["live_provider_calls_enabled"] is False
+
+
 def test_readiness_requires_reachable_qdrant() -> None:
     class OfflineClient:
         def get_collections(self) -> None:

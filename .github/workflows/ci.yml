@@ -18,6 +18,7 @@ jobs:
           cache: pip
       - run: sh scripts/install-cpu-deps.sh
       - run: ruff check src tests
+      - run: ruff format --check src tests
       - run: python -m pytest
       - run: make demo
         env:

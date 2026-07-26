@@ -16,10 +16,14 @@ def evaluate_triage(
     eval_path: Path = Path("data/eval/eval_set.csv"),
     services: ApplicationServices | None = None,
 ) -> dict[str, Any]:
-    settings = get_settings()
-    services = services or build_services(settings)
+    if services is None:
+        settings = get_settings()
+        services = build_services(settings)
+    else:
+        settings = services.settings
     if services.bootstrap_status.get("status") == "pending":
         services.bootstrap_demo()
+    dataset_info = services.dataset_info()
     frame = pd.read_csv(eval_path)
     expected_intents: list[str] = []
     predicted_intents: list[str] = []
@@ -78,6 +82,15 @@ def evaluate_triage(
             "name": "Banking77-derived deterministic evaluation fixture",
             "path": str(eval_path),
             "sample_size": sample_size,
+            "retrieval_corpus_size": int(dataset_info.get("records", 0)),
+            "fixture_revision": dataset_info.get("revision"),
+        },
+        "execution": {
+            "embedding_provider": settings.embedding_provider,
+            "embedding_model": settings.embedding_model,
+            "provider_names": services.provider_names,
+            "qdrant_mode": settings.qdrant_mode,
+            "cache_enabled": settings.llm_cache_enabled,
         },
         "classification": {
             "intent": intent,
@@ -174,6 +187,8 @@ def _summary(metrics: dict[str, Any]) -> str:
         or "- None."
     )
     recommendations = "\n".join(f"- {item}" for item in metrics["recommendations"])
+    embedding_provider = metrics["execution"]["embedding_provider"]
+    embedding_model = metrics["execution"]["embedding_model"]
     return f"""# Deterministic Evaluation Summary
 
 Generated: {metrics["generated_at"]}
@@ -181,6 +196,8 @@ Command: `{metrics["command"]}`
 Mode: `{metrics["evaluation_mode"]}`
 Dataset: {metrics["dataset"]["name"]}
 Sample size: {metrics["dataset"]["sample_size"]}
+Retrieval corpus: {metrics["dataset"]["retrieval_corpus_size"]} records
+Embeddings: `{embedding_provider}` / `{embedding_model}`
 
 | Metric | Measured result |
 | --- | ---: |
@@ -192,7 +209,7 @@ Sample size: {metrics["dataset"]["sample_size"]}
 | MRR | {metrics["retrieval_mrr"]:.3f} |
 | nDCG@{metrics["top_k"]} | {metrics["retrieval_ndcg_at_k"]:.3f} |
 | Zero-result rate | {percent(metrics["retrieval_zero_result_rate"])} |
-| Grounded response rate | {percent(metrics["groundedness_pass_rate"])} |
+| Mock grounding-verifier pass rate | {percent(metrics["groundedness_pass_rate"])} |
 | Unsupported-claim rate | {percent(metrics["unsupported_claim_rate"])} |
 | Workflow success rate | {percent(metrics["workflow_success_rate"])} |
 | Fallback rate | {percent(metrics["provider_fallback_rate"])} |
@@ -211,7 +228,8 @@ Sample size: {metrics["dataset"]["sample_size"]}
 ## Method and limitations
 
 - Retrieval relevance is defined by the expected mapped intent label.
-- Generation and grounding use the deterministic mock provider; no external API is called.
+- Generation and grounding use the deterministic mock provider plus graph evidence guards;
+  no external API is called.
 - The small fixture is intended for reproducibility and regression detection, not an SLA.
 """
 

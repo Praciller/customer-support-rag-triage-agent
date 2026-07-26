@@ -35,10 +35,14 @@ Upload the repository to a Docker Space and select free CPU hardware. No secret 
 demo mode. A deployment is only considered verified after the live UI loads, `/ready` returns 200,
 and a live deterministic triage request returns seven trace nodes.
 
-Verified June 21, 2026: the public free-CPU Space loaded the UI, reported API connectivity, returned
-3 retrieval matches, produced an 86% grounding result, completed all 7 trace nodes, and ended with
-no browser application errors. This is a single-ticket smoke result, separate from the deterministic
-evaluation report.
+Verified July 19, 2026: `/ready` returned 200 and the public free-CPU Space returned 3 retrieval
+matches, a passing mock grounding check, `ask_for_order_id`, and all 7 trace nodes. Playwright found
+no browser warnings or errors. This is a single-ticket deployment smoke result, separate from the
+deterministic evaluation report.
+
+The deployed Evaluation view still served the earlier June 21 artifact during that check. The
+repository's July 19 artifact contains corrected Recall@5 and nDCG@5 calculations. The Space is not
+claimed current until an explicitly approved manual synchronization and repeat smoke test occur.
 
 ### GitHub and Space synchronization
 

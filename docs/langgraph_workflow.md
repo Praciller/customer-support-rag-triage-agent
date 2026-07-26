@@ -10,5 +10,13 @@ The compiled `StateGraph` executes:
 6. `grounding_check`
 7. `suggest_next_action`
 
-Each node appends a status, detail, and duration to the returned trace. The response includes
-provider/model metadata, cache state, degraded mode, unsupported claims, and a human next action.
+Each successful node appends bounded input/output summaries, status, duration, component, and
+task-specific metadata to the returned trace. Model-backed nodes add provider, model, cache,
+fallback, and degraded flags. Retrieval records its evidence count; grounding records its result.
+
+Empty retrieval or degraded generation cannot finish as grounded, and an ungrounded result routes to
+`manual_review`. Unexpected node exceptions are sanitized at the FastAPI boundary and do not create
+a false completed trace step.
+
+See [architecture.md](architecture.md#seven-node-implementation-contract) for the authoritative
+per-node input, output, failure, and trace contract.

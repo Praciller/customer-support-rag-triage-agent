@@ -1,33 +1,30 @@
 # Customer Support RAG Triage Agent
 
-[![CI](https://github.com/Praciller/customer-support-rag-triage-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Praciller/customer-support-rag-triage-agent/actions/workflows/ci.yml)
-![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB)
-![React 19](https://img.shields.io/badge/React-19-149ECA)
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
-![Demo cost](https://img.shields.io/badge/demo%20cost-%240-26735F)
+A typed, inspectable RAG triage workflow that retrieves support evidence, drafts a response, checks grounding, and recommends a human action.
 
 **[Open the live zero-key demo](https://pracill-customer-support-rag-triage-agent.hf.space/)**
 
-A local-first support operations system that classifies incoming tickets, detects urgency,
-retrieves related public examples, drafts a grounded response, verifies the draft, recommends a
-human action, and exposes every LangGraph node in an inspectable trace. The default demo requires
-no API keys and makes no external LLM calls.
-
 ![Ticket triage result](docs/screenshots/triage-result.png)
 
-## Why this is not a generic chatbot
+## Evidence-backed outcomes
 
-The application executes a fixed, typed seven-stage workflow. It returns evidence, confidence,
-grounding status, provider/cache/fallback metadata, and a human-review action instead of running
-an open-ended autonomous conversation.
+- Runs a fixed seven-node LangGraph workflow with typed state and an inspectable per-node trace.
+- Retrieves bounded Banking77-derived evidence from Qdrant with local BGE embeddings and stable, idempotent fixture IDs.
+- Exposes provider, model, cache, fallback, degraded-mode, retrieval, grounding, and human-action metadata.
+- Ships a zero-key deterministic review path plus a checked-in 8-ticket regression artifact. The fixture is evidence of reproducibility, not real-world model quality.
+
+[![CI](https://github.com/Praciller/customer-support-rag-triage-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Praciller/customer-support-rag-triage-agent/actions/workflows/ci.yml)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Zero-key demo](https://img.shields.io/badge/demo-zero--key-26735F)
 
 ## 30-second reviewer path
 
-1. Open the [live demo](https://pracill-customer-support-rag-triage-agent.hf.space/) and choose an example ticket.
-2. Run triage and inspect the retrieved cases plus all seven trace nodes.
-3. Open Evaluation to review the checked-in deterministic artifact.
-4. Review [architecture](docs/architecture.md), [evaluation](docs/evaluation.md), and
-   [security](docs/security.md).
+1. Open the [live demo](https://pracill-customer-support-rag-triage-agent.hf.space/) and run **Card not arrived**.
+2. Read the decision, three retrieved cases, grounding state, and recommended human action.
+3. Scan the complete 7/7 trace, then open Evaluation for the small deterministic fixture.
+4. Review [architecture](docs/architecture.md), [evaluation methodology](docs/evaluation.md), and [security boundaries](docs/security.md).
+
+This is a reviewable support decision workflow, not a generic chatbot or an autonomous customer-support replacement.
 
 ## Architecture
 
@@ -40,11 +37,10 @@ flowchart LR
   G --> C[SQLite response cache]
   G --> R[Provider router]
   R --> M[Deterministic mock]
-  R -. optional .-> P[Gemini / Groq / Cerebras]
+  R -. opt-in .-> P[Gemini / Groq / Cerebras]
 ```
 
-The public demo bootstraps 27 bounded Banking77-derived records into Qdrant idempotently. Provider
-credentials remain backend-only and are optional. See [docs/architecture.md](docs/architecture.md).
+The public demo bootstraps 27 bounded Banking77-derived records into Qdrant without duplicating existing stable IDs. Provider credentials remain backend-only and external providers are opt-in. See [the architecture contract](docs/architecture.md).
 
 ## Workflow stages
 
@@ -56,56 +52,42 @@ credentials remain backend-only and are optional. See [docs/architecture.md](doc
 6. `grounding_check`
 7. `suggest_next_action`
 
-Each trace step includes status, duration, bounded input/output summaries, component,
-provider/model where applicable, cache/fallback/degraded flags, retrieval count, and grounding
-result.
+Each successful node records duration, bounded input/output summaries, component, provider/model when applicable, cache/fallback/degraded flags, retrieval count, and grounding result. Empty retrieval or degraded generation cannot produce a grounded final result.
 
 ![Seven-node workflow trace](docs/screenshots/workflow-trace.png)
 
-## Measured deterministic evaluation
+## Deterministic evaluation
 
-Generated on June 21, 2026 with local `BAAI/bge-small-en-v1.5` FastEmbed embeddings, the mock
-provider, 27 indexed demo records, and 8 labeled evaluation tickets.
+Generated on July 19, 2026 with local `BAAI/bge-small-en-v1.5` FastEmbed embeddings, the mock provider, 27 indexed demo records, and 8 labeled evaluation tickets.
 
 | Metric | Result |
 | --- | ---: |
 | Intent accuracy / macro F1 | 100.0% / 100.0% |
 | Urgency accuracy | 100.0% |
-| Precision@5 / Recall@5 | 37.5% / 100.0% |
-| MRR / nDCG@5 | 0.771 / 0.814 |
+| Precision@5 / Recall@5 | 37.5% / 62.5% |
+| MRR / nDCG@5 | 0.771 / 0.611 |
 | Zero-result rate | 0.0% |
-| Grounded response rate | 100.0% |
-| Unsupported-claim rate | 0.0% |
+| Mock grounding-verifier pass rate | 100.0% |
+| Unsupported-claim flag rate | 0.0% |
 | Workflow success rate | 100.0% |
-| P50 / P95 latency | 11.0 ms / 40.2 ms |
+| P50 / P95 local latency | 16.2 ms / 28.8 ms |
 
-These are regression results for a small deterministic fixture, not production quality or latency
-claims. See [the full artifact](reports/evaluation/summary.md) and
-[methodology](docs/evaluation.md).
+Recall and nDCG use the three known relevant fixture records per intent. These are deterministic regression results from a deliberately small, rules-aligned fixture. They are not production latency, policy correctness, semantic-entailment, or universal model-quality claims. See the [generated summary](reports/evaluation/summary.md) and [methodology](docs/evaluation.md).
 
-## Verified public smoke test
+### Public deployment smoke evidence
 
-On June 21, 2026, the public deterministic mock demo returned 3 retrieval matches, an 86%
-grounding result, and a complete 7/7 LangGraph trace for the card-delivery ticket. The final
-browser check found no application console errors. This single-ticket smoke result is deployment
-evidence; it does not replace the evaluation metrics above.
+Verified July 19, 2026: `/ready` returned 200 and one live mock triage returned 3 retrieved cases, 7/7 completed trace nodes, a passing mock grounding check, and `ask_for_order_id`. Playwright found no browser warnings or errors. The deployed Evaluation view still serves an earlier June 21 artifact; the checked-in July 19 artifact above is the current local regression evidence. No redeploy was performed in this task.
 
 ![Evaluation dashboard](docs/screenshots/evaluation.png)
 
-## Tech stack
+## Local quickstart
 
-- Python 3.12, FastAPI, Pydantic, LangGraph
-- Qdrant and local `BAAI/bge-small-en-v1.5` embeddings via FastEmbed
-- SQLite cache; optional Gemini, Groq, and Cerebras routing
-- React 19, Vite, TypeScript, Tailwind CSS
-- Pytest, Vitest, Ruff, ESLint, Docker Compose, GitHub Actions
-
-## Local quick start
+The primary review path uses deterministic mock generation and requires no provider key.
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 Copy-Item .env.example .env
 uvicorn src.api.main:app --reload --port 8000
 ```
@@ -118,102 +100,82 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:5173`. The Vite development proxy targets `http://localhost:8000`.
+Open `http://localhost:5173`. The first FastEmbed run downloads the public BGE ONNX model. If a stale Hugging Face login interferes with that public download, run the command without an implicit token or use the hashing-based CI command below for a network-free workflow check.
 
-## Docker quick start
+### Docker alternative
 
 ```powershell
 docker compose up --build
 ```
-
-No `.env` file is required for the deterministic demo. Services:
 
 - Console: `http://localhost:5173`
 - API docs: `http://localhost:8000/docs`
 - Readiness: `http://localhost:8000/ready`
 - Qdrant: `http://localhost:6333/dashboard`
 
-## Demo mode
+## Testing and verification
 
-The default contract is `DEMO_MODE=true`, `MOCK_LLM_MODE=true`,
-`BOOTSTRAP_DEMO_DATA=true`, and `ALLOW_PUBLIC_INGEST=false`. Startup indexes only missing fixture
-records, so restarts do not duplicate data. See [docs/demo_mode.md](docs/demo_mode.md).
+```powershell
+.venv\Scripts\ruff.exe check src tests
+.venv\Scripts\ruff.exe format --check src tests
+.venv\Scripts\python.exe -m pytest
 
-## Commands
+cd frontend
+npm run lint
+npm test
+npm run build
+```
 
-| Command | Purpose |
-| --- | --- |
-| `make setup` | Install Python dependencies |
-| `make lint` | Run Ruff lint and formatting checks |
-| `make format` | Apply Ruff fixes and formatting |
-| `make test` | Run the backend test suite |
-| `make eval` | Run deterministic offline evaluation and write reports |
-| `make demo` | Run the offline evaluation demo and print API examples |
-| `make api` | Start the local FastAPI service |
-| `make clean` | Remove generated local caches, indexes, and build output |
+Reproduce the checked-in FastEmbed evaluation from the repository root:
 
-## API examples
+```powershell
+$env:DEMO_MODE="true"
+$env:MOCK_LLM_MODE="true"
+$env:QDRANT_MODE="memory"
+$env:EMBEDDING_PROVIDER="fastembed"
+$env:LLM_CACHE_ENABLED="false"
+.venv\Scripts\python.exe -m src.evaluation.evaluate_triage
+```
+
+CI uses deterministic hashing embeddings to avoid model downloads while exercising the same graph, API, fixture, evaluation, and artifact-generation contracts.
+
+## API review points
 
 ```powershell
 curl.exe http://localhost:8000/health
+curl.exe http://localhost:8000/ready
 curl.exe -X POST http://localhost:8000/triage -H "Content-Type: application/json" -d '{"message":"My card has not arrived","top_k":5}'
-curl.exe -X POST http://localhost:8000/answer -H "Content-Type: application/json" -d '{"message":"I need a refund","top_k":5}'
-curl.exe -X POST http://localhost:8000/evaluate
-curl.exe http://localhost:8000/metrics/sample
+curl.exe -X POST http://localhost:8000/search-similar -H "Content-Type: application/json" -d '{"message":"I need a refund","top_k":5}'
+curl.exe http://localhost:8000/eval/results
 ```
 
-`/answer` reuses the grounded triage workflow. `/evaluate` and `/metrics/sample` return the latest
-offline evaluation artifact; run `make eval` to refresh it without external provider calls.
+`/provider-health` reports the active mock routes in demo mode. External Gemini, Groq, and Cerebras routes remain configurable and opt-in; provider catalogs and quotas can change.
 
-## Optional real-provider mode
+## Security and limitations
 
-Set `DEMO_MODE=false`, `MOCK_LLM_MODE=false`, configure provider keys only in `.env`, and choose
-models through environment variables. Real-provider evaluation is intentionally excluded from CI.
-Provider catalogs and free quotas can change; verify configured model IDs before use.
-
-## Data source and license
-
-The bounded fixture derives from [mteb/banking77](https://huggingface.co/datasets/mteb/banking77),
-a mirror of PolyAI Banking77. The fixture records CC BY 4.0, upstream/source identifiers,
-`demo-fixture-v1`, normalization, intended use, and limitations. Banking77 contains intent-labeled
-questions, not real company policy or approved responses. See [docs/data_source.md](docs/data_source.md).
-
-Source code is licensed under [MIT](LICENSE). Banking77-derived data remains under CC BY 4.0;
-the dataset license is separate from the source-code license.
-
-## Security
-
-- Request schemas reject extra fields and bound message length, `top_k`, and ingestion batch size.
-- `/triage`, `/search-similar`, and `/ingest` use configurable in-memory rate limits.
+- Requests forbid extra fields and bound message length, `top_k`, confidence values, and ingestion batch size.
 - Public ingestion is disabled; non-local ingestion requires `X-Admin-API-Key`.
-- Provider status never returns keys; API failures return controlled messages without stack traces.
-- Generated responses require human review.
+- Provider keys stay server-side. Controlled errors omit stack traces, environment values, and local paths.
+- Retrieved records are untrusted precedent, not company policy. The mock grounding check validates evidence presence and workflow behavior, not semantic entailment.
+- Generated responses require human review. Prompt injection, policy authority, tenant isolation, distributed rate limiting, and sensitive-data retention require controls beyond this demo.
+- The in-memory limiter and local Qdrant/SQLite state are single-process constraints. Free CPU hosts may cold-start or exceed memory limits.
+- The public Space is manually synchronized and may lag this GitHub working tree.
 
-See [docs/security.md](docs/security.md).
-
-## Known limitations
-
-- The demo dataset is small and is not authoritative company policy.
-- Mock accuracy reflects deterministic rules matched to the fixture, not general model quality.
-- The rate limiter and local Qdrant/SQLite state are per-process and unsuitable for horizontal scale.
-- Free CPU hosts may cold-start or exceed memory limits while loading the embedding model.
-- The public Space is a manually maintained Hugging Face Git repository, not an automatic GitHub
-  deployment; source changes require an explicit Space rebuild.
+See [security details](docs/security.md) and [deployment constraints](docs/deployment.md).
 
 ## Documentation
 
-- [Architecture](docs/architecture.md)
-- [Demo mode](docs/demo_mode.md)
+- [Architecture and node contracts](docs/architecture.md)
+- [Deterministic demo mode](docs/demo_mode.md)
 - [Model routing](docs/model_routing.md)
-- [Data source](docs/data_source.md)
-- [Evaluation](docs/evaluation.md)
+- [Data source and license](docs/data_source.md)
+- [Evaluation methodology](docs/evaluation.md)
+- [Qdrant lifecycle](docs/qdrant.md)
 - [Deployment](docs/deployment.md)
 - [Security](docs/security.md)
-- [Runbook](docs/runbook.md)
+- [Operations runbook](docs/runbook.md)
 - [Portfolio review](PORTFOLIO_REVIEW.md)
 
 ## Resume bullet
 
-Built a key-free, retrieval-grounded support triage system using typed LangGraph orchestration,
-Qdrant and local BGE embeddings, deterministic offline evaluation, protected FastAPI endpoints,
-provider fallback/cache controls, React workflow observability, Docker, and CI.
+Built a zero-key, retrieval-grounded support triage workflow with typed LangGraph orchestration, Qdrant and local BGE embeddings, deterministic evaluation, provider fallback/cache controls, protected FastAPI endpoints, and a React evidence-and-trace console.

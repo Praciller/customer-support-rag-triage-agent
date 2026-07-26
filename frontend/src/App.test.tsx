@@ -6,6 +6,7 @@ import { api } from "./api";
 
 vi.mock("./api", () => ({
   api: {
+    health: vi.fn(),
     triage: vi.fn(),
     search: vi.fn(),
     evaluation: vi.fn(),
@@ -14,7 +15,10 @@ vi.mock("./api", () => ({
   },
 }));
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(api.health).mockResolvedValue({ status: "ok" });
+});
 
 describe("App", () => {
   it("renders the support triage workspace", () => {
@@ -34,6 +38,23 @@ describe("App", () => {
     expect(screen.getByLabelText(/customer message/i)).toHaveValue(
       "A cash withdrawal was made from my account, but I did not make it. This is urgent.",
     );
+  });
+
+  it("shows an unavailable API state when the health check fails", async () => {
+    vi.mocked(api.health).mockRejectedValue(new Error("offline"));
+
+    render(<App />);
+
+    expect(await screen.findByText(/api unavailable/i)).toBeInTheDocument();
+  });
+
+  it("gives semantic search controls accessible names", () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: /semantic search/i }));
+
+    expect(screen.getByRole("textbox", { name: /search support tickets/i })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /intent filter/i })).toBeInTheDocument();
   });
 
   it("renders a complete triage decision and seven-node trace", async () => {
@@ -106,6 +127,7 @@ describe("App", () => {
   it("renders measured evaluation methodology and per-class results", async () => {
     vi.mocked(api.evaluation).mockResolvedValue({
       evaluation_mode: "deterministic_mock",
+      top_k: 5,
       retrieval_precision_at_k: 0.8,
       retrieval_recall_at_k: 1,
       retrieval_mrr: 0.9,

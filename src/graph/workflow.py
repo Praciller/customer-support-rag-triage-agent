@@ -107,7 +107,7 @@ class TriageWorkflow:
         intent = payload.get("intent", "other")
         if intent not in INTENTS:
             intent = "other"
-        confidence = float(payload.get("confidence", 0))
+        confidence = self._unit_interval(payload.get("confidence", 0))
         return {
             "intent": intent,
             "intent_confidence": confidence,
@@ -218,25 +218,35 @@ class TriageWorkflow:
             context=context,
         )
         payload = self._json(response.text)
-        score = float(payload.get("grounding_score", 0))
+        score = self._unit_interval(payload.get("grounding_score", 0))
+        confidence = self._unit_interval(payload.get("confidence", score))
+        has_evidence = bool(state["retrieved_cases"])
+        degraded = state.get("degraded_mode", False) or response.degraded_mode
+        grounded = bool(payload.get("grounded", False)) and has_evidence and not degraded
+        unsupported_claims = list(payload.get("unsupported_claims") or [])
+        if not has_evidence and "No retrieved cases were available." not in unsupported_claims:
+            unsupported_claims.append("No retrieved cases were available.")
+        if degraded and "Generation used a degraded provider fallback." not in unsupported_claims:
+            unsupported_claims.append("Generation used a degraded provider fallback.")
+        if not grounded:
+            score = min(score, 0.25)
+            confidence = min(confidence, 0.4)
         return {
-            "grounded": bool(payload.get("grounded", False)),
+            "grounded": grounded,
             "grounding_score": score,
-            "unsupported_claims": list(payload.get("unsupported_claims") or []),
-            "confidence": float(payload.get("confidence", score)),
-            "degraded_mode": state.get("degraded_mode", False) or response.degraded_mode,
+            "unsupported_claims": unsupported_claims,
+            "confidence": confidence,
+            "degraded_mode": degraded,
             "fallback_used": state.get("fallback_used", False) or response.fallback_used,
             "trace": self._trace(
                 state,
                 "grounding_check",
                 started,
                 input_summary=f"draft_length={len(state['suggested_response'])}",
-                output_summary=(
-                    f"grounded={bool(payload.get('grounded', False))}; score={score:.2f}"
-                ),
+                output_summary=(f"grounded={grounded}; score={score:.2f}"),
                 component="llm_router",
                 response=response,
-                grounding_result=bool(payload.get("grounded", False)),
+                grounding_result=grounded,
             ),
         }
 
@@ -248,8 +258,7 @@ class TriageWorkflow:
         elif state["intent"] == "delivery_issue" and "order id" not in message:
             action = "ask_for_order_id"
         elif state["urgency"] == "critical" or (
-            state.get("escalate")
-            and state["intent"] in {"complaint", "refund_request"}
+            state.get("escalate") and state["intent"] in {"complaint", "refund_request"}
         ):
             action = "escalate_to_human"
         elif state["intent"] in {"technical_issue", "account_access", "other"}:
@@ -294,6 +303,14 @@ class TriageWorkflow:
             return json.loads(candidate)
         except json.JSONDecodeError:
             return {}
+
+    @staticmethod
+    def _unit_interval(value: Any, default: float = 0.0) -> float:
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            numeric = default
+        return min(1.0, max(0.0, numeric))
 
     @staticmethod
     def _prompt(name: str, **values: str) -> str:

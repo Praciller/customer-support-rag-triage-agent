@@ -77,6 +77,15 @@ export default function App() {
   const [result, setResult] = useState<TriageResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [apiStatus, setApiStatus] = useState<"checking" | "connected" | "unavailable">(
+    "checking",
+  );
+
+  useEffect(() => {
+    api.health()
+      .then(() => setApiStatus("connected"))
+      .catch(() => setApiStatus("unavailable"));
+  }, []);
 
   async function runTriage() {
     if (!message.trim()) return;
@@ -100,6 +109,7 @@ export default function App() {
         <nav aria-label="Main navigation">
           {nav.map((item) => (
             <button
+              aria-current={view === item.id ? "page" : undefined}
               className={view === item.id ? "active" : ""}
               key={item.id}
               onClick={() => setView(item.id)}
@@ -120,7 +130,14 @@ export default function App() {
             <p className="breadcrumb">Workspace <ChevronRight size={13} /> {nav.find((x) => x.id === view)?.label}</p>
             <h1>{nav.find((x) => x.id === view)?.label}</h1>
           </div>
-          <Badge tone="success"><Activity size={13} /> API connected</Badge>
+          <Badge tone={apiStatus === "connected" ? "success" : apiStatus === "unavailable" ? "danger" : "neutral"}>
+            <Activity size={13} />
+            {apiStatus === "connected"
+              ? "API connected"
+              : apiStatus === "unavailable"
+                ? "API unavailable"
+                : "Checking API"}
+          </Badge>
         </header>
         {view === "overview" && <OverviewView setView={setView} />}
         {view === "triage" && (
@@ -273,20 +290,33 @@ function SearchView() {
   const [topK, setTopK] = useState(5);
   const [cases, setCases] = useState<SimilarCase[]>([]);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   async function search() {
+    if (!query.trim()) return;
+    setLoading(true);
     setError("");
     try {
       setCases(await api.search(query, topK, intent));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Search failed.");
+    } finally {
+      setLoading(false);
     }
   }
   return (
     <section className="panel page-panel">
       <div className="section-title"><div><p>Vector retrieval</p><h2>Search indexed support tickets</h2></div></div>
       <div className="search-row">
-        <input value={query} onChange={(event) => setQuery(event.target.value)} />
-        <select value={intent} onChange={(event) => setIntent(event.target.value)}>
+        <input
+          aria-label="Search support tickets"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        <select
+          aria-label="Intent filter"
+          value={intent}
+          onChange={(event) => setIntent(event.target.value)}
+        >
           <option value="">All intents</option>
           {["delivery_issue", "refund_request", "billing_issue", "technical_issue", "account_access", "product_question", "complaint", "cancellation", "other"].map((value) => <option key={value}>{value}</option>)}
         </select>
@@ -299,7 +329,9 @@ function SearchView() {
             <option key={value} value={value}>Top {value}</option>
           ))}
         </select>
-        <button className="primary" onClick={search}><Search size={16} />Search</button>
+        <button className="primary" onClick={search} disabled={loading || !query.trim()}>
+          <Search size={16} />{loading ? "Searching..." : "Search"}
+        </button>
       </div>
       {error && <ErrorNotice message={error} />}
       <CaseList cases={cases} />
@@ -345,11 +377,12 @@ function EvaluationView() {
         <Badge tone="success">No external LLM calls</Badge>
       </section>
       <div className="metric-grid">
-        <MetricCard label="Precision@K" value={percent(metrics.retrieval_precision_at_k)} detail="Relevant cases retrieved" />
+        <MetricCard label={`Precision@${metrics.top_k ?? "K"}`} value={percent(metrics.retrieval_precision_at_k)} detail="Relevant cases in returned results" />
+        <MetricCard label={`Recall@${metrics.top_k ?? "K"}`} value={percent(metrics.retrieval_recall_at_k)} detail="Known relevant fixture cases retrieved" />
         <MetricCard label="Intent accuracy" value={percent(metrics.intent_accuracy)} detail="Triage classification" />
         <MetricCard label="Intent macro F1" value={percent(metrics.intent_macro_f1)} detail="Balanced class quality" />
         <MetricCard label="Urgency accuracy" value={percent(metrics.urgency_accuracy)} detail="Escalation sensitivity" />
-        <MetricCard label="Groundedness" value={percent(metrics.groundedness_pass_rate)} detail="Drafts passing verifier" />
+        <MetricCard label="Mock grounding verifier" value={percent(metrics.groundedness_pass_rate)} detail="Evidence-present workflow check" />
         <MetricCard label="Workflow success" value={percent(metrics.workflow_success_rate)} detail="All seven nodes completed" />
         <MetricCard label="MRR" value={metrics.retrieval_mrr?.toFixed(3) ?? "--"} detail={`nDCG ${(metrics.retrieval_ndcg_at_k ?? 0).toFixed(3)}`} />
         <MetricCard label="Avg latency" value={metrics.average_latency_ms ? `${Math.round(metrics.average_latency_ms)} ms` : "--"} detail="End-to-end workflow" />

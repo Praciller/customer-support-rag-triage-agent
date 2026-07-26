@@ -31,6 +31,22 @@ next action, provider metadata, and append-only trace through seven fixed nodes.
 Every node returns bounded, non-secret trace metadata. Public responses exclude environment
 values, provider keys, raw prompts, filesystem paths, and stack traces.
 
+### Seven-node implementation contract
+
+| Node | Typed state consumed | Typed state produced | Degraded or error behavior | Trace evidence |
+| --- | --- | --- | --- | --- |
+| `normalize_message` | `message`, `top_k` | `normalized_message` | API validation rejects empty or over-limit input before the graph. Unexpected errors become a controlled API 500. | Input and normalized lengths; local component. |
+| `classify_intent` | `normalized_message` | `intent`, `intent_confidence` | Unknown labels become `other`; confidence is clamped to 0..1. Provider retry/fallback/degraded state remains visible on this node. | Intent, confidence, provider, model, cache/fallback/degraded flags. |
+| `detect_urgency` | `normalized_message`, `intent` | `urgency`, `escalate`, `escalation_reason` | Unknown urgency becomes `medium`. Provider retry/fallback/degraded state remains visible on this node. | Urgency, escalation flag, provider, model, cache/fallback/degraded flags. |
+| `retrieve_similar_cases` | `normalized_message`, `intent`, `top_k` | `retrieved_cases` | A missing collection returns no evidence. Retrieval service exceptions fail the request through the controlled API boundary. | Intent filter, requested K, returned count, Qdrant component. |
+| `generate_support_response` | Message, intent, urgency, retrieved cases | `suggested_response`, provider/cache/fallback/degraded metadata | Router exhaustion returns a manual-review-safe fallback and marks the result degraded. Retrieved case IDs are appended as internal evidence references. | Draft length, context count, provider/model and cache/fallback/degraded flags. |
+| `grounding_check` | Draft and retrieved cases | `grounded`, score, confidence, unsupported claims | Retrieved context is supplied to the verifier. Empty evidence or degraded generation deterministically forces `grounded=false`, caps score/confidence, and records an unsupported-claim reason. | Draft length, grounded result, score, provider/model and cache/fallback/degraded flags. |
+| `suggest_next_action` | Intent, urgency, escalation, grounding | `next_action` | Ungrounded output always becomes `manual_review`; other actions are selected by explicit rules. | Inputs used and selected action; rules component. |
+
+`TriageState` is a `TypedDict`, API requests and responses are Pydantic models, and the frontend
+mirrors the public trace and evidence schemas in TypeScript. A node that raises does not fabricate a
+completed trace step; FastAPI returns a sanitized error instead.
+
 ## Data lifecycle
 
 On startup, demo mode reads `data/demo/support_cases.json`, computes stable UUID5 point IDs,

@@ -15,6 +15,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  health: () => request<Record<string, unknown>>("/health"),
   triage: (message: string, topK: number) =>
     request<TriageResult>("/triage", {
       method: "POST",

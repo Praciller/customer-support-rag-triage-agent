@@ -8,6 +8,7 @@ export default defineConfig({
     proxy: {
       "/dataset-info": "http://localhost:8000",
       "/eval": "http://localhost:8000",
+      "/health": "http://localhost:8000",
       "/provider-health": "http://localhost:8000",
       "/search-similar": "http://localhost:8000",
       "/triage": "http://localhost:8000",

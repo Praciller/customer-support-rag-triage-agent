@@ -18,6 +18,8 @@ def evaluate_retrieval(
     if services.bootstrap_status.get("status") == "pending":
         services.bootstrap_demo()
     frame = pd.read_csv(eval_path)
+    dataset_info = services.dataset_info()
+    relevant_totals = dataset_info.get("intents", {})
     examples: list[dict[str, Any]] = []
 
     for row in frame.to_dict(orient="records"):
@@ -30,6 +32,7 @@ def evaluate_retrieval(
             top_k=top_k,
             scores=[float(item["score"]) for item in results],
             latency_ms=latency_ms,
+            relevant_total=int(relevant_totals.get(str(row["intent"]), 0)) or None,
         )
         examples.append(
             {

@@ -79,8 +79,7 @@ class MockProvider:
         elif any(term in text for term in high_terms):
             urgency = "high"
         elif any(
-            term in text
-            for term in ("not arrived", "not working", "late", "problem", "issue")
+            term in text for term in ("not arrived", "not working", "late", "problem", "issue")
         ):
             urgency = "medium"
         else:
