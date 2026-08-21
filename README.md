@@ -12,6 +12,7 @@ A typed, inspectable RAG triage workflow that retrieves support evidence, drafts
 - Retrieves bounded Banking77-derived evidence from Qdrant with local BGE embeddings and stable, idempotent fixture IDs.
 - Exposes inference mode, cache, fallback, degraded-mode, retrieval, grounding, and human-action metadata.
 - Ships a zero-key deterministic review path plus a checked-in 8-ticket regression artifact. The fixture demonstrates reproducibility, not real-world model quality.
+- Preserves an optional generic external GenAI route without coupling the public repository to a specific inference vendor.
 
 [![CI](https://github.com/Praciller/customer-support-rag-triage-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Praciller/customer-support-rag-triage-agent/actions/workflows/ci.yml)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
@@ -35,11 +36,12 @@ flowchart LR
   G --> Q[Qdrant]
   Q --> E[Local BGE embeddings]
   G --> C[SQLite response cache]
-  G --> R[Local inference router]
-  R --> M[Deterministic generator]
+  G --> R[Inference router]
+  R --> M[Deterministic local generator]
+  R -. explicit opt-in .-> X[Generic external GenAI endpoint]
 ```
 
-The public demo bootstraps 27 bounded Banking77-derived records into Qdrant without duplicating stable IDs. Public inference is deterministic and requires no external model account or credential.
+The public demo bootstraps 27 bounded Banking77-derived records into Qdrant without duplicating stable IDs. Demo and mock modes are deterministic and require no external model account or credential. A generic server-side external GenAI endpoint remains available as an explicit non-demo route.
 
 ## Workflow stages
 
@@ -93,6 +95,20 @@ npm run dev
 
 Open `http://localhost:5173`. The first FastEmbed run downloads the public BGE ONNX model. CI can use hashing embeddings for a network-free workflow check.
 
+### Optional external GenAI route
+
+The default remains local/mock. To activate external GenAI outside demo mode, configure a server-side endpoint that accepts the neutral JSON contract documented in [`docs/model_routing.md`](docs/model_routing.md):
+
+```env
+DEMO_MODE=false
+MOCK_LLM_MODE=false
+EXTERNAL_LLM_URL=https://your-server-side-endpoint.example/v1/generate
+EXTERNAL_LLM_API_KEY=
+EXTERNAL_LLM_MODEL=general
+```
+
+The browser never receives the endpoint credential. If the external route fails, the existing router can fall back to the deterministic local provider and marks fallback/degraded state in workflow metadata.
+
 ### Docker alternative
 
 ```powershell
@@ -138,13 +154,14 @@ curl.exe -X POST http://localhost:8000/search-similar -H "Content-Type: applicat
 curl.exe http://localhost:8000/eval/results
 ```
 
-`/provider-health` reports the active local route, cache state, embeddings, vector store, and ingestion boundary. It does not perform external inference calls.
+`/provider-health` reports whether external inference is configured and active, along with cache, embedding, vector-store, and ingestion state. It never returns credentials or the configured external URL.
 
 ## Security and limitations
 
 - Requests forbid extra fields and bound message length, `top_k`, confidence values, and ingestion batch size.
 - Public ingestion is disabled; non-local ingestion requires `X-Admin-API-Key`.
-- Controlled errors omit stack traces, environment values, and local paths.
+- External inference credentials stay server-side and are only used when demo/mock modes are explicitly disabled.
+- Controlled errors omit stack traces, environment values, credentials, external endpoint URLs, and local paths.
 - Retrieved records are untrusted precedent, not company policy. The grounding check validates evidence presence and workflow behavior, not semantic entailment.
 - Draft responses require human review. Prompt injection, policy authority, tenant isolation, distributed rate limiting, and sensitive-data retention require controls beyond this demo.
 - The in-memory limiter and local Qdrant/SQLite state are single-process constraints. Free CPU hosts may cold-start or exceed memory limits.
@@ -164,4 +181,4 @@ curl.exe http://localhost:8000/eval/results
 
 ## Resume bullet
 
-Built a zero-key, retrieval-grounded support triage workflow with typed LangGraph orchestration, Qdrant and local BGE embeddings, deterministic evaluation, cache and fallback controls, protected FastAPI endpoints, and a React evidence-and-trace console.
+Built a retrieval-grounded support triage workflow with typed LangGraph orchestration, Qdrant and local BGE embeddings, deterministic evaluation, a vendor-neutral optional external GenAI adapter, cache/fallback controls, protected FastAPI endpoints, and a React evidence-and-trace console.
