@@ -121,9 +121,7 @@ class ApplicationServices:
     def provider_health(self) -> dict[str, Any]:
         external_configured = bool(self.settings.external_llm_url.strip())
         external_active = (
-            external_configured
-            and not self.settings.demo_mode
-            and not self.settings.mock_llm_mode
+            external_configured and not self.settings.demo_mode and not self.settings.mock_llm_mode
         )
         active_provider = "external" if external_active else "mock"
         routes = {
