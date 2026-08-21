@@ -1,24 +1,60 @@
 # Inference routing
 
-## Public route
+## Default deterministic route
 
-The public implementation uses one deterministic local route for all four inference-backed tasks:
+Demo mode and mock mode use one deterministic local route for all four inference-backed tasks:
 
-| Task | Route | Model label |
+| Task | Default route | Model label |
 | --- | --- | --- |
 | Intent classification | local | `deterministic-small` |
 | Urgency detection | local | `deterministic-small` |
 | Response generation | local | `deterministic-small` |
 | Grounding check | local | `deterministic-small` |
 
-No external model account, API key, or network inference call is required. The deterministic generator returns bounded JSON outputs suitable for tests, CI, screenshots, regression fixtures, and the public demo.
+No external model account, API key, or network inference call is required for tests, CI, screenshots, regression fixtures, or the public demo.
 
-## Cache and fallback behavior
+## Generic external GenAI route
 
-The router retains the same cache and fallback contracts used by the workflow. Route/model/task, prompt, context, temperature, and token limit are hashed into the SQLite cache key. A failed local generation can return the existing safe manual-review response with `fallback_used=true` and `degraded_mode=true`.
+The repository also preserves a vendor-neutral external GenAI adapter. It becomes active only when all three conditions are true:
 
-`/provider-health` exposes only operational metadata for the active local route, cache state, embeddings, vector store, and ingestion boundary. It does not expose credentials because the public inference path does not require any.
+- `DEMO_MODE=false`
+- `MOCK_LLM_MODE=false`
+- `EXTERNAL_LLM_URL` is non-empty
+
+Optional server-side settings are `EXTERNAL_LLM_API_KEY` and `EXTERNAL_LLM_MODEL`. The endpoint credential is never returned to the browser or by `/provider-health`.
+
+The configured endpoint receives an HTTP `POST` JSON body with this neutral contract:
+
+```json
+{
+  "task": "generate_response",
+  "prompt": "bounded task prompt",
+  "context": "retrieved evidence",
+  "model": "general",
+  "temperature": 0.2,
+  "max_output_tokens": 512
+}
+```
+
+It must return a JSON object containing a non-empty `text` field and may return a `model` field:
+
+```json
+{
+  "text": "generated result",
+  "model": "remote-model-label"
+}
+```
+
+If `EXTERNAL_LLM_API_KEY` is set, the adapter sends it as a server-side bearer token. The public repository does not prescribe which inference service implements this endpoint.
+
+## Cache, retry, and fallback behavior
+
+Route/model/task, prompt, context, temperature, and token limit are hashed into the SQLite cache key. The existing retry and exponential-backoff settings apply to external calls. When external inference is active, the route order is `external` then deterministic `mock`; exhaustion can still return the safe manual-review response with `fallback_used=true` and `degraded_mode=true`.
+
+When demo/mock mode is active, the route order is local-only, so configuration of an external endpoint cannot accidentally make the public demo perform a network inference call.
+
+`/provider-health` exposes whether external inference is configured and active, plus operational cache, embedding, vector-store, and ingestion metadata. It does not expose the endpoint URL or credential.
 
 ## Evaluation boundary
 
-The deterministic route is intended for reproducible portfolio evaluation. Its checked-in metrics demonstrate workflow and retrieval behavior on a small rules-aligned fixture; they are not evidence of production language-model quality or policy correctness.
+The checked-in metrics use the deterministic route. They demonstrate workflow and retrieval behavior on a small rules-aligned fixture; they are not evidence of production language-model quality or policy correctness. External GenAI behavior requires a separate controlled evaluation before any production claim.
