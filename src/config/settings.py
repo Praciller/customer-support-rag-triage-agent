@@ -63,6 +63,9 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.2
     llm_max_output_tokens: int = 512
     mock_llm_mode: bool = True
+    external_llm_url: str = ""
+    external_llm_api_key: str = ""
+    external_llm_model: str = "general"
 
     llm_cache_enabled: bool = True
     llm_cache_backend: str = "sqlite"
