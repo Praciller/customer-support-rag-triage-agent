@@ -7,9 +7,10 @@ flowchart TB
   Browser[React operations console] -->|JSON/HTTP| API[FastAPI]
   API --> Services[ApplicationServices]
   Services --> Graph[Compiled LangGraph StateGraph]
-  Graph --> Router[Local inference router]
+  Graph --> Router[Inference router]
   Router --> Cache[(SQLite TTL cache)]
-  Router --> Local[Deterministic generator]
+  Router --> Local[Deterministic local generator]
+  Router -. explicit opt-in .-> External[Generic external GenAI endpoint]
   Graph --> Retriever[QdrantRetriever]
   Retriever --> Embedder[Local BGE FastEmbed]
   Retriever --> Qdrant[(Qdrant collection)]
@@ -17,13 +18,13 @@ flowchart TB
   Reports[Evaluation JSON] --> API
 ```
 
-FastAPI owns trust-boundary validation, rate limits, ingestion authorization, controlled errors, liveness, and readiness. `ApplicationServices` constructs the local inference route, cache, retriever, and graph.
+FastAPI owns trust-boundary validation, rate limits, ingestion authorization, controlled errors, liveness, and readiness. `ApplicationServices` constructs the inference routes, cache, retriever, and graph. Demo/mock mode always selects the deterministic local route; external GenAI requires explicit non-demo configuration and remains server-side.
 
 ## Workflow contract
 
 `TriageState` carries the ticket, classification, urgency, retrieved cases, draft, grounding, next action, inference metadata, and append-only trace through seven fixed nodes. Prompts remain in `prompts/`; inference and retrieval implementations remain outside graph orchestration.
 
-Every node returns bounded, non-secret trace metadata. Public responses exclude environment values, raw prompts, filesystem paths, and stack traces.
+Every node returns bounded, non-secret trace metadata. Public responses exclude environment values, external endpoint URLs, credentials, raw prompts, filesystem paths, and stack traces.
 
 ### Seven-node implementation contract
 
@@ -39,6 +40,10 @@ Every node returns bounded, non-secret trace metadata. Public responses exclude 
 
 `TriageState` is a `TypedDict`, API requests and responses are Pydantic models, and the frontend mirrors the public trace and evidence schemas in TypeScript. A node that raises does not fabricate a completed trace step; FastAPI returns a sanitized error instead.
 
+## External inference boundary
+
+The external adapter accepts only the bounded task payload assembled by the backend. It does not receive browser credentials or direct control over retrieval, ingestion, next-action policy, or persistence. External output still passes through the existing schema/grounding workflow and human-review boundary. If the route fails, the router can fall back to deterministic local generation.
+
 ## Data lifecycle
 
 On startup, demo mode reads `data/demo/support_cases.json`, computes stable UUID5 point IDs, retrieves existing IDs, and embeds/uploads only missing records. Readiness becomes `ready` only when all fixture records exist. The full Banking77 dataset is never downloaded during demo startup or CI.
@@ -48,5 +53,6 @@ On startup, demo mode reads `data/demo/support_cases.json`, computes stable UUID
 - Docker Compose: React dev server, FastAPI, and Qdrant server.
 - CPU container deployment: built React assets served by FastAPI, embedded local Qdrant, SQLite cache, and FastEmbed on one application port.
 - Test/CI: in-memory Qdrant and deterministic hashing embeddings for bounded checks.
+- Optional external GenAI: a separately controlled server-side endpoint behind the neutral adapter; not used by the default demo or checked-in deterministic evaluation.
 
 Local embedded storage and the in-memory limiter are deliberate single-instance constraints. Move to managed persistence and shared rate limiting only when horizontal scale is required.
