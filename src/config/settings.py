@@ -57,33 +57,12 @@ class Settings(BaseSettings):
     retrieval_min_score: float = 0.35
     retrieval_max_context_chars: int = 4000
 
-    llm_provider_priority: str = "gemini,groq,cerebras"
-    llm_default_provider: str = "gemini"
     llm_timeout_seconds: float = 30
-    llm_max_retries: int = 1
-    llm_retry_backoff_seconds: float = 2
+    llm_max_retries: int = 0
+    llm_retry_backoff_seconds: float = 0
     llm_temperature: float = 0.2
     llm_max_output_tokens: int = 512
     mock_llm_mode: bool = True
-
-    gemini_api_key: str = ""
-    gemini_default_model: str = "gemini-3.1-flash-lite"
-    gemini_fallback_model: str = "gemini-3.5-flash"
-    groq_api_key: str = ""
-    groq_default_model: str = "openai/gpt-oss-20b"
-    groq_generation_fallback_model: str = "openai/gpt-oss-120b"
-    groq_quality_fallback_model: str = "openai/gpt-oss-120b"
-    cerebras_api_key: str = ""
-    cerebras_default_model: str = "gpt-oss-120b"
-
-    intent_model_provider: str = "groq"
-    intent_model_name: str = "openai/gpt-oss-20b"
-    urgency_model_provider: str = "groq"
-    urgency_model_name: str = "openai/gpt-oss-20b"
-    response_model_provider: str = "gemini"
-    response_model_name: str = "gemini-3.1-flash-lite"
-    grounding_model_provider: str = "gemini"
-    grounding_model_name: str = "gemini-3.1-flash-lite"
 
     llm_cache_enabled: bool = True
     llm_cache_backend: str = "sqlite"
@@ -106,10 +85,6 @@ class Settings(BaseSettings):
 
     eval_data_path: Path = Path("data/eval/eval_set.csv")
     eval_output_path: Path = Path("reports/evaluation/results.json")
-
-    @property
-    def provider_priority(self) -> list[str]:
-        return [item.strip() for item in self.llm_provider_priority.split(",") if item.strip()]
 
     @property
     def cache_path(self) -> Path:
