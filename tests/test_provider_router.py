@@ -23,14 +23,14 @@ class StubProvider:
 
 
 def test_router_retries_then_uses_next_provider(tmp_path: Path) -> None:
-    gemini = StubProvider("gemini", [TimeoutError("slow"), TimeoutError("slow")])
-    groq = StubProvider(
-        "groq",
-        [ProviderResponse(text='{"intent":"billing_issue"}', provider="groq", model="small")],
+    primary = StubProvider("primary", [TimeoutError("slow"), TimeoutError("slow")])
+    fallback = StubProvider(
+        "fallback",
+        [ProviderResponse(text='{"intent":"billing_issue"}', provider="fallback", model="small")],
     )
     router = ProviderRouter(
-        providers={"gemini": gemini, "groq": groq},
-        priority=["gemini", "groq"],
+        providers={"primary": primary, "fallback": fallback},
+        priority=["primary", "fallback"],
         cache=SQLiteLLMCache(tmp_path / "cache.sqlite3", ttl_seconds=60),
         max_retries=1,
         backoff_seconds=0,
@@ -38,42 +38,42 @@ def test_router_retries_then_uses_next_provider(tmp_path: Path) -> None:
 
     result = router.generate(
         LLMRequest(task="classify_intent", prompt="charged twice", model="small"),
-        preferred_provider="gemini",
+        preferred_provider="primary",
     )
 
-    assert result.provider == "groq"
+    assert result.provider == "fallback"
     assert result.degraded_mode is False
-    assert gemini.calls == 2
-    assert groq.calls == 1
+    assert primary.calls == 2
+    assert fallback.calls == 1
 
 
 def test_router_checks_cache_before_provider(tmp_path: Path) -> None:
-    gemini = StubProvider(
-        "gemini",
-        [ProviderResponse(text="first", provider="gemini", model="small")],
+    local = StubProvider(
+        "local",
+        [ProviderResponse(text="first", provider="local", model="small")],
     )
     router = ProviderRouter(
-        providers={"gemini": gemini},
-        priority=["gemini"],
+        providers={"local": local},
+        priority=["local"],
         cache=SQLiteLLMCache(tmp_path / "cache.sqlite3", ttl_seconds=60),
         max_retries=0,
         backoff_seconds=0,
     )
     request = LLMRequest(task="generate_response", prompt="hello", model="small")
 
-    first = router.generate(request, preferred_provider="gemini")
-    second = router.generate(request, preferred_provider="gemini")
+    first = router.generate(request, preferred_provider="local")
+    second = router.generate(request, preferred_provider="local")
 
     assert first.cached is False
     assert second.cached is True
-    assert gemini.calls == 1
+    assert local.calls == 1
 
 
 def test_router_returns_safe_fallback_when_all_providers_fail(tmp_path: Path) -> None:
-    gemini = StubProvider("gemini", [RuntimeError("offline")])
+    local = StubProvider("local", [RuntimeError("offline")])
     router = ProviderRouter(
-        providers={"gemini": gemini},
-        priority=["gemini"],
+        providers={"local": local},
+        priority=["local"],
         cache=SQLiteLLMCache(tmp_path / "cache.sqlite3", ttl_seconds=60),
         max_retries=0,
         backoff_seconds=0,
@@ -81,7 +81,7 @@ def test_router_returns_safe_fallback_when_all_providers_fail(tmp_path: Path) ->
 
     result = router.generate(
         LLMRequest(task="generate_response", prompt="hello", model="small"),
-        preferred_provider="gemini",
+        preferred_provider="local",
     )
 
     assert result.degraded_mode is True
@@ -90,20 +90,20 @@ def test_router_returns_safe_fallback_when_all_providers_fail(tmp_path: Path) ->
 
 
 def test_router_preserves_task_model_and_uses_task_specific_fallback(tmp_path: Path) -> None:
-    gemini = StubProvider("gemini", [RuntimeError("offline")])
-    groq = StubProvider(
-        "groq",
-        [ProviderResponse(text="ok", provider="groq", model="groq-generation")],
+    primary = StubProvider("primary", [RuntimeError("offline")])
+    fallback = StubProvider(
+        "fallback",
+        [ProviderResponse(text="ok", provider="fallback", model="fallback-generation")],
     )
     router = ProviderRouter(
-        providers={"gemini": gemini, "groq": groq},
-        priority=["gemini", "groq"],
+        providers={"primary": primary, "fallback": fallback},
+        priority=["primary", "fallback"],
         cache=SQLiteLLMCache(tmp_path / "cache.sqlite3", ttl_seconds=60),
         max_retries=0,
         backoff_seconds=0,
-        provider_models={"gemini": "gemini-default", "groq": "groq-default"},
+        provider_models={"primary": "primary-default", "fallback": "fallback-default"},
         task_provider_models={
-            "generate_response": {"groq": "groq-generation"},
+            "generate_response": {"fallback": "fallback-generation"},
         },
     )
 
@@ -111,11 +111,11 @@ def test_router_preserves_task_model_and_uses_task_specific_fallback(tmp_path: P
         LLMRequest(
             task="generate_response",
             prompt="draft",
-            model="gemini-task-model",
+            model="primary-task-model",
         ),
-        preferred_provider="gemini",
+        preferred_provider="primary",
     )
 
-    assert gemini.requests[0].model == "gemini-task-model"
-    assert groq.requests[0].model == "groq-generation"
-    assert result.model == "groq-generation"
+    assert primary.requests[0].model == "primary-task-model"
+    assert fallback.requests[0].model == "fallback-generation"
+    assert result.model == "fallback-generation"

@@ -14,7 +14,7 @@ class FakeServices:
         return {"name": "PolyAI/banking77", "records": 1000}
 
     def provider_health(self) -> dict:
-        return {"providers": ["gemini", "groq", "cerebras"], "cache_enabled": True}
+        return {"providers": ["mock"], "cache_enabled": True}
 
     def triage(self, message: str, top_k: int) -> dict:
         return {
@@ -32,7 +32,7 @@ class FakeServices:
             "confidence": 0.9,
             "next_action": "request_more_info",
             "provider_used": "mock",
-            "model_used": "mock-small",
+            "model_used": "deterministic-small",
             "cached": False,
             "fallback_used": False,
             "degraded_mode": False,

@@ -10,7 +10,7 @@ from src.data.clean_dataset import clean_record
 from src.data.load_dataset import load_records, write_raw_dataset
 from src.graph.workflow import TriageWorkflow
 from src.llm.cache import SQLiteLLMCache
-from src.llm.http_clients import GeminiProvider, OpenAICompatibleProvider
+from src.llm.external import ExternalProvider
 from src.llm.mock import MockProvider
 from src.llm.router import ProviderRouter
 from src.retrieval.retriever import (
@@ -119,42 +119,33 @@ class ApplicationServices:
         }
 
     def provider_health(self) -> dict[str, Any]:
-        configured_routes = {
-            "intent": {
-                "provider": self.settings.intent_model_provider,
-                "model": self.settings.intent_model_name,
-            },
-            "urgency": {
-                "provider": self.settings.urgency_model_provider,
-                "model": self.settings.urgency_model_name,
-            },
-            "response": {
-                "provider": self.settings.response_model_provider,
-                "model": self.settings.response_model_name,
-            },
-            "grounding": {
-                "provider": self.settings.grounding_model_provider,
-                "model": self.settings.grounding_model_name,
-            },
-        }
-        mock_mode = self.provider_names == ["mock"]
-        routes = (
-            {
-                task: {"provider": "mock", "model": "mock-small"}
-                for task in ("intent", "urgency", "response", "grounding")
-            }
-            if mock_mode
-            else configured_routes
+        external_configured = bool(self.settings.external_llm_url.strip())
+        external_active = (
+            external_configured and not self.settings.demo_mode and not self.settings.mock_llm_mode
         )
+        active_provider = "external" if external_active else "mock"
+        routes = {
+            task: {
+                "provider": active_provider,
+                "model": self.settings.external_llm_model
+                if external_active
+                else "deterministic-small",
+            }
+            for task in ("intent", "urgency", "response", "grounding")
+        }
+        fallback_order = [active_provider]
+        if external_active:
+            fallback_order.append("mock")
         return {
             "providers": self.provider_names,
-            "primary_provider": "mock" if mock_mode else self.settings.llm_default_provider,
-            "fallback_order": ["mock"] if mock_mode else self.settings.provider_priority,
+            "primary_provider": active_provider,
+            "fallback_order": fallback_order,
             "routes": routes,
             "cache_enabled": self.settings.llm_cache_enabled,
             "demo_mode": self.settings.demo_mode,
-            "mock_mode": mock_mode,
-            "live_provider_calls_enabled": not mock_mode,
+            "mock_mode": not external_active,
+            "external_inference_configured": external_configured,
+            "live_provider_calls_enabled": external_active,
             "embedding_model": self.settings.embedding_model,
             "embedding_provider": self.settings.embedding_provider,
             "qdrant_collection": self.settings.qdrant_collection,
@@ -219,72 +210,44 @@ def build_services(settings: Settings | None = None) -> ApplicationServices:
         embedder,
         min_score=settings.retrieval_min_score,
     )
-    use_mock = settings.demo_mode or settings.mock_llm_mode
-    providers = _build_providers(settings, use_mock=use_mock)
+
+    providers = {"mock": MockProvider()}
+    external_configured = bool(settings.external_llm_url.strip())
+    external_active = external_configured and not settings.demo_mode and not settings.mock_llm_mode
+    if external_configured:
+        providers["external"] = ExternalProvider(
+            endpoint=settings.external_llm_url,
+            api_key=settings.external_llm_api_key,
+            timeout_seconds=settings.llm_timeout_seconds,
+        )
+
     cache = SQLiteLLMCache(
         settings.cache_path,
         ttl_seconds=settings.llm_cache_ttl_seconds,
         enabled=settings.llm_cache_enabled,
     )
+    priority = ["external", "mock"] if external_active else ["mock"]
+    provider_models = {
+        "mock": "deterministic-small",
+        "external": settings.external_llm_model,
+    }
     router = ProviderRouter(
         providers,
-        priority=["mock"] if use_mock else settings.provider_priority,
+        priority=priority,
         cache=cache,
         max_retries=settings.llm_max_retries,
         backoff_seconds=settings.llm_retry_backoff_seconds,
-        provider_models={
-            "mock": "mock-small",
-            "gemini": settings.gemini_default_model,
-            "groq": settings.groq_default_model,
-            "cerebras": settings.cerebras_default_model,
-        },
-        task_provider_models={
-            "classify_intent": {
-                "gemini": settings.gemini_fallback_model,
-                "groq": settings.groq_default_model,
-            },
-            "detect_urgency": {
-                "gemini": settings.gemini_fallback_model,
-                "groq": settings.groq_default_model,
-            },
-            "generate_response": {
-                "gemini": settings.gemini_fallback_model,
-                "groq": settings.groq_generation_fallback_model,
-            },
-            "grounding_check": {
-                "gemini": settings.gemini_fallback_model,
-                "groq": settings.groq_default_model,
-            },
-        },
+        provider_models=provider_models,
         safe_fallback_enabled=settings.enable_safe_fallback,
     )
-    routes = (
-        {
-            "classify_intent": ("mock", "mock-small"),
-            "detect_urgency": ("mock", "mock-small"),
-            "generate_response": ("mock", "mock-small"),
-            "grounding_check": ("mock", "mock-small"),
-        }
-        if use_mock
-        else {
-            "classify_intent": (
-                settings.intent_model_provider,
-                settings.intent_model_name,
-            ),
-            "detect_urgency": (
-                settings.urgency_model_provider,
-                settings.urgency_model_name,
-            ),
-            "generate_response": (
-                settings.response_model_provider,
-                settings.response_model_name,
-            ),
-            "grounding_check": (
-                settings.grounding_model_provider,
-                settings.grounding_model_name,
-            ),
-        }
-    )
+    active_provider = "external" if external_active else "mock"
+    active_model = settings.external_llm_model if external_active else "deterministic-small"
+    routes = {
+        "classify_intent": (active_provider, active_model),
+        "detect_urgency": (active_provider, active_model),
+        "generate_response": (active_provider, active_model),
+        "grounding_check": (active_provider, active_model),
+    }
     workflow = TriageWorkflow(
         router,
         retriever,
@@ -306,7 +269,7 @@ def build_qdrant_client(settings: Settings) -> QdrantClient:
         return QdrantClient(
             url=settings.qdrant_url,
             api_key=settings.qdrant_api_key or None,
-            timeout=settings.llm_timeout_seconds,
+            timeout=settings.request_timeout_seconds,
         )
     settings.qdrant_path.mkdir(parents=True, exist_ok=True)
     return QdrantClient(path=str(settings.qdrant_path))
@@ -330,32 +293,3 @@ def build_embedder(
         batch_size=settings.embedding_batch_size,
         normalize=settings.normalize_embeddings,
     )
-
-
-def _build_providers(settings: Settings, use_mock: bool = False) -> dict[str, Any]:
-    if use_mock:
-        return {"mock": MockProvider()}
-
-    providers: dict[str, Any] = {}
-    if settings.gemini_api_key:
-        providers["gemini"] = GeminiProvider(
-            settings.gemini_api_key,
-            settings.llm_timeout_seconds,
-        )
-    if settings.groq_api_key:
-        providers["groq"] = OpenAICompatibleProvider(
-            "groq",
-            settings.groq_api_key,
-            "https://api.groq.com/openai/v1",
-            settings.llm_timeout_seconds,
-        )
-    if settings.cerebras_api_key:
-        providers["cerebras"] = OpenAICompatibleProvider(
-            "cerebras",
-            settings.cerebras_api_key,
-            "https://api.cerebras.ai/v1",
-            settings.llm_timeout_seconds,
-        )
-    if providers:
-        return providers
-    return {"mock": MockProvider()}

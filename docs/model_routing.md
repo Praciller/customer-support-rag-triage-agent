@@ -1,34 +1,60 @@
-# Model routing
+# Inference routing
 
-## Demo route
+## Default deterministic route
 
-When `DEMO_MODE=true` or `MOCK_LLM_MODE=true`, all four model-backed tasks use
-`mock/mock-small`. No provider key is read and no external LLM request is made. The mock provider
-uses deterministic rules and JSON outputs suitable for tests, CI, screenshots, and public demos.
-`/provider-health` reports these active mock routes rather than the dormant external configuration.
+Demo mode and mock mode use one deterministic local route for all four inference-backed tasks:
 
-## Optional provider route
-
-| Task | Configured primary | Configured model variable |
+| Task | Default route | Model label |
 | --- | --- | --- |
-| Intent classification | Groq | `INTENT_MODEL_NAME` |
-| Urgency detection | Groq | `URGENCY_MODEL_NAME` |
-| Response generation | Gemini | `RESPONSE_MODEL_NAME` |
-| Grounding check | Gemini | `GROUNDING_MODEL_NAME` |
+| Intent classification | local | `deterministic-small` |
+| Urgency detection | local | `deterministic-small` |
+| Response generation | local | `deterministic-small` |
+| Grounding check | local | `deterministic-small` |
 
-`LLM_PROVIDER_PRIORITY` controls fallback order. Provider/model/task, prompt, context,
-temperature, and token limit are hashed into the SQLite cache key. Each provider receives bounded
-retries and timeout configuration. Exhaustion returns a safe manual-review response with
-`fallback_used=true` and `degraded_mode=true`.
+No external model account, API key, or network inference call is required for tests, CI, screenshots, regression fixtures, or the public demo.
 
-Model names and provider catalogs change. The values in `.env.example` are configuration defaults,
-not availability guarantees. Keys stay in backend environment variables and are never returned by
-`/provider-health`.
+## Generic external GenAI route
 
-The defaults were reviewed against official provider documentation on July 19, 2026. Gemini uses
-[`gemini-3.1-flash-lite`](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite)
-with `gemini-3.5-flash` fallback. Groq uses `openai/gpt-oss-20b` with
-`openai/gpt-oss-120b` fallback because [Groq announced an August 16, 2026
-shutdown](https://console.groq.com/docs/deprecations) for the previous Llama 3.1 8B and Llama 3.3
-70B defaults. Cerebras uses [`gpt-oss-120b`](https://inference-docs.cerebras.ai/api-reference/models/public-models).
-Availability, permissions, and free quotas still require live account verification.
+The repository also preserves a vendor-neutral external GenAI adapter. It becomes active only when all three conditions are true:
+
+- `DEMO_MODE=false`
+- `MOCK_LLM_MODE=false`
+- `EXTERNAL_LLM_URL` is non-empty
+
+Optional server-side settings are `EXTERNAL_LLM_API_KEY` and `EXTERNAL_LLM_MODEL`. The endpoint credential is never returned to the browser or by `/provider-health`.
+
+The configured endpoint receives an HTTP `POST` JSON body with this neutral contract:
+
+```json
+{
+  "task": "generate_response",
+  "prompt": "bounded task prompt",
+  "context": "retrieved evidence",
+  "model": "general",
+  "temperature": 0.2,
+  "max_output_tokens": 512
+}
+```
+
+It must return a JSON object containing a non-empty `text` field and may return a `model` field:
+
+```json
+{
+  "text": "generated result",
+  "model": "remote-model-label"
+}
+```
+
+If `EXTERNAL_LLM_API_KEY` is set, the adapter sends it as a server-side bearer token. The public repository does not prescribe which inference service implements this endpoint.
+
+## Cache, retry, and fallback behavior
+
+Route/model/task, prompt, context, temperature, and token limit are hashed into the SQLite cache key. The existing retry and exponential-backoff settings apply to external calls. When external inference is active, the route order is `external` then deterministic `mock`; exhaustion can still return the safe manual-review response with `fallback_used=true` and `degraded_mode=true`.
+
+When demo/mock mode is active, the route order is local-only, so configuration of an external endpoint cannot accidentally make the public demo perform a network inference call.
+
+`/provider-health` exposes whether external inference is configured and active, plus operational cache, embedding, vector-store, and ingestion metadata. It does not expose the endpoint URL or credential.
+
+## Evaluation boundary
+
+The checked-in metrics use the deterministic route. They demonstrate workflow and retrieval behavior on a small rules-aligned fixture; they are not evidence of production language-model quality or policy correctness. External GenAI behavior requires a separate controlled evaluation before any production claim.
