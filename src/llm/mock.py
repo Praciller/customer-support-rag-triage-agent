@@ -23,7 +23,7 @@ class MockProvider:
 
     @staticmethod
     def _classify_intent(request: LLMRequest) -> dict:
-        text = MockProvider._customer_message(request.prompt)
+        text = request.user_ticket.lower()
         rules = [
             (
                 "complaint",
@@ -71,7 +71,7 @@ class MockProvider:
 
     @staticmethod
     def _detect_urgency(request: LLMRequest) -> dict:
-        text = MockProvider._customer_message(request.prompt)
+        text = request.user_ticket.lower()
         critical_terms = ("fraud", "stolen", "identity theft", "unsafe", "legal action")
         high_terms = ("refund", "asap", "immediately", "ignored", "urgent", "now")
         if any(term in text for term in critical_terms):
@@ -97,7 +97,7 @@ class MockProvider:
 
     @staticmethod
     def _generate_response(request: LLMRequest) -> dict:
-        prompt = request.prompt.lower()
+        prompt = request.workflow_instructions.lower()
         if "delivery_issue" in prompt:
             response = (
                 "I'm sorry your order has not arrived. Please share your order ID so the "
@@ -143,11 +143,14 @@ class MockProvider:
                 "I'm sorry you encountered this issue. Please share the relevant reference "
                 "number and any missing details so the support team can review it."
             )
-        return {"suggested_response": response}
+        return {
+            "suggested_response": response,
+            "evidence_references": [item.reference_id for item in request.evidence],
+        }
 
     @staticmethod
     def _grounding_check(request: LLMRequest) -> dict:
-        has_context = bool(request.context.strip())
+        has_context = bool(request.evidence)
         unsupported = [] if has_context else ["No retrieved cases were available."]
         return {
             "grounded": has_context,
@@ -155,9 +158,3 @@ class MockProvider:
             "unsupported_claims": unsupported,
             "confidence": 0.88 if has_context else 0.4,
         }
-
-    @staticmethod
-    def _customer_message(prompt: str) -> str:
-        marker = "message:"
-        _, separator, message = prompt.lower().rpartition(marker)
-        return message.strip() if separator else prompt.lower()

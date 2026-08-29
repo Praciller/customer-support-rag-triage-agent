@@ -59,6 +59,37 @@ def test_api_validates_triage_input_and_returns_metadata() -> None:
     assert invalid.status_code == 422
     assert valid.status_code == 200
     assert valid.json()["provider_used"] == "mock"
+    assert valid.json()["evidence_references"] == []
+    assert valid.json()["citation_integrity"] is True
+
+
+def test_api_exposes_retrieved_reference_integrity() -> None:
+    class EvidenceServices(FakeServices):
+        def triage(self, message: str, top_k: int) -> dict:
+            result = super().triage(message, top_k)
+            result["retrieved_cases"] = [
+                {
+                    "ticket_id": "case-1",
+                    "message": "Synthetic evidence.",
+                    "intent": "refund_request",
+                    "response": "Review the transaction reference.",
+                    "source": "synthetic_test",
+                    "score": 0.9,
+                    "created_at": None,
+                    "metadata": {},
+                }
+            ]
+            result["evidence_references"] = ["case-1"]
+            result["citation_integrity"] = True
+            return result
+
+    response = TestClient(create_app(services=EvidenceServices())).post(
+        "/triage", json={"message": "refund please", "top_k": 5}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["evidence_references"] == ["case-1"]
+    assert response.json()["citation_integrity"] is True
 
 
 def test_api_exposes_required_read_endpoints() -> None:
@@ -87,7 +118,7 @@ def test_production_ingest_requires_admin_key() -> None:
     settings = Settings(
         _env_file=None,
         app_env="production",
-        admin_api_key="deploy-secret",
+        admin_api_key="test-key",
     )
     client = TestClient(create_app(services=FakeServices(), settings=settings))
 
@@ -95,7 +126,7 @@ def test_production_ingest_requires_admin_key() -> None:
     allowed = client.post(
         "/ingest",
         json={"recreate": True, "sample_size": 10},
-        headers={"X-Admin-API-Key": "deploy-secret"},
+        headers={"X-Admin-API-Key": "test-key"},
     )
 
     assert denied.status_code == 403

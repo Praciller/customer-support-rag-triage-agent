@@ -1,5 +1,7 @@
 from typing import Any, TypedDict
 
+from src.evidence import RetrievedEvidence
+
 
 class TriageState(TypedDict, total=False):
     message: str
@@ -11,7 +13,10 @@ class TriageState(TypedDict, total=False):
     escalate: bool
     escalation_reason: str
     retrieved_cases: list[dict[str, Any]]
+    retrieved_evidence: tuple[RetrievedEvidence, ...]
     suggested_response: str
+    evidence_references: list[str]
+    citation_integrity: bool
     grounded: bool
     grounding_score: float
     unsupported_claims: list[str]

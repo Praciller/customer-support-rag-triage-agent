@@ -12,11 +12,14 @@ The compiled `StateGraph` executes:
 
 Each successful node appends bounded input/output summaries, status, duration, component, and
 task-specific metadata to the returned trace. Model-backed nodes add provider, model, cache,
-fallback, and degraded flags. Retrieval records its evidence count; grounding records its result.
+fallback, and degraded flags. Retrieval records evidence counts and reference IDs; generation and
+grounding pass a typed evidence block separate from workflow instructions and record citation
+integrity.
 
 Empty retrieval or degraded generation cannot finish as grounded, and an ungrounded result routes to
-`manual_review`. Unexpected node exceptions are sanitized at the FastAPI boundary and do not create
-a false completed trace step.
+`manual_review`. Critical urgency always preserves escalation, and unknown evidence references are
+rejected. Unexpected node exceptions are sanitized at the FastAPI boundary and do not create a
+false completed trace step.
 
 See [architecture.md](architecture.md#seven-node-implementation-contract) for the authoritative
 per-node input, output, failure, and trace contract.

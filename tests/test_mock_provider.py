@@ -8,10 +8,8 @@ def test_mock_classifier_ignores_instruction_labels() -> None:
     request = LLMRequest(
         task="classify_intent",
         model="mock-small",
-        prompt=(
-            "Allowed labels: delivery_issue, refund_request, billing_issue.\n"
-            "Message:\nI forgot my password and cannot sign in"
-        ),
+        workflow_instructions="Allowed labels: delivery_issue, refund_request, billing_issue.",
+        user_ticket="I forgot my password and cannot sign in",
     )
 
     payload = json.loads(MockProvider().generate(request).text)
@@ -23,7 +21,8 @@ def test_mock_urgency_ignores_instruction_risk_terms() -> None:
     request = LLMRequest(
         task="detect_urgency",
         model="mock-small",
-        prompt="Escalate fraud or urgent cases.\nMessage:\nHow do I update my profile?",
+        workflow_instructions="Escalate fraud or urgent cases.",
+        user_ticket="How do I update my profile?",
     )
 
     payload = json.loads(MockProvider().generate(request).text)
@@ -43,6 +42,7 @@ def test_mock_classifier_prioritizes_risk_and_failure_context() -> None:
         request = LLMRequest(
             task="classify_intent",
             model="mock-small",
-            prompt=f"Allowed labels include billing_issue.\nMessage:\n{message}",
+            workflow_instructions="Allowed labels include billing_issue.",
+            user_ticket=message,
         )
         assert json.loads(provider.generate(request).text)["intent"] == expected

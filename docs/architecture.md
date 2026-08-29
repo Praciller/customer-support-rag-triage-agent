@@ -22,7 +22,7 @@ FastAPI owns trust-boundary validation, rate limits, ingestion authorization, co
 
 ## Workflow contract
 
-`TriageState` carries the ticket, classification, urgency, retrieved cases, draft, grounding, next action, inference metadata, and append-only trace through seven fixed nodes. Prompts remain in `prompts/`; inference and retrieval implementations remain outside graph orchestration.
+`TriageState` carries the ticket, classification, urgency, typed `retrieved_evidence`, public retrieved cases, draft, validated evidence references, grounding, next action, inference metadata, and append-only trace through seven fixed nodes. Prompts remain in `prompts/`; inference and retrieval implementations remain outside graph orchestration.
 
 Every node returns bounded, non-secret trace metadata. Public responses exclude environment values, external endpoint URLs, credentials, raw prompts, filesystem paths, and stack traces.
 
@@ -33,12 +33,12 @@ Every node returns bounded, non-secret trace metadata. Public responses exclude 
 | `normalize_message` | `message`, `top_k` | `normalized_message` | API validation rejects empty or over-limit input before the graph. Unexpected errors become a controlled API 500. | Input and normalized lengths; local component. |
 | `classify_intent` | `normalized_message` | `intent`, `intent_confidence` | Unknown labels become `other`; confidence is clamped to 0..1. Retry/fallback/degraded state remains visible on this node. | Intent, confidence, route, model label, cache/fallback/degraded flags. |
 | `detect_urgency` | `normalized_message`, `intent` | `urgency`, `escalate`, `escalation_reason` | Unknown urgency becomes `medium`. Retry/fallback/degraded state remains visible on this node. | Urgency, escalation flag, route, model label, cache/fallback/degraded flags. |
-| `retrieve_similar_cases` | `normalized_message`, `intent`, `top_k` | `retrieved_cases` | A missing collection returns no evidence. Retrieval service exceptions fail the request through the controlled API boundary. | Intent filter, requested K, returned count, Qdrant component. |
-| `generate_support_response` | Message, intent, urgency, retrieved cases | `suggested_response`, route/cache/fallback/degraded metadata | Router exhaustion returns a manual-review-safe fallback and marks the result degraded. Retrieved case IDs are appended as internal evidence references. | Draft length, context count, route/model label and cache/fallback/degraded flags. |
-| `grounding_check` | Draft and retrieved cases | `grounded`, score, confidence, unsupported claims | Retrieved context is supplied to the verifier. Empty evidence or degraded generation deterministically forces `grounded=false`, caps score/confidence, and records an unsupported-claim reason. | Draft length, grounded result, score, route/model label and cache/fallback/degraded flags. |
+| `retrieve_similar_cases` | `normalized_message`, `intent`, `top_k` | typed `retrieved_evidence`, public `retrieved_cases` | A missing collection returns no evidence. Retrieval service exceptions fail the request through the controlled API boundary. | Intent filter, requested K, returned count, evidence reference IDs, Qdrant component. |
+| `generate_support_response` | current ticket, intent, urgency, typed evidence block | `suggested_response`, validated evidence references, citation integrity, route/cache/fallback/degraded metadata | Router exhaustion returns a manual-review-safe fallback and marks the result degraded. Provider references not present in the evidence block are rejected; original evidence text is not interpolated into workflow instructions. | Draft length, evidence count/reference IDs, route/model label and cache/fallback/degraded flags. |
+| `grounding_check` | candidate response, current ticket, typed evidence block | `grounded`, score, confidence, unsupported claims | The verifier receives evidence in a dedicated data field. Empty evidence, rejected citations, or degraded generation deterministically forces `grounded=false`, caps score/confidence, and records an unsupported-claim reason. | Draft length, evidence reference IDs, grounded result, score, route/model label and cache/fallback/degraded flags. |
 | `suggest_next_action` | Intent, urgency, escalation, grounding | `next_action` | Ungrounded output always becomes `manual_review`; other actions are selected by explicit rules. | Inputs used and selected action; rules component. |
 
-`TriageState` is a `TypedDict`, API requests and responses are Pydantic models, and the frontend mirrors the public trace and evidence schemas in TypeScript. A node that raises does not fabricate a completed trace step; FastAPI returns a sanitized error instead.
+`TriageState` is a `TypedDict`, retrieved evidence and provider requests are typed dataclasses, API requests and responses are Pydantic models, and the frontend mirrors the public trace and evidence schemas in TypeScript. A node that raises does not fabricate a completed trace step; FastAPI returns a sanitized error instead.
 
 ## External inference boundary
 

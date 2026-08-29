@@ -1,13 +1,17 @@
 from dataclasses import dataclass, replace
 from typing import Protocol
 
+from src.evidence import RetrievedEvidence
+
 
 @dataclass(frozen=True)
 class LLMRequest:
     task: str
-    prompt: str
+    workflow_instructions: str
+    user_ticket: str
     model: str
-    context: str = ""
+    evidence: tuple[RetrievedEvidence, ...] = ()
+    candidate_response: str = ""
     temperature: float = 0.2
     max_output_tokens: int = 512
 

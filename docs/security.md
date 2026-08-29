@@ -11,7 +11,11 @@
 
 ## Retrieved-content and prompt boundaries
 
-Retrieved messages are untrusted text, not instructions or policy. The graph passes bounded context to generation and grounding prompts, appends internal evidence IDs, and requires human review. Empty retrieval or degraded generation deterministically forces an ungrounded result and `manual_review`.
+Retrieved messages are untrusted text, not instructions or policy. The graph converts each result to a typed `RetrievedEvidence` record and passes it through a dedicated `evidence` field. Workflow instructions, the current user ticket, candidate response, and retrieved evidence are separate request fields; retrieved text is never assigned a system/developer role. Original evidence text remains available for traceability.
+
+The generation contract accepts structured `evidence_references` only when every reference ID belongs to the retrieved evidence block. Unknown or fabricated IDs are rejected, removed from the public reference list, and force an ungrounded result. Empty evidence, rejected citations, or degraded generation deterministically forces `grounded=false` and `manual_review`. Trace metadata carries reference IDs and counts without copying evidence text or prompts.
+
+Structural authority isolation and a deterministic eight-record adversarial fixture are tested in [`reports/evaluation/adversarial_retrieval.md`](../reports/evaluation/adversarial_retrieval.md). These tests do not establish semantic LLM prompt-injection immunity or universal protection against malicious retrieved text.
 
 These controls do not prove semantic entailment and do not prevent every prompt-injection pattern. Before using private help-center content or customer data, add source authorization, tenant isolation, content classification, stronger citation/entailment checks, and an approved policy corpus.
 
@@ -19,7 +23,7 @@ These controls do not prove semantic entailment and do not prevent every prompt-
 
 `.env`, local caches, embedded databases, and generated frontend output are ignored. The public inference route does not require an external inference credential. Never place credentials in frontend variables, screenshots, logs, fixtures, or checked-in evaluation artifacts.
 
-The SQLite inference cache hashes prompts and retrieved context for keys but stores generated responses in plaintext. Keep it on trusted local storage, set retention appropriate to the data, and do not cache sensitive tickets without encryption and deletion controls. Application traces deliberately contain bounded summaries rather than raw prompts or environment values.
+The SQLite inference cache hashes workflow request fields and typed retrieved evidence for keys but stores generated responses in plaintext. Keep it on trusted local storage, set retention appropriate to the data, and do not cache sensitive tickets without encryption and deletion controls. Application traces deliberately contain bounded summaries and evidence reference IDs rather than raw prompts, evidence text, or environment values.
 
 ## Limitations
 

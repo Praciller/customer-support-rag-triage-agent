@@ -7,6 +7,7 @@ from typing import Any
 
 from langgraph.graph import END, START, StateGraph
 
+from src.evidence import RetrievedEvidence
 from src.graph.state import TriageState
 from src.llm.base import LLMRequest
 from src.llm.router import ProviderRouter
@@ -54,6 +55,7 @@ class TriageWorkflow:
             "top_k": top_k,
             "trace": [],
             "retrieved_cases": [],
+            "retrieved_evidence": (),
             "unsupported_claims": [],
             "cached": False,
             "fallback_used": False,
@@ -101,7 +103,8 @@ class TriageWorkflow:
         started = self.clock()
         response = self._call(
             "classify_intent",
-            self._prompt("classify_intent", message=state["normalized_message"]),
+            workflow_instructions=self._prompt("classify_intent"),
+            user_ticket=state["normalized_message"],
         )
         payload = self._json(response.text)
         intent = payload.get("intent", "other")
@@ -126,13 +129,14 @@ class TriageWorkflow:
         started = self.clock()
         response = self._call(
             "detect_urgency",
-            self._prompt("detect_urgency", message=state["normalized_message"]),
+            workflow_instructions=self._prompt("detect_urgency"),
+            user_ticket=state["normalized_message"],
         )
         payload = self._json(response.text)
         urgency = payload.get("urgency", "medium")
         if urgency not in URGENCIES:
             urgency = "medium"
-        escalate = bool(payload.get("escalate", urgency in {"high", "critical"}))
+        escalate = bool(payload.get("escalate", False)) or urgency in {"high", "critical"}
         reason = str(payload.get("escalation_reason", ""))
         return {
             "urgency": urgency,
@@ -156,40 +160,58 @@ class TriageWorkflow:
             top_k=state["top_k"],
             intent=state.get("intent"),
         )
-        cases = [result.to_dict() for result in results]
+        evidence = tuple(
+            RetrievedEvidence(
+                reference_id=result.ticket_id,
+                message=result.message,
+                intent=result.intent,
+                response=result.response,
+                source=result.source,
+                score=result.score,
+                created_at=result.created_at,
+                metadata=result.metadata,
+            )
+            for result in results
+        )
         return {
-            "retrieved_cases": cases,
+            "retrieved_evidence": evidence,
+            "retrieved_cases": [item.to_public_dict() for item in evidence],
             "trace": self._trace(
                 state,
                 "retrieve_similar_cases",
                 started,
                 input_summary=f"intent={state.get('intent', 'other')}; top_k={state['top_k']}",
-                output_summary=f"retrieved={len(cases)}",
+                output_summary=f"retrieved={len(evidence)}",
                 component="qdrant",
-                retrieved_document_count=len(cases),
+                retrieved_document_count=len(evidence),
+                evidence_references=[item.reference_id for item in evidence],
             ),
         }
 
     def _generate_support_response(self, state: TriageState) -> dict[str, Any]:
         started = self.clock()
-        context = self._context(state["retrieved_cases"])
+        evidence = tuple(state.get("retrieved_evidence", ()))
         response = self._call(
             "generate_response",
-            self._prompt(
+            workflow_instructions=self._prompt(
                 "generate_response",
-                message=state["normalized_message"],
                 intent=state["intent"],
                 urgency=state["urgency"],
             ),
-            context=context,
+            user_ticket=state["normalized_message"],
+            evidence=evidence,
         )
         payload = self._json(response.text)
         suggested = str(payload.get("suggested_response", response.text)).strip()
-        case_ids = [case["ticket_id"] for case in state["retrieved_cases"]]
-        if case_ids:
-            suggested = f"{suggested}\n\nInternal evidence: {', '.join(case_ids)}"
+        references, citation_integrity = self._validate_evidence_references(
+            payload.get("evidence_references"), evidence
+        )
+        if citation_integrity and references:
+            suggested = f"{suggested}\n\nInternal evidence: {', '.join(references)}"
         return {
             "suggested_response": suggested,
+            "evidence_references": references,
+            "citation_integrity": citation_integrity,
             "provider_used": response.provider,
             "model_used": response.model,
             "cached": response.cached,
@@ -199,35 +221,49 @@ class TriageWorkflow:
                 state,
                 "generate_support_response",
                 started,
-                input_summary=f"intent={state['intent']}; context_cases={len(case_ids)}",
+                input_summary=f"intent={state['intent']}; evidence_count={len(evidence)}",
                 output_summary=f"draft_length={len(suggested)}",
                 component="llm_router",
                 response=response,
+                evidence_references=references,
             ),
         }
 
     def _grounding_check(self, state: TriageState) -> dict[str, Any]:
         started = self.clock()
-        context = self._context(state["retrieved_cases"])
+        evidence = tuple(state.get("retrieved_evidence", ()))
         response = self._call(
             "grounding_check",
-            self._prompt(
-                "grounding_check",
-                response=state["suggested_response"],
-            ),
-            context=context,
+            workflow_instructions=self._prompt("grounding_check"),
+            user_ticket=state["normalized_message"],
+            candidate_response=state["suggested_response"],
+            evidence=evidence,
         )
         payload = self._json(response.text)
         score = self._unit_interval(payload.get("grounding_score", 0))
         confidence = self._unit_interval(payload.get("confidence", score))
-        has_evidence = bool(state["retrieved_cases"])
+        has_evidence = bool(evidence)
+        citation_integrity = bool(state.get("citation_integrity", True))
         degraded = state.get("degraded_mode", False) or response.degraded_mode
-        grounded = bool(payload.get("grounded", False)) and has_evidence and not degraded
-        unsupported_claims = list(payload.get("unsupported_claims") or [])
+        grounded = (
+            bool(payload.get("grounded", False))
+            and has_evidence
+            and citation_integrity
+            and bool(state.get("evidence_references"))
+            and not degraded
+        )
+        raw_unsupported_claims = payload.get("unsupported_claims") or []
+        unsupported_claims = (
+            [str(claim) for claim in raw_unsupported_claims]
+            if isinstance(raw_unsupported_claims, list)
+            else []
+        )
         if not has_evidence and "No retrieved cases were available." not in unsupported_claims:
             unsupported_claims.append("No retrieved cases were available.")
         if degraded and "Generation used a degraded provider fallback." not in unsupported_claims:
             unsupported_claims.append("Generation used a degraded provider fallback.")
+        if not citation_integrity:
+            unsupported_claims.append("Unknown retrieved evidence references were rejected.")
         if not grounded:
             score = min(score, 0.25)
             confidence = min(confidence, 0.4)
@@ -247,6 +283,7 @@ class TriageWorkflow:
                 component="llm_router",
                 response=response,
                 grounding_result=grounded,
+                evidence_references=list(state.get("evidence_references", [])),
             ),
         }
 
@@ -280,14 +317,23 @@ class TriageWorkflow:
             ),
         }
 
-    def _call(self, task: str, prompt: str, context: str = ""):
+    def _call(
+        self,
+        task: str,
+        workflow_instructions: str,
+        user_ticket: str,
+        evidence: tuple[RetrievedEvidence, ...] = (),
+        candidate_response: str = "",
+    ):
         provider, model = self.task_routes.get(task, ("mock", "mock-small"))
         return self.router.generate(
             LLMRequest(
                 task=task,
-                prompt=prompt,
+                workflow_instructions=workflow_instructions,
+                user_ticket=user_ticket,
                 model=model,
-                context=context,
+                evidence=evidence,
+                candidate_response=candidate_response,
                 temperature=self.temperature,
                 max_output_tokens=self.max_output_tokens,
             ),
@@ -317,18 +363,25 @@ class TriageWorkflow:
         template = (PROMPT_DIR / f"{name}.md").read_text(encoding="utf-8")
         return template.format(**values)
 
-    def _context(self, cases: list[dict[str, Any]]) -> str:
-        context = "\n\n".join(
-            (
-                f"Case {case['ticket_id']}\n"
-                f"Intent: {case['intent']}\n"
-                f"Message: {case['message']}\n"
-                f"Past response: {case['response'] or 'Not provided'}\n"
-                f"Source: {case['source']}"
-            )
-            for case in cases
-        )
-        return context[: self.max_context_chars]
+    @staticmethod
+    def _validate_evidence_references(
+        raw_references: Any,
+        evidence: tuple[RetrievedEvidence, ...],
+    ) -> tuple[list[str], bool]:
+        allowed = {item.reference_id for item in evidence}
+        if raw_references is None:
+            references = [item.reference_id for item in evidence]
+        elif isinstance(raw_references, list) and all(
+            isinstance(reference, str) and reference.strip() for reference in raw_references
+        ):
+            references = list(dict.fromkeys(reference.strip() for reference in raw_references))
+        else:
+            return [], False
+        if any(reference not in allowed for reference in references):
+            return [], False
+        if evidence and not references:
+            return [], False
+        return references, True
 
     def _trace(
         self,
@@ -341,6 +394,7 @@ class TriageWorkflow:
         response: Any | None = None,
         retrieved_document_count: int = 0,
         grounding_result: bool | None = None,
+        evidence_references: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         provider = getattr(response, "provider", None)
         model = getattr(response, "model", None)
@@ -364,6 +418,7 @@ class TriageWorkflow:
                 "degraded_mode": degraded,
                 "retrieved_document_count": retrieved_document_count,
                 "grounding_result": grounding_result,
+                "evidence_references": evidence_references or [],
                 "error_category": None,
             },
         ]

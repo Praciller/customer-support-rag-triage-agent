@@ -37,7 +37,12 @@ def test_router_retries_then_uses_next_provider(tmp_path: Path) -> None:
     )
 
     result = router.generate(
-        LLMRequest(task="classify_intent", prompt="charged twice", model="small"),
+        LLMRequest(
+            task="classify_intent",
+            workflow_instructions="Classify the ticket.",
+            user_ticket="charged twice",
+            model="small",
+        ),
         preferred_provider="primary",
     )
 
@@ -59,7 +64,12 @@ def test_router_checks_cache_before_provider(tmp_path: Path) -> None:
         max_retries=0,
         backoff_seconds=0,
     )
-    request = LLMRequest(task="generate_response", prompt="hello", model="small")
+    request = LLMRequest(
+        task="generate_response",
+        workflow_instructions="Draft a reply.",
+        user_ticket="hello",
+        model="small",
+    )
 
     first = router.generate(request, preferred_provider="local")
     second = router.generate(request, preferred_provider="local")
@@ -80,7 +90,12 @@ def test_router_returns_safe_fallback_when_all_providers_fail(tmp_path: Path) ->
     )
 
     result = router.generate(
-        LLMRequest(task="generate_response", prompt="hello", model="small"),
+        LLMRequest(
+            task="generate_response",
+            workflow_instructions="Draft a reply.",
+            user_ticket="hello",
+            model="small",
+        ),
         preferred_provider="local",
     )
 
@@ -110,7 +125,8 @@ def test_router_preserves_task_model_and_uses_task_specific_fallback(tmp_path: P
     result = router.generate(
         LLMRequest(
             task="generate_response",
-            prompt="draft",
+            workflow_instructions="Draft a reply.",
+            user_ticket="draft",
             model="primary-task-model",
         ),
         preferred_provider="primary",

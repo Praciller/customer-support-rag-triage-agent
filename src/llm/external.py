@@ -36,8 +36,10 @@ class ExternalProvider:
             headers=headers,
             json={
                 "task": request.task,
-                "prompt": request.prompt,
-                "context": request.context,
+                "workflow_instructions": request.workflow_instructions,
+                "user_ticket": request.user_ticket,
+                "candidate_response": request.candidate_response,
+                "evidence": [item.to_provider_payload() for item in request.evidence],
                 "model": request.model,
                 "temperature": request.temperature,
                 "max_output_tokens": request.max_output_tokens,

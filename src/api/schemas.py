@@ -55,6 +55,7 @@ class TraceStepResponse(BaseModel):
     degraded_mode: bool
     retrieved_document_count: int = Field(ge=0)
     grounding_result: bool | None = None
+    evidence_references: list[str] = Field(default_factory=list)
     error_category: str | None = None
 
 
@@ -78,6 +79,8 @@ class TriageResponse(BaseModel):
     escalation_reason: str
     suggested_response: str
     retrieved_cases: list[SimilarCaseResponse]
+    evidence_references: list[str] = Field(default_factory=list)
+    citation_integrity: bool = True
     grounded: bool
     grounding_score: float = Field(ge=0, le=1)
     unsupported_claims: list[str] = Field(default_factory=list)
