@@ -18,6 +18,17 @@ Artifacts:
 - `reports/evaluation/summary.md`
 - `reports/evaluation/confusion_matrix.json`
 
+The separate deterministic adversarial evidence-boundary evaluation uses the committed eight-record
+synthetic fixture in `tests/fixtures/adversarial_retrieval.json`:
+
+```powershell
+.venv\Scripts\python.exe -m src.evaluation.evaluate_adversarial_retrieval --report-path reports/evaluation/adversarial_retrieval.md
+```
+
+It tests structural authority isolation, provider-role separation, evidence provenance, citation
+integrity, grounding guards, unsupported-claim handling, and human-review/escalation routing. It
+does not establish semantic LLM prompt-injection immunity.
+
 ## Fixture and definitions
 
 The evaluation uses 8 labeled tickets from `data/eval/eval_set.csv`, 27 indexed demo records,

@@ -77,6 +77,8 @@ describe("App", () => {
           metadata: {},
         },
       ],
+      evidence_references: ["demo-delivery"],
+      citation_integrity: true,
       grounded: true,
       grounding_score: 0.86,
       unsupported_claims: [],
@@ -111,6 +113,7 @@ describe("App", () => {
         degraded_mode: false,
         retrieved_document_count: node === "retrieve_similar_cases" ? 1 : 0,
         grounding_result: node === "grounding_check" ? true : null,
+        evidence_references: node === "retrieve_similar_cases" ? ["demo-delivery"] : [],
         error_category: null,
       })),
     });

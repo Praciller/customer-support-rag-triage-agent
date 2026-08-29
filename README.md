@@ -53,7 +53,7 @@ The public demo bootstraps 27 bounded Banking77-derived records into Qdrant with
 6. `grounding_check`
 7. `suggest_next_action`
 
-Each successful node records duration, bounded input/output summaries, component, inference metadata, cache/fallback/degraded flags, retrieval count, and grounding result. Empty retrieval or degraded generation cannot produce a grounded final result.
+Each successful node records duration, bounded input/output summaries, component, inference metadata, cache/fallback/degraded flags, retrieval count, evidence references, and grounding result. Retrieved records are carried as typed data-only evidence, separate from workflow instructions and the current user ticket. Empty retrieval, rejected citations, or degraded generation cannot produce a grounded final result.
 
 ![Seven-node workflow trace](docs/screenshots/workflow-trace.png)
 
@@ -144,6 +144,14 @@ $env:LLM_CACHE_ENABLED="false"
 .venv\Scripts\python.exe -m src.evaluation.evaluate_triage
 ```
 
+Run the deterministic adversarial evidence-boundary evaluation and regenerate its fixed report:
+
+```powershell
+.venv\Scripts\python.exe -m src.evaluation.evaluate_adversarial_retrieval --report-path reports/evaluation/adversarial_retrieval.md
+```
+
+See the [adversarial retrieval report](reports/evaluation/adversarial_retrieval.md) for the committed fixture and measured invariant checks.
+
 ## API review points
 
 ```powershell
@@ -162,8 +170,11 @@ curl.exe http://localhost:8000/eval/results
 - Public ingestion is disabled; non-local ingestion requires `X-Admin-API-Key`.
 - External inference credentials stay server-side and are only used when demo/mock modes are explicitly disabled.
 - Controlled errors omit stack traces, environment values, credentials, external endpoint URLs, and local paths.
-- Retrieved records are untrusted precedent, not company policy. The grounding check validates evidence presence and workflow behavior, not semantic entailment.
-- Draft responses require human review. Prompt injection, policy authority, tenant isolation, distributed rate limiting, and sensitive-data retention require controls beyond this demo.
+- Retrieved records are untrusted precedent, not company policy. They remain in a typed evidence block and cannot become system/developer/workflow instructions; structured citations are accepted only when their IDs are present in retrieved records.
+- Structural authority isolation: **tested** with workflow, provider-contract, API, and trace regression checks.
+- Deterministic adversarial fixture: **tested** with eight synthetic records and a reproducible report; this catches the committed containment, citation, grounding, and review invariants.
+- Semantic LLM prompt-injection immunity: **NOT established**. The deterministic tests do not prove that a real language model will semantically ignore every malicious retrieved string.
+- Draft responses require human review. Policy authority, tenant isolation, distributed rate limiting, and sensitive-data retention require controls beyond this demo.
 - The in-memory limiter and local Qdrant/SQLite state are single-process constraints. Free CPU hosts may cold-start or exceed memory limits.
 
 ## Documentation

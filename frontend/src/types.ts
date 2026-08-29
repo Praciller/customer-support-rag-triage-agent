@@ -13,6 +13,7 @@ export type TraceStep = {
   degraded_mode: boolean;
   retrieved_document_count: number;
   grounding_result: boolean | null;
+  evidence_references: string[];
   error_category: string | null;
 };
 
@@ -35,6 +36,8 @@ export type TriageResult = {
   escalation_reason: string;
   suggested_response: string;
   retrieved_cases: SimilarCase[];
+  evidence_references: string[];
+  citation_integrity: boolean;
   grounded: boolean;
   grounding_score: number;
   unsupported_claims: string[];

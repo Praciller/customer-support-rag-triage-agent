@@ -20,6 +20,7 @@ jobs:
       - run: ruff check src tests
       - run: ruff format --check src tests
       - run: python -m pytest
+      - run: python -m src.evaluation.evaluate_adversarial_retrieval --report-path /tmp/adversarial_retrieval.md
       - run: make demo
         env:
           EVAL_OUTPUT_PATH: /tmp/evaluation/results.json

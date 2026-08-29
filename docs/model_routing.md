@@ -28,8 +28,18 @@ The configured endpoint receives an HTTP `POST` JSON body with this neutral cont
 ```json
 {
   "task": "generate_response",
-  "prompt": "bounded task prompt",
-  "context": "retrieved evidence",
+  "workflow_instructions": "bounded task instructions",
+  "user_ticket": "current customer ticket",
+  "candidate_response": "candidate response when grounding is checked",
+  "evidence": [
+    {
+      "reference_id": "case-123",
+      "content": "retrieved evidence",
+      "intent": "billing_issue",
+      "prior_response": "synthetic prior response",
+      "source": "public_dataset"
+    }
+  ],
   "model": "general",
   "temperature": 0.2,
   "max_output_tokens": 512
@@ -49,7 +59,9 @@ If `EXTERNAL_LLM_API_KEY` is set, the adapter sends it as a server-side bearer t
 
 ## Cache, retry, and fallback behavior
 
-Route/model/task, prompt, context, temperature, and token limit are hashed into the SQLite cache key. The existing retry and exponential-backoff settings apply to external calls. When external inference is active, the route order is `external` then deterministic `mock`; exhaustion can still return the safe manual-review response with `fallback_used=true` and `degraded_mode=true`.
+Route/model/task, workflow instructions, user ticket, candidate response, typed evidence, temperature, and token limit are hashed into the SQLite cache key. The existing retry and exponential-backoff settings apply to external calls. When external inference is active, the route order is `external` then deterministic `mock`; exhaustion can still return the safe manual-review response with `fallback_used=true` and `degraded_mode=true`.
+
+The external adapter receives evidence as a dedicated data array. It does not receive a system/developer role assignment for retrieved content, and the workflow rejects provider evidence references that are not present in the retrieved array.
 
 When demo/mock mode is active, the route order is local-only, so configuration of an external endpoint cannot accidentally make the public demo perform a network inference call.
 
