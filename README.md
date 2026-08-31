@@ -2,6 +2,16 @@
 
 A typed, inspectable RAG triage workflow that retrieves support evidence, drafts a response, checks grounding, and recommends a human action.
 
+## Recruiter snapshot
+
+**Signal:** Evidence-grounded AI workflow with inspectable traces and explicit human-action routing.
+
+[Repository](https://github.com/Praciller/customer-support-rag-triage-agent) · [Live demo](https://pracill-customer-support-rag-triage-agent.hf.space/) · [Dream Logs case study](https://dreamlogsdata.com/en/projects/customer-support-rag-triage-agent)
+
+**What this demonstrates:** typed RAG orchestration · grounding and retrieval evidence · deterministic evaluation with a human-review boundary.
+
+**Boundary:** the public path is a bounded zero-key fixture; it demonstrates workflow inspectability, not production support quality.
+
 **[Open the live zero-key demo](https://pracill-customer-support-rag-triage-agent.hf.space/)**
 
 ![Ticket triage result](docs/screenshots/triage-result.png)
