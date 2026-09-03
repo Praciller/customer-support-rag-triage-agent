@@ -1,6 +1,7 @@
 import { Send } from "lucide-react";
 
-import { ErrorNotice } from "../../components";
+import { Button } from "../../components/ui/Button";
+import { ErrorNotice } from "../../components/ui/ErrorNotice";
 
 export const sampleTicketMessage = "My card has still not arrived and I need help before I travel tomorrow.";
 
@@ -70,9 +71,9 @@ export function TicketComposer({
         ))}
       </div>
       <div className="actions">
-        <button className="primary" onClick={run} disabled={loading || !message.trim()}>
-          <Send size={16} />{loading ? "Running workflow..." : "Run triage"}
-        </button>
+          <Button onClick={run} disabled={!message.trim()} loading={loading}>
+            <Send size={16} />{loading ? "Running workflow..." : "Run triage"}
+          </Button>
       </div>
       {error && <ErrorNotice message={error} />}
     </section>

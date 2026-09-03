@@ -1,0 +1,49 @@
+:root {
+  --color-canvas: oklch(0.975 0.006 245);
+  --color-surface: oklch(0.995 0.004 245);
+  --color-surface-muted: oklch(0.948 0.010 245);
+  --color-foreground: oklch(0.245 0.025 250);
+  --color-foreground-muted: oklch(0.510 0.025 250);
+  --color-border: oklch(0.875 0.018 245);
+  --color-primary: oklch(0.555 0.180 258);
+  --color-primary-hover: color-mix(in srgb, var(--color-primary) 86%, var(--color-foreground));
+  --color-success: oklch(0.565 0.125 154);
+  --color-warning: oklch(0.700 0.145 76);
+  --color-danger: oklch(0.560 0.190 28);
+  --color-focus: oklch(0.555 0.180 258);
+
+  --font-ui: Inter, "Segoe UI", system-ui, sans-serif;
+  --font-code: ui-monospace, SFMono-Regular, Consolas, monospace;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-md: 16px;
+  --text-lg: 20px;
+  --text-xl: 26px;
+  --text-display: 34px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --shadow-panel: 0 1px 2px rgb(25 40 65 / 0.06);
+  --shadow-raised: 0 4px 12px rgb(25 40 65 / 0.10);
+  --border-width-thin: 1px;
+  --border-width-strong: 2px;
+
+  --motion-fast: 120ms;
+  --motion-standard: 180ms;
+  --motion-ease: ease-out;
+
+  /* Breakpoints are documented here; media queries use the exact values. */
+  --breakpoint-mobile: 390px;
+  --breakpoint-tablet: 768px;
+  --breakpoint-desktop: 1440px;
+}

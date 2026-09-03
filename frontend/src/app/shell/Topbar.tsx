@@ -1,6 +1,6 @@
 import { Activity, ChevronRight } from "lucide-react";
 
-import { Badge } from "../../components";
+import { StatusIndicator } from "../../components/ui/StatusIndicator";
 import { nav, type View } from "../navigation";
 
 export type ApiStatus = "checking" | "connected" | "unavailable";
@@ -14,14 +14,11 @@ export function Topbar({ view, apiStatus }: { view: View; apiStatus: ApiStatus }
         <p className="breadcrumb">Workspace <ChevronRight size={13} /> {currentLabel}</p>
         <h1>{currentLabel}</h1>
       </div>
-      <Badge tone={apiStatus === "connected" ? "success" : apiStatus === "unavailable" ? "danger" : "neutral"}>
-        <Activity size={13} />
-        {apiStatus === "connected"
-          ? "API connected"
-          : apiStatus === "unavailable"
-            ? "API unavailable"
-            : "Checking API"}
-      </Badge>
+      <StatusIndicator
+        icon={<Activity size={13} />}
+        label={apiStatus === "connected" ? "API connected" : apiStatus === "unavailable" ? "API unavailable" : "Checking API"}
+        tone={apiStatus === "connected" ? "success" : apiStatus === "unavailable" ? "danger" : "neutral"}
+      />
     </header>
   );
 }

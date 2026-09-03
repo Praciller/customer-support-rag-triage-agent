@@ -1,6 +1,7 @@
 import { ChevronRight } from "lucide-react";
 
-import { MetricCard } from "../../components";
+import { MetricCard } from "../../components/MetricCard";
+import { Button } from "../../components/ui/Button";
 import type { View } from "../../app/navigation";
 
 export function OverviewView({ setView }: { setView: (view: View) => void }) {
@@ -13,9 +14,9 @@ export function OverviewView({ setView }: { setView: (view: View) => void }) {
           Classify intent, assess urgency, retrieve similar Banking77 cases, draft a response,
           verify grounding, and inspect all seven LangGraph steps.
         </p>
-        <button className="primary" onClick={() => setView("triage")}>
+        <Button onClick={() => setView("triage")}>
           Open triage workspace <ChevronRight size={16} />
-        </button>
+        </Button>
       </section>
       <MetricCard label="Workflow" value="7 nodes" detail="Typed and traceable" />
       <MetricCard label="Retrieval" value="Local BGE" detail="Qdrant semantic search" />

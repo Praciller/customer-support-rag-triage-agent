@@ -60,4 +60,28 @@ describe("TriageView", () => {
     expect(screen.getByText("Escalate")).toBeInTheDocument();
     expect(screen.getByText("The customer reports a potentially compromised card.")).toBeInTheDocument();
   });
+
+  it("makes an ungrounded result and manual review action explicit", () => {
+    renderTriage({
+      ...makeTriageResult(),
+      grounded: false,
+      grounding_score: 0.2,
+      next_action: "manual_review",
+    });
+
+    expect(screen.getByText(/not grounded/i)).toBeInTheDocument();
+    expect(screen.getByText(/manual review/i)).toBeInTheDocument();
+  });
+
+  it("keeps degraded fallback review instructions visible", () => {
+    renderTriage({
+      ...makeTriageResult(),
+      degraded_mode: true,
+      grounded: false,
+      next_action: "manual_review",
+    });
+
+    expect(screen.getByText(/degraded/i)).toBeInTheDocument();
+    expect(screen.getByText(/review retrieved evidence and respond manually/i)).toBeInTheDocument();
+  });
 });

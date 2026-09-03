@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 
 import { api } from "../../lib/api";
-import { Badge } from "../../components";
+import { Badge } from "../../components/ui/Badge";
+import { Panel } from "../../components/ui/Panel";
 
 export function DatasetView() {
   const [data, setData] = useState<Record<string, unknown>>({});
@@ -9,7 +10,7 @@ export function DatasetView() {
   const intents = (data.intents ?? {}) as Record<string, number>;
   const records = Number(data.records || 0);
   return (
-    <section className="panel page-panel">
+    <Panel className="page-panel">
       <div className="section-title">
         <div><p>Public source</p><h2>Banking77 dataset explorer</h2></div>
         <Badge>{records} records</Badge>
@@ -30,6 +31,6 @@ export function DatasetView() {
           </div>
         ))}
       </div>
-    </section>
+    </Panel>
   );
 }

@@ -1,11 +1,11 @@
-import { Badge } from "../../components";
+import { StatusIndicator } from "../../components/ui/StatusIndicator";
 import type { TriageResult } from "../../types/api";
 import { TriageMetadata } from "./TriageMetadata";
 
 export function TriageDecision({ result }: { result: TriageResult | null }) {
   return (
     <article className="panel decision">
-      <div className="section-title"><div><p>Decision</p><h2>Triage summary</h2></div>{result && <Badge tone={result.escalate ? "danger" : "success"}>{result.escalate ? "Escalate" : "Standard queue"}</Badge>}</div>
+      <div className="section-title"><div><p>Decision</p><h2>Triage summary</h2></div>{result && <StatusIndicator label={result.escalate ? "Escalate" : "Standard queue"} tone={result.escalate ? "danger" : "success"} />}</div>
       {result ? (
         <>
           <div className="facts">
