@@ -1,0 +1,69 @@
+name: Engineering task
+description: Bounded agent-ready engineering work
+title: "[Engineering] "
+labels:
+  - engineering
+body:
+  - type: textarea
+    id: problem-context
+    attributes:
+      label: Problem / context
+      description: What problem exists, and what evidence or context explains it?
+    validations:
+      required: true
+  - type: textarea
+    id: user-reviewer-value
+    attributes:
+      label: User / reviewer value
+      description: Who benefits and what becomes clearer, safer, faster, or more verifiable?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: List the bounded implementation surface and intended behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: non-goals
+    attributes:
+      label: Non-goals
+      description: State what this task explicitly will not change.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Given / When / Then acceptance criteria
+      description: Write observable criteria using Given, When, and Then statements.
+    validations:
+      required: true
+  - type: textarea
+    id: likely-modules
+    attributes:
+      label: Likely modules / files
+      description: Identify expected files or modules and any explicit do-not-touch boundaries.
+    validations:
+      required: true
+  - type: textarea
+    id: security-data-evidence
+    attributes:
+      label: Security / data / evidence impact
+      description: Describe secret handling, privacy, trust boundaries, evidence, grounding, citation, or human-review impact.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification commands
+      description: List exact commands and environments needed to verify the change.
+    validations:
+      required: true
+  - type: textarea
+    id: completion-evidence
+    attributes:
+      label: Completion evidence
+      description: State the logs, reports, screenshots, traces, links, or review observations that will prove completion.
+    validations:
+      required: true
