@@ -54,6 +54,7 @@ describe("semantic UI components", () => {
     const control = screen.getByRole("textbox", { name: "Customer message" });
     expect(control).toHaveAttribute("id", "customer-message");
     expect(control).toHaveAttribute("aria-describedby", "customer-message-help customer-message-error");
+    expect(control).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByText("Message needs review.")).toHaveAttribute("id", "customer-message-error");
   });
 
