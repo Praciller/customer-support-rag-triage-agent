@@ -20,4 +20,18 @@ describe("TraceList", () => {
 
     expect(screen.getByText("Run triage to inspect the workflow.")).toBeInTheDocument();
   });
+
+  it("keeps provider, cache, fallback, and degraded trace metadata visible", () => {
+    const trace = makeTriageResult().trace.map((step, index) =>
+      index === 0
+        ? { ...step, provider: "mock", model: "mock-small", cache_hit: true, fallback: true, degraded_mode: true }
+        : step,
+    );
+    render(<TraceList trace={trace} />);
+
+    expect(screen.getAllByText("mock / mock-small")).toHaveLength(2);
+    expect(screen.getByText("cache hit")).toBeInTheDocument();
+    expect(screen.getByText("fallback")).toBeInTheDocument();
+    expect(screen.getByText("degraded")).toBeInTheDocument();
+  });
 });
