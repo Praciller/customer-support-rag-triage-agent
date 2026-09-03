@@ -1,12 +1,13 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 
 import { api } from "../api";
-import { Badge, ErrorNotice, MetricCard, TraceList } from "../components";
+import { Badge, ErrorNotice, MetricCard } from "../components";
 import type { Evaluation, TriageResult } from "../types";
 import { OverviewView } from "../features/overview/OverviewView";
 import { SearchView } from "../features/search/SearchView";
 import { sampleTicketMessage } from "../features/triage/TicketComposer";
 import { TriageView } from "../features/triage/TriageView";
+import { TraceView } from "../features/trace/TraceView";
 import { type View } from "./navigation";
 import { AppShell } from "./shell/AppShell";
 
@@ -62,10 +63,6 @@ export default function App() {
         {view === "providers" && <ProviderView />}
     </AppShell>
   );
-}
-
-function TraceView({ trace }: { trace: TriageResult["trace"] }) {
-  return <section className="panel page-panel"><div className="section-title"><div><p>LangGraph</p><h2>Seven-node execution trace</h2></div></div><TraceList trace={trace} /></section>;
 }
 
 function EvaluationView() {
