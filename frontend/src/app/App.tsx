@@ -1,42 +1,17 @@
 import {
-  Activity,
-  BarChart3,
-  Bot,
   ChevronRight,
-  CircleDot,
-  Database,
-  GitBranch,
-  LayoutDashboard,
   Search,
   Send,
-  ServerCog,
 } from "lucide-react";
 import { lazy, Suspense, useEffect, useState } from "react";
 
-import { api } from "./api";
-import { Badge, CaseList, ErrorNotice, MetricCard, TraceList } from "./components";
-import type { Evaluation, SimilarCase, TriageResult } from "./types";
+import { api } from "../api";
+import { Badge, CaseList, ErrorNotice, MetricCard, TraceList } from "../components";
+import type { Evaluation, SimilarCase, TriageResult } from "../types";
+import { type View } from "./navigation";
+import { AppShell } from "./shell/AppShell";
 
-const EvaluationChart = lazy(() => import("./EvaluationChart"));
-
-type View =
-  | "overview"
-  | "triage"
-  | "search"
-  | "trace"
-  | "evaluation"
-  | "dataset"
-  | "providers";
-
-const nav: { id: View; label: string; icon: typeof LayoutDashboard }[] = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "triage", label: "Ticket triage", icon: LayoutDashboard },
-  { id: "search", label: "Semantic search", icon: Search },
-  { id: "trace", label: "Agent trace", icon: GitBranch },
-  { id: "evaluation", label: "Evaluation", icon: BarChart3 },
-  { id: "dataset", label: "Dataset explorer", icon: Database },
-  { id: "providers", label: "Provider status", icon: ServerCog },
-];
+const EvaluationChart = lazy(() => import("../EvaluationChart"));
 
 const demoTickets = [
   {
@@ -102,43 +77,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell antialiased">
-      <aside>
-        <div className="brand"><Bot size={22} /><span>ResolveOps</span></div>
-        <p className="eyebrow">Support intelligence</p>
-        <nav aria-label="Main navigation">
-          {nav.map((item) => (
-            <button
-              aria-current={view === item.id ? "page" : undefined}
-              className={view === item.id ? "active" : ""}
-              key={item.id}
-              onClick={() => setView(item.id)}
-            >
-              <item.icon size={18} />{item.label}
-            </button>
-          ))}
-        </nav>
-        <div className="system-card">
-          <span><CircleDot size={14} />Deterministic demo</span>
-          <strong>No API key required</strong>
-          <small>Mock provider and bounded local index</small>
-        </div>
-      </aside>
-      <main>
-        <header className="topbar">
-          <div>
-            <p className="breadcrumb">Workspace <ChevronRight size={13} /> {nav.find((x) => x.id === view)?.label}</p>
-            <h1>{nav.find((x) => x.id === view)?.label}</h1>
-          </div>
-          <Badge tone={apiStatus === "connected" ? "success" : apiStatus === "unavailable" ? "danger" : "neutral"}>
-            <Activity size={13} />
-            {apiStatus === "connected"
-              ? "API connected"
-              : apiStatus === "unavailable"
-                ? "API unavailable"
-                : "Checking API"}
-          </Badge>
-        </header>
+    <AppShell view={view} setView={setView} apiStatus={apiStatus}>
         {view === "overview" && <OverviewView setView={setView} />}
         {view === "triage" && (
           <TriageView
@@ -155,8 +94,7 @@ export default function App() {
         {view === "evaluation" && <EvaluationView />}
         {view === "dataset" && <DatasetView />}
         {view === "providers" && <ProviderView />}
-      </main>
-    </div>
+    </AppShell>
   );
 }
 

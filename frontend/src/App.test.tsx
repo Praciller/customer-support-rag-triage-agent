@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import App from "./App";
+import App from "./app/App";
 import { api } from "./api";
 import { makeEvaluation, makeTriageResult } from "./test/fixtures";
 
@@ -22,12 +22,15 @@ beforeEach(() => {
 });
 
 describe("App", () => {
-  it("renders the support triage workspace", () => {
+  it("renders the support triage workspace", async () => {
     render(<App />);
     expect(screen.getByRole("heading", { name: /ticket triage/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /run triage/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /overview/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /dataset explorer/i })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: /main navigation/i })).toBeInTheDocument();
+    expect(screen.getByText(/deterministic demo/i)).toBeInTheDocument();
+    expect(await screen.findByText(/api connected/i)).toBeInTheDocument();
   });
 
   it("labels deterministic demo mode and loads a fraud example", () => {
