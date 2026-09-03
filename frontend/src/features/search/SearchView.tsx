@@ -6,6 +6,7 @@ import { CaseList } from "../../components/evidence/CaseList";
 import { Button } from "../../components/ui/Button";
 import { ErrorNotice } from "../../components/ui/ErrorNotice";
 import { Field } from "../../components/ui/Field";
+import { Panel } from "../../components/ui/Panel";
 import type { SimilarCase } from "../../types/api";
 
 export function SearchView() {
@@ -28,7 +29,7 @@ export function SearchView() {
     }
   }
   return (
-    <section className="panel page-panel">
+    <Panel className="page-panel">
       <div className="section-title"><div><p>Vector retrieval</p><h2>Search indexed support tickets</h2></div></div>
       <div className="search-row">
         <Field id="search-query" label="Search support tickets">
@@ -53,6 +54,6 @@ export function SearchView() {
       </div>
       {error && <ErrorNotice message={error} />}
       <CaseList cases={cases} />
-    </section>
+    </Panel>
   );
 }

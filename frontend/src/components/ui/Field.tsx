@@ -19,6 +19,7 @@ export function Field({
   error?: string;
   children: ReactElement<ControlProps>;
 }) {
+  const controlId = children.props.id ?? id;
   const helpId = helperText ? `${id}-help` : undefined;
   const errorId = error ? `${id}-error` : undefined;
   const describedBy = [children.props["aria-describedby"], helpId, errorId].filter(Boolean).join(" ") || undefined;
@@ -30,7 +31,7 @@ export function Field({
 
   return (
     <div className={`field${error ? " field-invalid" : ""}`}>
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={controlId}>{label}</label>
       {control}
       {helperText && <span className="field-help" id={helpId}>{helperText}</span>}
       {error && <span className="field-error" id={errorId}>{error}</span>}
