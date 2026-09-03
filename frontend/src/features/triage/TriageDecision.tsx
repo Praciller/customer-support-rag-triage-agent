@@ -26,11 +26,12 @@ export function TriageDecision({ result }: { result: TriageResult | null }) {
             </div>
           )}
           <div className="metadata">
-            <Badge tone={result.grounded ? "success" : "danger"}>{Math.round(result.grounding_score * 100)}% grounded</Badge>
-            <Badge tone={result.citation_integrity ? "success" : "danger"}>
-              {result.citation_integrity ? "citations checked" : "citation rejected"}
-            </Badge>
-            <TriageMetadata result={result} />
+            <TriageMetadata result={result}>
+              <Badge tone={result.grounded ? "success" : "danger"}>{Math.round(result.grounding_score * 100)}% grounded</Badge>
+              <Badge tone={result.citation_integrity ? "success" : "danger"}>
+                {result.citation_integrity ? "citations checked" : "citation rejected"}
+              </Badge>
+            </TriageMetadata>
           </div>
           {result.degraded_mode && (
             <div className="warning" role="status">
