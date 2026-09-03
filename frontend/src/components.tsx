@@ -1,6 +1,6 @@
 import { CheckCircle2, Clock3, Database, ShieldAlert } from "lucide-react";
 
-import type { SimilarCase, TraceStep } from "./types";
+import type { SimilarCase, TraceStep } from "./types/api";
 
 export function Badge({ children, tone = "neutral" }: { children: React.ReactNode; tone?: string }) {
   return <span className={`badge badge-${tone}`}>{children}</span>;

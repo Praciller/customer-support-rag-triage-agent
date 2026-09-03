@@ -1,4 +1,4 @@
-import type { Evaluation, SimilarCase, TriageResult } from "./types";
+import type { Evaluation, SimilarCase, TriageResult } from "../types/api";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
 
