@@ -34,6 +34,22 @@ describe("TriageView", () => {
     expect(screen.getByText(/7\. suggest next action/i)).toBeInTheDocument();
   });
 
+  it("preserves the original triage metadata badge order", () => {
+    const { container } = renderTriage();
+
+    const metadata = Array.from(container.querySelectorAll(".metadata .badge")).map((node) =>
+      node.textContent?.trim(),
+    );
+
+    expect(metadata).toEqual([
+      "mock / mock-small",
+      "86% grounded",
+      "fresh",
+      "18.4 ms total",
+      "citations checked",
+    ]);
+  });
+
   it("shows semantic escalation text and the escalation reason", () => {
     renderTriage({
       ...makeTriageResult(),
