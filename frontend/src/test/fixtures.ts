@@ -1,4 +1,4 @@
-import type { Evaluation, TriageResult } from "../types";
+import type { Evaluation, TriageResult } from "../types/api";
 
 export function makeTriageResult(): TriageResult {
   const traceNodes = [

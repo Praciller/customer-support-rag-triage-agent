@@ -2,10 +2,10 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./app/App";
-import { api } from "./api";
+import { api } from "./lib/api";
 import { makeEvaluation, makeTriageResult } from "./test/fixtures";
 
-vi.mock("./api", () => ({
+vi.mock("./lib/api", () => ({
   api: {
     health: vi.fn(),
     triage: vi.fn(),

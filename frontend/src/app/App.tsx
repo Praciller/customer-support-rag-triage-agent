@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
-import { api } from "../api";
-import type { TriageResult } from "../types";
+import { api } from "../lib/api";
+import type { TriageResult } from "../types/api";
 import { DatasetView } from "../features/dataset/DatasetView";
 import { EvaluationView } from "../features/evaluation/EvaluationView";
 import { OverviewView } from "../features/overview/OverviewView";

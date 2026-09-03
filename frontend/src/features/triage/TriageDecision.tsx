@@ -1,5 +1,5 @@
 import { Badge } from "../../components";
-import type { TriageResult } from "../../types";
+import type { TriageResult } from "../../types/api";
 import { TriageMetadata } from "./TriageMetadata";
 
 export function TriageDecision({ result }: { result: TriageResult | null }) {

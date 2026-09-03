@@ -1,10 +1,10 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { api } from "../../api";
+import { api } from "../../lib/api";
 import { SearchView } from "./SearchView";
 
-vi.mock("../../api", () => ({
+vi.mock("../../lib/api", () => ({
   api: {
     search: vi.fn(),
   },

@@ -1,5 +1,5 @@
 import { Badge } from "../../components";
-import type { TriageResult } from "../../types";
+import type { TriageResult } from "../../types/api";
 
 export function TriageMetadata({ result }: { result: TriageResult }) {
   return (

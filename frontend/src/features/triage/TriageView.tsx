@@ -1,5 +1,5 @@
 import { Badge, CaseList, TraceList } from "../../components";
-import type { TriageResult } from "../../types";
+import type { TriageResult } from "../../types/api";
 import { TicketComposer } from "./TicketComposer";
 import { TriageDecision } from "./TriageDecision";
 

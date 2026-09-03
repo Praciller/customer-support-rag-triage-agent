@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { api } from "../../api";
+import { api } from "../../lib/api";
 
 export function ProviderView() {
   const [data, setData] = useState<Record<string, unknown>>({});

@@ -1,9 +1,9 @@
 import { Search } from "lucide-react";
 import { useState } from "react";
 
-import { api } from "../../api";
+import { api } from "../../lib/api";
 import { CaseList, ErrorNotice } from "../../components";
-import type { SimilarCase } from "../../types";
+import type { SimilarCase } from "../../types/api";
 
 export function SearchView() {
   const [query, setQuery] = useState("card delivery is late");

@@ -1,10 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { api } from "../../api";
+import { api } from "../../lib/api";
 import { DatasetView } from "./DatasetView";
 
-vi.mock("../../api", () => ({
+vi.mock("../../lib/api", () => ({
   api: {
     dataset: vi.fn(),
   },

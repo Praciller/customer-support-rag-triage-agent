@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { api } from "../../api";
+import { api } from "../../lib/api";
 import { Badge } from "../../components";
 
 export function DatasetView() {
