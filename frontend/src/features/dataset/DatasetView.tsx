@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { api } from "../../lib/api";
-import { Badge } from "../../components";
+import { Badge } from "../../components/ui/Badge";
 
 export function DatasetView() {
   const [data, setData] = useState<Record<string, unknown>>({});

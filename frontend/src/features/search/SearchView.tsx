@@ -2,7 +2,10 @@ import { Search } from "lucide-react";
 import { useState } from "react";
 
 import { api } from "../../lib/api";
-import { CaseList, ErrorNotice } from "../../components";
+import { CaseList } from "../../components/evidence/CaseList";
+import { Button } from "../../components/ui/Button";
+import { ErrorNotice } from "../../components/ui/ErrorNotice";
+import { Field } from "../../components/ui/Field";
 import type { SimilarCase } from "../../types/api";
 
 export function SearchView() {
@@ -28,31 +31,25 @@ export function SearchView() {
     <section className="panel page-panel">
       <div className="section-title"><div><p>Vector retrieval</p><h2>Search indexed support tickets</h2></div></div>
       <div className="search-row">
-        <input
-          aria-label="Search support tickets"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <select
-          aria-label="Intent filter"
-          value={intent}
-          onChange={(event) => setIntent(event.target.value)}
-        >
-          <option value="">All intents</option>
-          {["delivery_issue", "refund_request", "billing_issue", "technical_issue", "account_access", "product_question", "complaint", "cancellation", "other"].map((value) => <option key={value}>{value}</option>)}
-        </select>
-        <select
-          aria-label="Top K"
-          value={topK}
-          onChange={(event) => setTopK(Number(event.target.value))}
-        >
-          {[3, 5, 8, 10].map((value) => (
-            <option key={value} value={value}>Top {value}</option>
-          ))}
-        </select>
-        <button className="primary" onClick={search} disabled={loading || !query.trim()}>
+        <Field id="search-query" label="Search support tickets">
+          <input value={query} onChange={(event) => setQuery(event.target.value)} />
+        </Field>
+        <Field id="search-intent" label="Intent filter">
+          <select value={intent} onChange={(event) => setIntent(event.target.value)}>
+            <option value="">All intents</option>
+            {["delivery_issue", "refund_request", "billing_issue", "technical_issue", "account_access", "product_question", "complaint", "cancellation", "other"].map((value) => <option key={value}>{value}</option>)}
+          </select>
+        </Field>
+        <Field id="search-top-k" label="Top K">
+          <select value={topK} onChange={(event) => setTopK(Number(event.target.value))}>
+            {[3, 5, 8, 10].map((value) => (
+              <option key={value} value={value}>Top {value}</option>
+            ))}
+          </select>
+        </Field>
+        <Button onClick={search} disabled={!query.trim()} loading={loading}>
           <Search size={16} />{loading ? "Searching..." : "Search"}
-        </button>
+        </Button>
       </div>
       {error && <ErrorNotice message={error} />}
       <CaseList cases={cases} />

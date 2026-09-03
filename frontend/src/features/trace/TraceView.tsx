@@ -1,4 +1,4 @@
-import { TraceList } from "../../components";
+import { TraceList } from "../../components/trace/TraceList";
 import type { TriageResult } from "../../types/api";
 
 export function TraceView({ trace }: { trace: TriageResult["trace"] }) {

@@ -1,7 +1,9 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 
 import { api } from "../../lib/api";
-import { Badge, ErrorNotice, MetricCard } from "../../components";
+import { MetricCard } from "../../components/MetricCard";
+import { Badge } from "../../components/ui/Badge";
+import { ErrorNotice } from "../../components/ui/ErrorNotice";
 import type { Evaluation } from "../../types/api";
 
 const EvaluationChart = lazy(() => import("./EvaluationChart"));
