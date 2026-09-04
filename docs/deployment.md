@@ -35,7 +35,21 @@ The existing Docker Space runs on `cpu-basic`. No secret is required for demo mo
 only considered verified after the live UI loads, `/ready` returns 200, and a live deterministic
 triage request returns seven trace nodes.
 
-Verified July 26, 2026 at 14:43 ICT:
+### Current verified deployment — September 5, 2026
+
+- GitHub source SHA: `11df5035e3f4f96b78b21f5c1d993bb6d6deaaba`.
+- Current Space revision: `a2661562ff1a2a7b7f15e4b9145cb007c98444a5`.
+- Previous healthy rollback revision: `255b7272544c9222e1fde5351598779049615162`.
+- Bundle SHA256: `86eeb7f69fede2be2d2f7ba3cf65a98feb24e18e3fb6b0f484737ed8de9ab123`.
+- `/ready`: HTTP 200, demo mode active, 27 indexed records ready; hardware `cpu-basic`.
+- Triage: HTTP 200, 3 retrieval matches, grounded score 0.86, 7/7 trace nodes, `ask_for_order_id`, no fallback or degraded state.
+- Public ingestion: HTTP 403.
+- Evaluation: deterministic fixture, 8 labeled tickets, Precision@5 37.5%, Recall@5 62.5%, MRR 0.771, nDCG@5 0.611, with the explicit not-production-SLA limitation.
+- Browser: live HF UI verified at 1440px and 390px without page overflow; mobile hierarchy passed; no application console or page errors.
+
+Rollback with `git revert a2661562ff1a2a7b7f15e4b9145cb007c98444a5` followed by `git push origin main`; do not force-push.
+
+Historical verification — July 26, 2026 at 14:43 ICT:
 
 - GitHub governed release: `ac196bddb75527f5d719ca5bbb0775b30700ff49`.
 - GitHub synchronized revision, including the mobile Evaluation containment fix:

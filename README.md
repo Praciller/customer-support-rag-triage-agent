@@ -141,7 +141,11 @@ cd frontend
 npm run lint
 npm test
 npm run build
+npm run build-storybook
+npm run test:e2e
 ```
+
+CI builds Storybook and runs the 14-test Chromium browser suite. The current live demo was verified from Space revision `a2661562ff1a2a7b7f15e4b9145cb007c98444a5`; it remains a bounded zero-key fixture, not production support quality.
 
 Reproduce the checked-in evaluation from the repository root:
 

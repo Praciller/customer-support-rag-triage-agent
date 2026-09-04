@@ -37,9 +37,9 @@ urgency accuracy were 100%; Precision@5 was 37.5%, standard Recall@5 62.5%, MRR 
 0.611, and workflow success 100%. These are deterministic regression measurements, not production
 claims. The mock grounding-verifier pass rate is workflow evidence, not semantic-entailment proof.
 
-The July 26 public smoke test verified Hugging Face revision
-`255b7272544c9222e1fde5351598779049615162`, synchronized from GitHub
-`81baa5f727da21e9cd1577ebc4131ace2fbf2b37`. `/ready` returned 200 with 27 indexed records; one
+The September 5, 2026 public smoke test verified Hugging Face revision
+`a2661562ff1a2a7b7f15e4b9145cb007c98444a5`, synchronized from GitHub
+`11df5035e3f4f96b78b21f5c1d993bb6d6deaaba`. `/ready` returned 200 with 27 indexed records; one
 mock triage returned 3 retrieval matches, a complete 7/7 trace, grounded status, and
 `ask_for_order_id`, while public ingestion returned 403. The deployed Evaluation view showed
 Precision@5 37.5% (38% displayed), Recall@5 62.5% (63% displayed), MRR 0.771, and nDCG@5 0.611.
