@@ -16,11 +16,11 @@ Live URL: https://pracill-customer-support-rag-triage-agent.hf.space/
 
 ## Failed
 
-- Storybook build: the existing generated `storybook-static/sb-manager` directory caused a deterministic `EEXIST` collision during the fresh local run. No source or configuration change was made.
+None.
 
 ## Flaky
 
-None observed.
+None observed. The first local Storybook attempt was blocked by a stale ignored `storybook-static` output directory; after removing that generated directory, a fresh `npm run build-storybook` completed successfully without source or configuration changes.
 
 ## Limitations
 
