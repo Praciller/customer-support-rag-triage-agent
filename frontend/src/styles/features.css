@@ -40,6 +40,7 @@ input, select { min-height: 40px; padding: 0 11px; }
 .response { margin-top: 14px; padding: var(--space-4); border: var(--border-width-thin) solid color-mix(in srgb, var(--color-success) 35%, var(--color-border)); border-radius: 7px; background: color-mix(in srgb, var(--color-success) 8%, var(--color-surface)); }
 .response p { margin: 7px 0 0; font-size: var(--text-xs); line-height: 1.6; overflow-wrap: anywhere; }
 .metadata { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px; }
+.metric-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
 .evaluation-layout { display: grid; gap: 15px; }
 .evaluation-layout > * { min-width: 0; }
 .evaluation-chart { padding: 22px; overflow: hidden; }
