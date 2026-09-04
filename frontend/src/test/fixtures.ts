@@ -1,6 +1,6 @@
 import type { Evaluation, TriageResult } from "../types/api";
 
-export function makeTriageResult(): TriageResult {
+export function makeTriageResult(overrides: Partial<TriageResult> = {}): TriageResult {
   const traceNodes = [
     "normalize_message",
     "classify_intent",
@@ -11,7 +11,7 @@ export function makeTriageResult(): TriageResult {
     "suggest_next_action",
   ];
 
-  return {
+  const base: TriageResult = {
     normalized_message: "My card has not arrived.",
     intent: "delivery_issue",
     intent_confidence: 0.94,
@@ -62,10 +62,12 @@ export function makeTriageResult(): TriageResult {
       error_category: null,
     })),
   };
+
+  return { ...base, ...overrides };
 }
 
-export function makeEvaluation(): Evaluation {
-  return {
+export function makeEvaluation(overrides: Partial<Evaluation> = {}): Evaluation {
+  const base: Evaluation = {
     evaluation_mode: "deterministic_mock",
     top_k: 5,
     retrieval_precision_at_k: 0.8,
@@ -95,4 +97,6 @@ export function makeEvaluation(): Evaluation {
     },
     limitations: ["Small deterministic fixture; not a production SLA."],
   };
+
+  return { ...base, ...overrides };
 }
