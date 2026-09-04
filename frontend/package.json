@@ -11,7 +11,8 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test:e2e": "playwright test",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:visual": "playwright test e2e/visual.spec.ts"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

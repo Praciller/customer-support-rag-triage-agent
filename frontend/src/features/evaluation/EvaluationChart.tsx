@@ -23,7 +23,7 @@ export default function EvaluationChart({ data }: { data: MetricDatum[] }) {
           <XAxis dataKey="metric" tickLine={false} axisLine={false} />
           <YAxis domain={[0, 100]} tickLine={false} axisLine={false} />
           <Tooltip formatter={(value) => `${Number(value).toFixed(1)}%`} />
-          <Bar dataKey="value" fill="#459781" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="value" fill="var(--color-success)" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </section>
