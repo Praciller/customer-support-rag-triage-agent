@@ -1,4 +1,6 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
+
+import { Button as AriaButton } from "@/components/aria-ui/button";
 
 type ButtonVariant = "primary" | "secondary";
 
@@ -9,7 +11,7 @@ export function Button({
   children,
   className = "",
   ...props
-}: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "disabled"> & {
+}: Omit<ComponentProps<typeof AriaButton>, "children" | "isDisabled" | "className" | "variant"> & {
   variant?: ButtonVariant;
   disabled?: boolean;
   loading?: boolean;
@@ -17,13 +19,14 @@ export function Button({
   className?: string;
 }) {
   return (
-    <button
+    <AriaButton
       {...props}
+      variant={variant === "primary" ? "default" : "outline"}
+      isDisabled={disabled || loading}
       aria-busy={loading || undefined}
       className={`button button-${variant} ${className}`.trim()}
-      disabled={disabled || loading}
     >
       {children}
-    </button>
+    </AriaButton>
   );
 }

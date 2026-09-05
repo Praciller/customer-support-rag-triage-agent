@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
 import { Badge } from "./Badge";
 import { Button } from "./Button";
@@ -25,6 +26,19 @@ describe("semantic UI components", () => {
     expect(screen.getByRole("button", { name: "Disabled" })).toBeDisabled();
     expect(screen.getByRole("button", { name: /save changes/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /save changes/i })).toHaveTextContent("Save changes");
+  });
+
+  it("preserves button press, keyboard, and class composition semantics", async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(<Button className="custom-action" onClick={onClick}>Review decision</Button>);
+    const button = screen.getByRole("button", { name: "Review decision" });
+    expect(button).toHaveClass("button-primary", "custom-action");
+    await user.click(button);
+    expect(onClick).toHaveBeenCalledTimes(1);
+    button.focus();
+    await user.keyboard("[Enter]");
+    expect(onClick).toHaveBeenCalledTimes(2);
   });
 
   it.each(["neutral", "success", "warning", "danger"] as const)(

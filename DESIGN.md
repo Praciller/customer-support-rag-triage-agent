@@ -1,5 +1,5 @@
 ---
-version: 2
+version: 3
 name: ResolveOps
 aesthetic: evidence-first-operational-console
 color_tokens:
@@ -15,8 +15,18 @@ color_tokens:
   danger: "oklch(0.560 0.190 28)"
   focus: "oklch(0.555 0.180 258)"
 typography:
-  family_ui: "Inter, Segoe UI, system-ui, sans-serif"
-  family_code: "ui-monospace, SFMono-Regular, Consolas, monospace"
+  family_ui: "Geist Variable, Geist, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+  family_code: "Geist Mono Variable, Geist Mono, ui-monospace, SFMono-Regular, Consolas, monospace"
+  roles:
+    page_title: "26px / 32px / 600"
+    section_title: "18px / 24px / 600"
+    primary_decision: "22px / 28px / 600"
+    body: "15px / 22px / 400"
+    body_strong: "15px / 22px / 550-600"
+    control: "14px / 20px / 500"
+    metadata: "13px / 18px / 400-500"
+    technical: "12-13px / 18px / 450-500 / Geist Mono"
+    eyebrow: "11px / 16px / 600"
   scale_px: [12, 14, 16, 20, 26, 34]
 spacing_px: [4, 8, 12, 16, 24, 32, 48]
 radius_px: [6, 10, 14]
@@ -37,15 +47,35 @@ component_state_rules:
   unavailable: "explain the missing capability and the safe next action"
   degraded: "show degraded state and preserve human review"
   ungrounded: "never present as grounded; route to manual review"
+v3_foundation:
+  status: "implemented foundation; future page migration remains separate"
+  tailwind: "3.4.19 retained"
+  primitive_base: "shadcn source ownership with React Aria"
+  aliases: "@/* resolves through TypeScript and Vite to frontend/src"
+  surfaces: [canvas, workspace, primary_decision, standard_section, subtle_item, technical_metadata]
+  rules:
+    - "semantic tokens remain ResolveOps-owned"
+    - "technical numerals use Geist Mono and tabular numerals"
+    - "generated registry defaults are not product decisions"
+    - "direct labels are preferred over unlabeled icon-only meaning"
+    - "generic Card-first composition is not the default"
 ---
 
 # ResolveOps — Evidence-first Operational Console
 
 ## Product fit and personality
 
+## v3 foundation status
+
+The v3 foundation is implemented: Geist Variable is the UI family, Geist Mono Variable is the technical family, Tailwind 3 is retained, and shadcn source components use the React Aria primitive base. The `@/*` alias is defined consistently in TypeScript and Vite. ResolveOps owns the semantic tokens and domain composition; generated registry defaults are reference material, not product decisions.
+
+The surface hierarchy is: Canvas, Workspace, Primary decision surface, Standard section surface, Subtle item surface, and Technical metadata surface. Technical identifiers, scores, latency, runtime values, and metrics use Geist Mono with tabular numerals where alignment improves scanning. Consequential actions remain at least 14px, and focus-visible outlines and reduced-motion behavior remain required.
+
+This slice establishes foundation tokens, typography, primitives, and Storybook references. Shell/navigation, Triage, Evidence, Trace, and Evaluation layout migration remains future Slice C/D/E work and is not claimed as implemented here.
+
 ResolveOps is a calm, precise, operational workspace for support agents working in a professional office environment. It is dense but readable: the interface supports quick triage while keeping consequential recommendations inspectable. The visual language refines the existing restrained OKLCH palette with cobalt/blue as the primary action accent and uses semantic colors only where they carry meaning.
 
-This specification is version 2 and is the source of truth for future design and frontend implementation. It does not, by itself, change runtime behavior.
+This specification is the v3 source of truth for the implemented foundation and future frontend implementation. It does not change runtime behavior.
 
 ## Information hierarchy
 
