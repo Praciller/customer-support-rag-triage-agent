@@ -5,12 +5,12 @@ import { StatusIndicator } from "../../components/ui/StatusIndicator";
 export function DecisionWorkspace({ result }: { result: TriageResult | null }) {
   return (
     <section className="decision-workspace" aria-label="Recommended action">
-      <div className="section-title"><div><p>Recommended action</p><h2>Triage summary</h2></div>{result && <StatusIndicator label={result.escalate ? "Escalate" : "Standard queue"} tone={result.escalate ? "danger" : "success"} />}</div>
+        <div className="section-title"><div><p>Recommended action</p><h2>Triage summary</h2></div>{result && <StatusIndicator label={result.escalate ? "Escalate" : !result.grounded || result.next_action === "manual_review" ? "Manual review" : "Standard queue"} tone={result.escalate || !result.grounded || result.next_action === "manual_review" ? "danger" : "success"} />}</div>
       {result ? <>
         <div className="primary-action"><span>Next action</span><strong>{result.next_action.replaceAll("_", " ")}</strong></div>
         <div className="decision-intent"><span>Intent</span><strong>{result.intent.replaceAll("_", " ")}</strong></div>
         <div className="decision-statuses">
-          <span className="decision-status"><CheckCircle2 size={16} />{result.grounded ? `${Math.round(result.grounding_score * 100)}% grounded` : `Not grounded (${Math.round(result.grounding_score * 100)}%)`}</span>
+          <span className="decision-status" aria-label={`Grounding status: ${result.grounded ? "grounded" : "not grounded"}`}>{result.grounded ? <CheckCircle2 size={16} aria-hidden="true" /> : <ShieldAlert size={16} aria-hidden="true" />}{result.grounded ? `${Math.round(result.grounding_score * 100)}% grounded` : `Not grounded (${Math.round(result.grounding_score * 100)}%)`}</span>
           <span className="decision-status">Urgency: <strong>{result.urgency}</strong></span>
           <span className="decision-status">{result.citation_integrity ? "Citations checked" : "Citation rejected"}</span>
           <span className="decision-status">{result.escalate ? "Manual review required" : "Human review remains required"}</span>

@@ -17,7 +17,7 @@ export function CaseList({ cases }: { cases: SimilarCase[] }) {
           </div>
           <p className="case-intent">{item.intent.replaceAll("_", " ")}</p>
           <p>{item.message}</p>
-          <small>Source: {item.source} · bounded demo evidence</small>
+          <small>Source: {item.source}</small>
         </article>
       ))}
     </div>

@@ -21,7 +21,8 @@ describe("CaseList", () => {
     expect(screen.getByText("delivery issue")).toBeInTheDocument();
     expect(screen.getByText("0.91 similarity")).toBeInTheDocument();
     expect(screen.getByText("Where is the card I ordered?")).toBeInTheDocument();
-    expect(screen.getByText("Source: mteb/banking77 · bounded demo evidence")).toBeInTheDocument();
+    expect(screen.getByText("Source: mteb/banking77")).toBeInTheDocument();
+    expect(screen.queryByText(/bounded demo evidence/i)).not.toBeInTheDocument();
     expect(screen.getByText("demo-delivery")).toBeInTheDocument();
   });
 

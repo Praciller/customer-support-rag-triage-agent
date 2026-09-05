@@ -63,14 +63,10 @@ describe("TriageView", () => {
     expect(details.querySelector("code")).toHaveTextContent("mock / mock-small");
   });
 
-  it("preserves the original triage metadata badge order", () => {
+  it("does not duplicate technical metadata as badges", () => {
     const { container } = renderTriage();
 
-    const metadata = Array.from(container.querySelectorAll(".metadata .badge")).map((node) =>
-      node.textContent?.trim(),
-    );
-
-    expect(metadata).toEqual(["mock / mock-small", "fresh", "18.4 ms total"]);
+    expect(container.querySelectorAll(".technical-details .metadata .badge")).toHaveLength(0);
   });
 
   it("shows semantic escalation text and the escalation reason", () => {
@@ -93,7 +89,24 @@ describe("TriageView", () => {
     });
 
     expect(screen.getByText(/not grounded/i)).toBeInTheDocument();
-    expect(screen.getByText(/manual review/i)).toBeInTheDocument();
+    expect(screen.getByText("manual review", { selector: "strong" })).toBeInTheDocument();
+    const groundingStatus = screen.getByLabelText("Grounding status: not grounded");
+    expect(groundingStatus).toBeInTheDocument();
+    expect(groundingStatus.querySelector("svg")?.getAttribute("data-lucide")).not.toBe("circle-check");
+    expect(screen.getByText("Manual review")).toBeInTheDocument();
+  });
+
+  it("shows each technical detail once and only conditional runtime flags", () => {
+    const { container } = renderTriage({ ...makeTriageResult(), fallback_used: true, degraded_mode: true });
+    fireEvent.click(screen.getByText("Technical details", { selector: "summary" }));
+    const details = container.querySelector(".technical-details")!;
+    expect(details.querySelectorAll("code")).toHaveLength(4);
+    expect(Array.from(details.querySelectorAll("code")).filter((node) => node.textContent === "mock / mock-small")).toHaveLength(1);
+    expect(Array.from(details.querySelectorAll("code")).filter((node) => node.textContent === "fresh")).toHaveLength(1);
+    expect(Array.from(details.querySelectorAll("code")).filter((node) => node.textContent === "18.4 ms total")).toHaveLength(1);
+    expect(Array.from(details.querySelectorAll("code")).filter((node) => node.textContent === "My card has not arrived.")).toHaveLength(1);
+    expect(screen.getByText("provider fallback")).toBeInTheDocument();
+    expect(screen.getByText("degraded")).toBeInTheDocument();
   });
 
   it("keeps degraded fallback review instructions visible", () => {
