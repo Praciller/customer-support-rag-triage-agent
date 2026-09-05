@@ -1,10 +1,10 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { makeTriageResult } from "../../test/fixtures";
 import { TriageView } from "./TriageView";
 
-function renderTriage(result = makeTriageResult()) {
+function renderTriage(result: ReturnType<typeof makeTriageResult> | null = makeTriageResult()) {
   return render(
     <TriageView
       message="My card has still not arrived and I need help."
@@ -34,6 +34,35 @@ describe("TriageView", () => {
     expect(screen.getByText(/7\. suggest next action/i)).toBeInTheDocument();
   });
 
+  it("makes the human decision the primary workspace and subordinates technical metadata", () => {
+    const { container } = renderTriage();
+
+    const decision = screen.getByRole("region", { name: /recommended action/i });
+    expect(decision).toHaveTextContent(/ask for order id/i);
+    expect(decision).toHaveTextContent(/suggested response/i);
+    expect(decision).toHaveTextContent(/86% grounded/i);
+    expect(decision).toHaveTextContent(/medium/i);
+    expect(screen.getByRole("group", { name: /technical details/i })).toBeInTheDocument();
+    expect(container.querySelector(".technical-details")).toBeInTheDocument();
+    expect(container.querySelector(".inline-trace")?.compareDocumentPosition(container.querySelector(".technical-details")!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it("keeps the empty state purposeful without inventing a decision", () => {
+    renderTriage(null);
+
+    expect(screen.getByText(/run triage to generate a recommended action and evidence/i)).toBeInTheDocument();
+    expect(screen.queryByText(/ask for order id/i)).not.toBeInTheDocument();
+  });
+
+  it("provides a keyboard-operable technical details disclosure", () => {
+    const { container } = renderTriage();
+    const details = container.querySelector(".technical-details")!;
+    expect(details).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByText("Technical details", { selector: "summary" }));
+    expect(details).toHaveAttribute("open");
+    expect(details.querySelector("code")).toHaveTextContent("mock / mock-small");
+  });
+
   it("preserves the original triage metadata badge order", () => {
     const { container } = renderTriage();
 
@@ -41,13 +70,7 @@ describe("TriageView", () => {
       node.textContent?.trim(),
     );
 
-    expect(metadata).toEqual([
-      "mock / mock-small",
-      "86% grounded",
-      "fresh",
-      "18.4 ms total",
-      "citations checked",
-    ]);
+    expect(metadata).toEqual(["mock / mock-small", "fresh", "18.4 ms total"]);
   });
 
   it("shows semantic escalation text and the escalation reason", () => {

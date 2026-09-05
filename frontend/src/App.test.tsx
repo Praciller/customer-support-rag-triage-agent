@@ -68,7 +68,7 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: /run triage/i }));
 
     expect(await screen.findByText("My card has not arrived.")).toBeInTheDocument();
-    expect(screen.getByText(/18\.4 ms total/i)).toBeInTheDocument();
+    expect(screen.getByText(/18\.4 ms total/i, { selector: "code" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /seven-node execution trace/i })).toBeInTheDocument();
     expect(screen.getByText(/7\. suggest next action/i)).toBeInTheDocument();
   });
