@@ -27,6 +27,18 @@ export const Loading: Story = {
   args: { loading: true },
 };
 
+export const LongLabel: Story = {
+  args: { children: "Request manual review for this customer decision" },
+};
+
+export const KeyboardFocus: Story = {
+  parameters: { pseudo: { focusVisible: true } },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.tab();
+    await expect(canvas.getByRole("button", { name: /run triage/i })).toHaveFocus();
+  },
+};
+
 const clickable = fn();
 
 export const Clickable: Story = {
