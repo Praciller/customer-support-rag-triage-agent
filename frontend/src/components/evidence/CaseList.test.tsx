@@ -19,9 +19,11 @@ describe("CaseList", () => {
     render(<CaseList cases={[exampleCase]} />);
 
     expect(screen.getByText("delivery issue")).toBeInTheDocument();
-    expect(screen.getByText("91% match")).toBeInTheDocument();
+    expect(screen.getByText("0.91 similarity")).toBeInTheDocument();
     expect(screen.getByText("Where is the card I ordered?")).toBeInTheDocument();
-    expect(screen.getByText("mteb/banking77 / demo-delivery")).toBeInTheDocument();
+    expect(screen.getByText("Source: mteb/banking77")).toBeInTheDocument();
+    expect(screen.queryByText(/bounded demo evidence/i)).not.toBeInTheDocument();
+    expect(screen.getByText("demo-delivery")).toBeInTheDocument();
   });
 
   it("explains when no indexed evidence matches", () => {

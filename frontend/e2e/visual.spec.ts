@@ -42,7 +42,7 @@ test("evaluation desktop baseline", async ({ page }) => {
 
 test("successful triage mobile baseline and hierarchy", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 }); await installVisualRoutes(page); await runSuccess(page);
-  const decision = page.getByRole("article").filter({ has: page.getByRole("heading", { name: "Triage summary" }) }); const evidence = page.getByRole("article").filter({ has: page.getByRole("heading", { name: "Similar cases" }) }); const trace = page.locator("section").filter({ has: page.getByRole("heading", { name: "Seven-node execution trace" }) });
+  const decision = page.getByRole("region", { name: "Recommended action" }); const evidence = page.getByRole("region", { name: "Retrieved evidence" }); const trace = page.getByRole("region", { name: "Workflow trace" });
   const boxes = await Promise.all([decision, evidence, trace].map((locator) => locator.boundingBox())); if (boxes.some((box) => box === null)) throw new Error("Expected mobile decision, evidence, and trace boxes");
   if (!(boxes[0]!.y < boxes[1]!.y && boxes[1]!.y < boxes[2]!.y)) throw new Error("Mobile hierarchy order is incorrect");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(() => document.documentElement.clientWidth)); await page.evaluate(() => document.fonts.ready);

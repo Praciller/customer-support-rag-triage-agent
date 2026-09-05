@@ -21,31 +21,32 @@ test("Card not arrived produces a grounded seven-node decision", async ({ page }
   await page.getByRole("button", { name: "Card not arrived", exact: true }).click();
   await page.getByRole("button", { name: "Run triage", exact: true }).click();
 
-  const decision = page.getByRole("article").filter({
-    has: page.getByRole("heading", { name: "Triage summary" }),
-  });
+  const decision = page.getByRole("region", { name: "Recommended action" });
   await expect(decision.getByText("Intent", { exact: true })).toBeVisible();
   await expect(decision.getByText("delivery issue", { exact: true })).toBeVisible();
-  await expect(decision.getByText("Urgency", { exact: true })).toBeVisible();
+  await expect(decision).toContainText("Urgency:");
   await expect(decision.getByText("medium", { exact: true })).toBeVisible();
   await expect(decision.getByText("Next action", { exact: true })).toBeVisible();
   await expect(decision.getByText("ask for order id", { exact: true })).toBeVisible();
   await expect(decision.getByText(/grounded/i)).toBeVisible();
-  await expect(decision.getByText("citations checked", { exact: true })).toBeVisible();
+  await expect(decision.getByText(/citation/i)).toBeVisible();
 
-  const evidence = page.getByRole("article").filter({
-    has: page.getByRole("heading", { name: "Similar cases" }),
-  });
+  const evidence = page.getByRole("region", { name: "Retrieved evidence" });
   await expect(evidence).toContainText("found");
-  const firstCase = evidence.getByRole("article").first();
+  const firstCase = evidence.getByRole("listitem").first();
   await expect(firstCase).toBeVisible();
-  await expect(firstCase).toContainText("% match");
+  await expect(firstCase).toContainText("similarity");
   await expect(firstCase).toContainText("mteb/banking77");
   await expect(firstCase).toContainText("demo-delivery-estimate");
 
-  const trace = page.locator("section").filter({
-    has: page.getByRole("heading", { name: "Seven-node execution trace" }),
-  });
+  const trace = page.getByRole("region", { name: "Workflow trace" });
+  const details = page.getByRole("group", { name: "Technical details" });
+  await expect(details).toBeVisible();
+  await expect(decision).toHaveAttribute("aria-label", "Recommended action");
+  const decisionBox = await decision.boundingBox();
+  const evidenceBox = await evidence.boundingBox();
+  const traceBox = await trace.boundingBox();
+  expect(decisionBox && evidenceBox && traceBox && decisionBox.y < evidenceBox.y && evidenceBox.y < traceBox.y).toBeTruthy();
   const traceItems = trace.getByRole("listitem");
   await expect(traceItems).toHaveCount(nodes.length);
   for (const [index, node] of nodes.entries()) {
@@ -58,9 +59,7 @@ test("a high-risk example shows an actual escalation decision", async ({ page })
   await page.getByRole("button", { name: "Suspicious transaction", exact: true }).click();
   await page.getByRole("button", { name: "Run triage", exact: true }).click();
 
-  const decision = page.getByRole("article").filter({
-    has: page.getByRole("heading", { name: "Triage summary" }),
-  });
+  const decision = page.getByRole("region", { name: "Recommended action" });
   await expect(decision.getByText("Escalate", { exact: true })).toBeVisible();
   await expect(decision.getByText("high", { exact: true })).toBeVisible();
   await expect(decision).toContainText("Escalation reason");
