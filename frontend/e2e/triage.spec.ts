@@ -66,3 +66,20 @@ test("a high-risk example shows an actual escalation decision", async ({ page })
   await expect(decision).toContainText("Escalation reason");
   await expect(decision).toContainText(/human|review|protect|unauthorized|risk/i);
 });
+
+test("mobile More exposes labelled secondary tools and closes with Escape", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Triage", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Evaluation", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Trace", exact: true })).toBeVisible();
+  const more = page.getByRole("button", { name: "More", exact: true });
+  await more.click();
+  await expect(page.getByRole("menu", { name: "Secondary tools" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Overview" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Semantic search" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Dataset explorer" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Provider status" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu", { name: "Secondary tools" })).toBeHidden();
+});
