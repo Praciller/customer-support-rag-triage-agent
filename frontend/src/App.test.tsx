@@ -87,8 +87,27 @@ describe("App", () => {
   it("opens labelled secondary tools from the responsive More control", () => {
     render(<App />);
     fireEvent.click(screen.getByRole("button", { name: /^more$/i }));
-    expect(screen.getByRole("menu", { name: /secondary tools/i })).toBeInTheDocument();
+    expect(screen.getByRole("menu")).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: /provider status/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^more$/i })).toHaveAttribute("aria-expanded", "true");
+    expect(document.querySelector(".more-trigger")).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("keeps workflow navigation in the approved order", () => {
+    render(<App />);
+    const desktop = screen.getByRole("navigation", { name: "Main navigation" });
+    expect(Array.from(desktop.querySelectorAll("button")).slice(0, 3).map((button) => button.textContent)).toEqual(["Ticket triage", "Evaluation", "Agent trace"]);
+    const responsive = document.querySelector(".responsive-primary")!;
+    expect(Array.from(responsive.querySelectorAll("button")).slice(0, 4).map((button) => button.textContent?.trim())).toEqual(["Triage", "Evaluation", "Trace", "More"]);
+  });
+
+  it("marks More when the current view is a secondary tool", () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Overview" }));
+    expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument();
+    expect(document.querySelector(".more-trigger")).toHaveAttribute("data-current-secondary", "true");
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    expect(screen.getByRole("menuitem", { name: "Overview" })).toHaveAttribute("data-current", "true");
+    expect(screen.getByRole("menuitem", { name: "Overview" }).querySelector("[aria-current='page']")).toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
 import { Bot, CircleDot } from "lucide-react";
 
-import { nav, type View } from "../navigation";
+import { getNavItems, primaryIds, secondaryIds, type View } from "../navigation";
 
 export function Sidebar({
   view,
@@ -15,7 +15,7 @@ export function Sidebar({
       <p className="eyebrow">Support intelligence</p>
       <nav aria-label="Main navigation">
         <p className="nav-group-label">Workflow</p>
-        {nav.filter((item) => ["triage", "evaluation", "trace"].includes(item.id)).map((item) => (
+        {getNavItems(primaryIds).map((item) => (
           <button
             aria-current={view === item.id ? "page" : undefined}
             className={view === item.id ? "active" : ""}
@@ -26,7 +26,7 @@ export function Sidebar({
           </button>
         ))}
         <p className="nav-group-label nav-group-tools">Tools</p>
-        {nav.filter((item) => ["overview", "search", "dataset", "providers"].includes(item.id)).map((item) => (
+        {getNavItems(secondaryIds).map((item) => (
           <button aria-current={view === item.id ? "page" : undefined} className={view === item.id ? "active" : ""} key={item.id} onClick={() => setView(item.id)}><item.icon size={18} />{item.label}</button>
         ))}
       </nav>
