@@ -14,7 +14,8 @@ export function Sidebar({
       <div className="brand"><Bot size={22} /><span>ResolveOps</span></div>
       <p className="eyebrow">Support intelligence</p>
       <nav aria-label="Main navigation">
-        {nav.map((item) => (
+        <p className="nav-group-label">Workflow</p>
+        {nav.filter((item) => ["triage", "evaluation", "trace"].includes(item.id)).map((item) => (
           <button
             aria-current={view === item.id ? "page" : undefined}
             className={view === item.id ? "active" : ""}
@@ -23,6 +24,10 @@ export function Sidebar({
           >
             <item.icon size={18} />{item.label}
           </button>
+        ))}
+        <p className="nav-group-label nav-group-tools">Tools</p>
+        {nav.filter((item) => ["overview", "search", "dataset", "providers"].includes(item.id)).map((item) => (
+          <button aria-current={view === item.id ? "page" : undefined} className={view === item.id ? "active" : ""} key={item.id} onClick={() => setView(item.id)}><item.icon size={18} />{item.label}</button>
         ))}
       </nav>
       <div className="system-card">

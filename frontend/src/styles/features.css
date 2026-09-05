@@ -4,6 +4,8 @@ aside { background: var(--color-foreground); color: var(--color-surface); paddin
 .brand svg { color: var(--color-success); }
 .eyebrow { margin: 28px 10px 9px; color: color-mix(in srgb, var(--color-surface) 55%, var(--color-foreground)); font-size: var(--text-xs); font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
 nav { display: grid; gap: var(--space-1); }
+.nav-group-label { margin: 10px 10px 3px; color: color-mix(in srgb, var(--color-surface) 48%, var(--color-foreground)); font: 700 10px var(--font-code); letter-spacing: .12em; text-transform: uppercase; }
+.nav-group-tools { margin-top: 20px; }
 nav button { border: 0; background: transparent; color: color-mix(in srgb, var(--color-surface) 70%, var(--color-foreground)); border-radius: 7px; padding: 10px 11px; display: flex; align-items: center; gap: 10px; text-align: left; font-size: var(--text-xs); font-weight: 650; }
 nav button:hover, nav button.active { background: color-mix(in srgb, var(--color-primary) 25%, var(--color-foreground)); color: var(--color-surface); }
 .responsive-shell { display: none; }
