@@ -230,3 +230,54 @@ def test_invalid_grounding_payload_does_not_mark_response_grounded() -> None:
     assert result["grounding_score"] == 0
     assert result["next_action"] == "manual_review"
     assert result["unsupported_claims"] == ["A claim has no support."]
+
+
+def test_classifier_fallback_remains_degraded_through_final_decision() -> None:
+    class DegradedClassificationRouter(FakeRouter):
+        def generate(
+            self, request: LLMRequest, preferred_provider: str | None = None
+        ) -> ProviderResponse:
+            response = super().generate(request, preferred_provider)
+            if request.task == "classify_intent":
+                return ProviderResponse(
+                    text=response.text,
+                    provider="mock",
+                    model=response.model,
+                    degraded_mode=True,
+                    fallback_used=True,
+                )
+            return response
+
+    result = TriageWorkflow(
+        router=DegradedClassificationRouter(), retriever=FakeRetriever()
+    ).run("My order has not arrived", top_k=3)
+
+    assert result["retrieved_cases"]
+    assert result["degraded_mode"] is True
+    assert result["fallback_used"] is True
+    assert result["grounded"] is False
+    assert result["next_action"] == "manual_review"
+    assert result["trace"][1]["degraded_mode"] is True
+    assert "Generation used a degraded provider fallback." in result["unsupported_claims"]
+
+
+def test_non_boolean_escalation_is_not_trusted_for_low_urgency() -> None:
+    class InvalidEscalationRouter(FakeRouter):
+        def generate(
+            self, request: LLMRequest, preferred_provider: str | None = None
+        ) -> ProviderResponse:
+            if request.task == "detect_urgency":
+                return ProviderResponse(
+                    text='{"urgency":"low","escalate":"false","escalation_reason":""}',
+                    provider="mock",
+                    model="mock-small",
+                )
+            return super().generate(request, preferred_provider)
+
+    result = TriageWorkflow(
+        router=InvalidEscalationRouter(), retriever=FakeRetriever()
+    ).run("My order has not arrived", top_k=3)
+
+    assert result["urgency"] == "low"
+    assert result["escalate"] is False
+    assert result["next_action"] == "ask_for_order_id"
