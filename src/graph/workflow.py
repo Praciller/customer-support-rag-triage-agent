@@ -1,4 +1,5 @@
 import json
+import math
 import re
 import time
 from collections.abc import Callable
@@ -108,12 +109,14 @@ class TriageWorkflow:
         )
         payload = self._json(response.text)
         intent = payload.get("intent", "other")
-        if intent not in INTENTS:
+        if not isinstance(intent, str) or intent not in INTENTS:
             intent = "other"
         confidence = self._unit_interval(payload.get("confidence", 0))
         return {
             "intent": intent,
             "intent_confidence": confidence,
+            "degraded_mode": state.get("degraded_mode", False) or response.degraded_mode,
+            "fallback_used": state.get("fallback_used", False) or response.fallback_used,
             "trace": self._trace(
                 state,
                 "classify_intent",
@@ -134,14 +137,16 @@ class TriageWorkflow:
         )
         payload = self._json(response.text)
         urgency = payload.get("urgency", "medium")
-        if urgency not in URGENCIES:
+        if not isinstance(urgency, str) or urgency not in URGENCIES:
             urgency = "medium"
-        escalate = bool(payload.get("escalate", False)) or urgency in {"high", "critical"}
+        escalate = payload.get("escalate") is True or urgency in {"high", "critical"}
         reason = str(payload.get("escalation_reason", ""))
         return {
             "urgency": urgency,
             "escalate": escalate,
             "escalation_reason": reason,
+            "degraded_mode": state.get("degraded_mode", False) or response.degraded_mode,
+            "fallback_used": state.get("fallback_used", False) or response.fallback_used,
             "trace": self._trace(
                 state,
                 "detect_urgency",
@@ -155,11 +160,18 @@ class TriageWorkflow:
 
     def _retrieve_similar_cases(self, state: TriageState) -> dict[str, Any]:
         started = self.clock()
+        intent = state.get("intent")
         results = self.retriever.search(
             state["normalized_message"],
             top_k=state["top_k"],
-            intent=state.get("intent"),
+            intent=intent,
         )
+        unfiltered_fallback = False
+        if not results and intent and intent != "other":
+            results = self.retriever.search(
+                state["normalized_message"], top_k=state["top_k"], intent=None
+            )
+            unfiltered_fallback = True
         evidence = tuple(
             RetrievedEvidence(
                 reference_id=result.ticket_id,
@@ -181,7 +193,10 @@ class TriageWorkflow:
                 "retrieve_similar_cases",
                 started,
                 input_summary=f"intent={state.get('intent', 'other')}; top_k={state['top_k']}",
-                output_summary=f"retrieved={len(evidence)}",
+                output_summary=(
+                    f"retrieved={len(evidence)}; "
+                    f"unfiltered_fallback={str(unfiltered_fallback).lower()}"
+                ),
                 component="qdrant",
                 retrieved_document_count=len(evidence),
                 evidence_references=[item.reference_id for item in evidence],
@@ -215,8 +230,8 @@ class TriageWorkflow:
             "provider_used": response.provider,
             "model_used": response.model,
             "cached": response.cached,
-            "fallback_used": response.fallback_used,
-            "degraded_mode": response.degraded_mode,
+            "fallback_used": state.get("fallback_used", False) or response.fallback_used,
+            "degraded_mode": state.get("degraded_mode", False) or response.degraded_mode,
             "trace": self._trace(
                 state,
                 "generate_support_response",
@@ -245,18 +260,22 @@ class TriageWorkflow:
         has_evidence = bool(evidence)
         citation_integrity = bool(state.get("citation_integrity", True))
         degraded = state.get("degraded_mode", False) or response.degraded_mode
+        raw_unsupported_claims = payload.get("unsupported_claims", [])
+        if isinstance(raw_unsupported_claims, list) and all(
+            isinstance(claim, str) for claim in raw_unsupported_claims
+        ):
+            unsupported_claims = [
+                claim.strip() for claim in raw_unsupported_claims if claim.strip()
+            ]
+        else:
+            unsupported_claims = ["Grounding verifier returned malformed unsupported_claims."]
         grounded = (
-            bool(payload.get("grounded", False))
+            payload.get("grounded") is True
             and has_evidence
             and citation_integrity
             and bool(state.get("evidence_references"))
             and not degraded
-        )
-        raw_unsupported_claims = payload.get("unsupported_claims") or []
-        unsupported_claims = (
-            [str(claim) for claim in raw_unsupported_claims]
-            if isinstance(raw_unsupported_claims, list)
-            else []
+            and not unsupported_claims
         )
         if not has_evidence and "No retrieved cases were available." not in unsupported_claims:
             unsupported_claims.append("No retrieved cases were available.")
@@ -292,12 +311,10 @@ class TriageWorkflow:
         message = state["normalized_message"].lower()
         if not state.get("grounded", False):
             action = "manual_review"
+        elif state["urgency"] in {"high", "critical"} or state.get("escalate", False):
+            action = "escalate_to_human"
         elif state["intent"] == "delivery_issue" and "order id" not in message:
             action = "ask_for_order_id"
-        elif state["urgency"] == "critical" or (
-            state.get("escalate") and state["intent"] in {"complaint", "refund_request"}
-        ):
-            action = "escalate_to_human"
         elif state["intent"] in {"technical_issue", "account_access", "other"}:
             action = "request_more_info"
         else:
@@ -346,15 +363,18 @@ class TriageWorkflow:
         if candidate.startswith("```"):
             candidate = re.sub(r"^```(?:json)?\s*|\s*```$", "", candidate)
         try:
-            return json.loads(candidate)
+            parsed = json.loads(candidate)
         except json.JSONDecodeError:
             return {}
+        return parsed if isinstance(parsed, dict) else {}
 
     @staticmethod
     def _unit_interval(value: Any, default: float = 0.0) -> float:
         try:
             numeric = float(value)
         except (TypeError, ValueError):
+            numeric = default
+        if not math.isfinite(numeric):
             numeric = default
         return min(1.0, max(0.0, numeric))
 
@@ -370,7 +390,7 @@ class TriageWorkflow:
     ) -> tuple[list[str], bool]:
         allowed = {item.reference_id for item in evidence}
         if raw_references is None:
-            references = [item.reference_id for item in evidence]
+            return [], not bool(evidence)
         elif isinstance(raw_references, list) and all(
             isinstance(reference, str) and reference.strip() for reference in raw_references
         ):

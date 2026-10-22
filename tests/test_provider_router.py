@@ -135,3 +135,32 @@ def test_router_preserves_task_model_and_uses_task_specific_fallback(tmp_path: P
     assert primary.requests[0].model == "primary-task-model"
     assert fallback.requests[0].model == "fallback-generation"
     assert result.model == "fallback-generation"
+
+
+def test_mock_fallback_is_degraded_including_cache_hits(tmp_path: Path) -> None:
+    primary = StubProvider("external", [RuntimeError("down"), RuntimeError("down")])
+    mock = StubProvider(
+        "mock",
+        [ProviderResponse(text='{"intent":"other"}', provider="mock", model="deterministic-small")],
+    )
+    router = ProviderRouter(
+        providers={"external": primary, "mock": mock},
+        priority=["external", "mock"],
+        cache=SQLiteLLMCache(tmp_path / "cache.sqlite3", ttl_seconds=60),
+        max_retries=0,
+        backoff_seconds=0,
+    )
+    request = LLMRequest(
+        task="classify_intent",
+        workflow_instructions="Classify.",
+        user_ticket="Need help",
+        model="external-model",
+    )
+
+    first = router.generate(request, preferred_provider="external")
+    second = router.generate(request, preferred_provider="external")
+
+    assert first.provider == "mock"
+    assert first.fallback_used and first.degraded_mode
+    assert second.cached and second.fallback_used and second.degraded_mode
+    assert mock.calls == 1
