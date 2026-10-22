@@ -165,9 +165,7 @@ def test_filtered_search_miss_retries_without_intent_filter() -> None:
         def __init__(self) -> None:
             self.intents: list[str | None] = []
 
-        def search(
-            self, query: str, top_k: int, intent: str | None = None
-        ) -> list[SearchResult]:
+        def search(self, query: str, top_k: int, intent: str | None = None) -> list[SearchResult]:
             self.intents.append(intent)
             return [] if intent is not None else super().search(query, top_k, intent)
 
