@@ -56,5 +56,8 @@ for (const width of [390, 768, 1440]) test(`responsive triage has no page overfl
 
 for (const width of [390, 768, 1440]) test(`evaluation has no page overflow at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 }); await installVisualRoutes(page); await page.goto("/"); await page.getByRole("button", { name: "Evaluation", exact: true }).click(); await expect(page.getByRole("heading", { name: "Retrieval quality" })).toBeVisible();
+  if (width === 390) {
+    await expect(page.locator('.evaluation-table td[data-label="Support"]').first()).toBeVisible();
+  }
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(() => document.documentElement.clientWidth));
 });

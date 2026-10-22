@@ -174,3 +174,14 @@ tbody th { font-weight: 650; text-transform: capitalize; }
   .section-title h2 { overflow-wrap: anywhere; }
   .intent-bars > div { grid-template-columns: 110px minmax(0, 1fr) 38px; gap: var(--space-2); }
 }
+
+
+@media (max-width: 480px) {
+  .evaluation-table .table-scroll { overflow-x: visible; }
+  .evaluation-table table, .evaluation-table tbody { display: block; width: 100%; }
+  .evaluation-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .evaluation-table tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: var(--border-width-thin) solid var(--color-border); }
+  .evaluation-table tbody th { display: block; grid-column: 1 / -1; padding: var(--space-3) 0 var(--space-2); text-align: left; border: 0; }
+  .evaluation-table tbody td { display: grid; gap: 3px; padding: var(--space-2) 0; text-align: left; border: 0; }
+  .evaluation-table tbody td::before { content: attr(data-label); color: var(--color-foreground-muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+}

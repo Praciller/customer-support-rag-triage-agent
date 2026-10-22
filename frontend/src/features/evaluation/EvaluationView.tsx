@@ -119,10 +119,10 @@ export function EvaluationView() {
                   return (
                     <tr key={label}>
                       <th scope="row">{label.replaceAll("_", " ")}</th>
-                      <td>{percent(row.precision)}</td>
-                      <td>{percent(row.recall)}</td>
-                      <td>{percent(row.f1)}</td>
-                      <td>{row.support}</td>
+                      <td data-label="Precision">{percent(row.precision)}</td>
+                      <td data-label="Recall">{percent(row.recall)}</td>
+                      <td data-label="F1">{percent(row.f1)}</td>
+                      <td data-label="Support">{row.support}</td>
                     </tr>
                   );
                 })}
