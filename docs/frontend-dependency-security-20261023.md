@@ -52,3 +52,8 @@ count as successful security remediation. Before approving the Slice E
 release gate, require either a clean audit or a time-bounded exception
 explicitly accepted by the repository owner, with this outstanding
 advisory set and compensating controls documented.
+
+
+## Subsequent Tailwind 4 migration
+
+The previous seven entries were not waived. A standalone migration to Tailwind 4 was developed to remove those Tailwind 3 dependency paths; see [frontend-tailwind4-security-migration.md](frontend-tailwind4-security-migration.md). The earlier 13→7 table documents the PR #87 milestone and must not be mistaken for the current toolchain after the new migration is merged.
