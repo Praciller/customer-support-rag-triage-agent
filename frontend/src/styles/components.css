@@ -30,7 +30,7 @@
   text-transform: capitalize;
 }
 .badge-success, .status-success { color: color-mix(in srgb, var(--color-success) 70%, var(--color-foreground)); background: color-mix(in srgb, var(--color-success) 16%, var(--color-surface)); }
-.badge-warning, .status-warning { color: color-mix(in srgb, var(--color-warning) 65%, var(--color-foreground)); background: color-mix(in srgb, var(--color-warning) 20%, var(--color-surface)); }
+.badge-warning, .status-warning { color: color-mix(in srgb, var(--color-warning) 55%, var(--color-foreground)); background: color-mix(in srgb, var(--color-warning) 20%, var(--color-surface)); }
 .badge-danger, .status-danger { color: color-mix(in srgb, var(--color-danger) 72%, var(--color-foreground)); background: color-mix(in srgb, var(--color-danger) 14%, var(--color-surface)); }
 .status-indicator { font-size: var(--text-xs); padding: var(--space-2) var(--space-3); }
 

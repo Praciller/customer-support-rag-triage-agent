@@ -15,9 +15,12 @@ This SHA describes the **repository**, not the Hugging Face Space.
 - Continue the complete `npm run test:e2e` suite and the existing owner-reviewed
   Windows Chromium visual screenshots rather than regenerating baselines.
 - `npm audit --audit-level=low` remains a blocking frontend CI command.
+- `frontend/e2e/slice-f-contrast-reflow.spec.ts` adds 320px CSS-viewport
+  reflow checks for Triage/Evaluation and a browser-computed text-contrast
+  sample (neutral/success/warning/danger badge states; minimum 4.5:1).
 - These deterministic checks are **not** a comprehensive WCAG 2.2 AA audit.
-  They do not automatically evaluate contrast ratios, screen-reader traversal,
-  browser zoom/reflow, or assistive-technology combinations.
+  They do not cover every foreground/background combination, actual browser
+  zoom, screen-reader traversal, or assistive-technology combinations.
 
 ## Human accessibility review required
 
@@ -26,7 +29,7 @@ This SHA describes the **repository**, not the Hugging Face Space.
   error-status announcement and focused navigation at desktop and mobile sizes.
 - Verify contrast with actual computed foreground/background colors, including
   transparent/color-mixed text states, on the changed views.
-- Verify 200% browser zoom and 320px narrow reflow; document any horizontal
+- Verify real 200% browser zoom and 320px narrow reflow beyond the automated 320px CSS-viewport smoke; document any horizontal
   scroll container that is intentionally local instead of page-level overflow.
 - Check reduced motion, focus retention during asynchronous triage, and empty,
   loading, success, degraded and error states.
