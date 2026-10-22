@@ -91,3 +91,20 @@ Space and copy the GitHub repository with `Dockerfile.hf` renamed to `Dockerfile
 
 Free hosts can still exceed RAM or cold-start limits while loading the embedding model. Do not
 claim a live deployment from a successful image build alone.
+
+
+## Local Compose isolation
+
+Compose is a development/review deployment rather than an internet-facing production configuration.
+Its React, API, and Qdrant host ports are explicitly bound to `127.0.0.1`, so they are
+accessible from the local machine but not published on every network interface. The
+unused host-side Qdrant gRPC port (6334) is not exposed; the API still reaches Qdrant
+over Compose's private service network. The checked-in `data` and `reports` mounts
+are read-only in this review deployment. Ingestion in this configuration is intentionally
+disabled; an authorized writable ingestion deployment needs its own explicit data volume.
+
+The API image runs as non-root UID 10001 and owns its internal SQLite/cache
+directories. These defaults are not substitutes for authentication, TLS, network
+policies, or a hardened multi-tenant production deployment.
+
+Run `docker compose config --quiet` before building to validate Compose syntax.
