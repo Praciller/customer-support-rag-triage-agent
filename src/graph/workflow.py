@@ -194,7 +194,8 @@ class TriageWorkflow:
                 started,
                 input_summary=f"intent={state.get('intent', 'other')}; top_k={state['top_k']}",
                 output_summary=(
-                    f"retrieved={len(evidence)}; unfiltered_fallback={str(unfiltered_fallback).lower()}"
+                    f"retrieved={len(evidence)}; "
+                    f"unfiltered_fallback={str(unfiltered_fallback).lower()}"
                 ),
                 component="qdrant",
                 retrieved_document_count=len(evidence),
@@ -263,7 +264,9 @@ class TriageWorkflow:
         if isinstance(raw_unsupported_claims, list) and all(
             isinstance(claim, str) for claim in raw_unsupported_claims
         ):
-            unsupported_claims = [claim.strip() for claim in raw_unsupported_claims if claim.strip()]
+            unsupported_claims = [
+                claim.strip() for claim in raw_unsupported_claims if claim.strip()
+            ]
         else:
             unsupported_claims = ["Grounding verifier returned malformed unsupported_claims."]
         grounded = (
