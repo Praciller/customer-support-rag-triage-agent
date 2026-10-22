@@ -30,3 +30,21 @@ The SQLite inference cache hashes workflow request fields and typed retrieved ev
 The limiter is intentionally in-memory and per process; it is not a distributed abuse-control system. Embedded storage is single-instance. Add a trusted proxy, shared limiter, authentication, and persistent managed storage before multi-instance or sensitive-data use.
 
 The application drafts responses for human review. Banking77 is not company policy, and grounding against demo examples does not establish policy correctness.
+
+
+## Decision-correctness hardening
+
+High/critical urgency and explicit escalation take precedence over requesting missing identifiers when
+the draft is grounded. Ungrounded drafts still require `manual_review`. A classified-intent search
+with zero matches retries once without an intent filter; it does not claim to solve wrong-intent
+retrieval when filtered results are nonempty.
+
+The graph never fabricates evidence citations when a provider omits reference IDs; missing IDs
+with retrieved evidence force an ungrounded result. Only literal JSON `true` permits the grounding
+verifier to approve a draft. Nonfinite scores and malformed unsupported-claim lists fail closed.
+If an active external provider falls back to the deterministic mock provider, the route is marked
+degraded (including cached mock fallbacks), and final grounding is denied. Degradation from
+classification or urgency detection propagates through the full graph.
+
+These safeguards enforce workflow invariants, not claim-level semantic entailment or policy
+correctness. Neither model self-report nor presence of retrieved text proves a response is supported.
