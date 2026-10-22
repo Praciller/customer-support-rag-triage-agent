@@ -16,6 +16,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      - run: docker compose config --quiet
       - run: sh scripts/install-cpu-deps.sh
       - run: ruff check src tests
       - run: ruff format --check src tests
@@ -86,3 +87,80 @@ jobs:
             frontend/test-results
           if-no-files-found: ignore
           retention-days: 7
+
+  docker-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build API container
+        run: docker build --file Dockerfile.api --tag resolveops-api:smoke .
+      - name: Verify non-root identity and cache permissions
+        run: |
+          docker run --rm --entrypoint sh resolveops-api:smoke -c '
+            test "$(id -u)" = "10001"
+            test -w /app/.cache/llm
+            test -w "$HOME/.cache"
+          '
+      - name: Smoke test isolated API with read-only fixture mounts
+        run: |
+          docker run --detach --name resolveops-api-smoke \
+            --publish 127.0.0.1:18080:8000 \
+            --volume "$PWD/data:/app/data:ro" \
+            --volume "$PWD/reports:/app/reports:ro" \
+            --env APP_ENV=production \
+            --env DEMO_MODE=true \
+            --env MOCK_LLM_MODE=true \
+            --env QDRANT_MODE=memory \
+            --env EMBEDDING_PROVIDER=hashing \
+            resolveops-api:smoke
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:18080/ready >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          python - <<'PY'
+          import json
+          import urllib.error
+          import urllib.request
+
+          base = "http://127.0.0.1:18080"
+          with urllib.request.urlopen(base + "/ready", timeout=5) as response:
+              ready = json.load(response)
+              assert response.status == 200
+              assert ready["index"]["records"] == 27
+
+          request = urllib.request.Request(
+              base + "/triage",
+              data=json.dumps(
+                  {"message": "My card has not arrived", "top_k": 5}
+              ).encode(),
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          with urllib.request.urlopen(request, timeout=20) as response:
+              result = json.load(response)
+              assert response.status == 200
+              assert len(result["trace"]) == 7
+              assert result["provider_used"] == "mock"
+
+          blocked = urllib.request.Request(
+              base + "/ingest",
+              data=b'{"sample_size": 10}',
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          try:
+              urllib.request.urlopen(blocked, timeout=5)
+          except urllib.error.HTTPError as error:
+              assert error.code == 403
+          else:
+              raise AssertionError("Public ingestion unexpectedly succeeded")
+          PY
+      - name: Inspect container failure
+        if: failure()
+        run: docker logs resolveops-api-smoke || true
+      - name: Stop isolated container
+        if: always()
+        run: docker rm --force resolveops-api-smoke || true

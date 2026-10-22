@@ -2,8 +2,7 @@ services:
   qdrant:
     image: qdrant/qdrant:v1.18.0
     ports:
-      - "6333:6333"
-      - "6334:6334"
+      - "127.0.0.1:6333:6333"
     volumes:
       - qdrant_data:/qdrant/storage
     healthcheck:
@@ -29,11 +28,11 @@ services:
       EMBEDDING_BATCH_SIZE: "8"
       EVAL_OUTPUT_PATH: reports/evaluation/results.json
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
-      - huggingface_cache:/root/.cache/huggingface
-      - ./data:/app/data
-      - ./reports:/app/reports
+      - model_cache:/home/appuser/.cache
+      - ./data:/app/data:ro
+      - ./reports:/app/reports:ro
     depends_on:
       qdrant:
         condition: service_healthy
@@ -49,11 +48,11 @@ services:
     environment:
       VITE_API_URL: http://localhost:8000
     ports:
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
     depends_on:
       api:
         condition: service_healthy
 
 volumes:
   qdrant_data:
-  huggingface_cache:
+  model_cache:
