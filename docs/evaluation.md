@@ -71,3 +71,24 @@ Optional real-provider evaluation must be run manually and never runs in normal 
 The deployed public Evaluation view can lag the checked-in artifact because the Hugging Face Space
 is synchronized manually. Deployment smoke evidence must be reported separately from this local
 regression artifact and from any production-performance claim.
+
+
+## Evidence integrity and provider attribution
+
+Both triage and retrieval evaluation reject empty fixtures, missing/blank required values,
+and duplicated ticket messages (ignoring case and surrounding whitespace) before computing
+scores. This prevents silent denominator errors and accidental duplicate inflation;
+it does **not** detect train/evaluation leakage or establish semantic policy relevance.
+
+The evaluation mode is assigned from providers actually recorded in the inference-node
+traces, not providers merely configured in the application:
+
+- `deterministic_mock`: every observed inference node used the mock route with no fallback
+  or degradation.
+- `real_provider`: every observed inference node used the external route without fallback
+  or degradation. This label does not establish the real model's quality.
+- `mixed_or_degraded`: fallback, degraded, or mixed provider execution.
+
+The report also records `execution.observed_inference_providers`. The checked-in
+eight-ticket results remain the historical July 2026 mock baseline; CI regenerates
+new artifacts separately rather than updating the published fixture metrics implicitly.

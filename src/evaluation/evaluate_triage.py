@@ -4,12 +4,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import pandas as pd
-
 from src.api.services import ApplicationServices, build_services
 from src.config.settings import get_settings
 from src.evaluation.evaluate_retrieval import evaluate_retrieval
 from src.evaluation.metrics import classification_metrics, percentile
+from src.evaluation.validation import load_evaluation_frame
 
 
 def evaluate_triage(
@@ -24,7 +23,7 @@ def evaluate_triage(
     if services.bootstrap_status.get("status") == "pending":
         services.bootstrap_demo()
     dataset_info = services.dataset_info()
-    frame = pd.read_csv(eval_path)
+    frame = load_evaluation_frame(eval_path)
     expected_intents: list[str] = []
     predicted_intents: list[str] = []
     expected_urgencies: list[str] = []
@@ -72,12 +71,13 @@ def evaluate_triage(
         and all(step.get("status") == "completed" for step in result["trace"])
         for result in results
     )
-    mock_mode = services.provider_names == ["mock"]
+    evaluation_mode, observed_providers = _evaluation_mode(results)
+    mock_mode = evaluation_mode == "deterministic_mock"
 
     metrics = {
         "generated_at": datetime.now(UTC).isoformat(),
         "command": "python -m src.evaluation.evaluate_triage",
-        "evaluation_mode": "deterministic_mock" if mock_mode else "real_provider",
+        "evaluation_mode": evaluation_mode,
         "dataset": {
             "name": "Banking77-derived deterministic evaluation fixture",
             "path": str(eval_path),
@@ -89,6 +89,7 @@ def evaluate_triage(
             "embedding_provider": settings.embedding_provider,
             "embedding_model": settings.embedding_model,
             "provider_names": services.provider_names,
+            "observed_inference_providers": observed_providers,
             "qdrant_mode": settings.qdrant_mode,
             "cache_enabled": settings.llm_cache_enabled,
         },
@@ -145,6 +146,27 @@ def evaluate_triage(
     metrics["recommendations"] = _recommendations(metrics)
     _write_artifacts(metrics, settings.eval_output_path)
     return metrics
+
+
+
+def _evaluation_mode(results: list[dict[str, Any]]) -> tuple[str, list[str]]:
+    """Use executed graph traces, not registered provider configurations."""
+    observed = {
+        step["provider"]
+        for result in results
+        for step in result.get("trace", [])
+        if step.get("component") == "llm_router"
+        and isinstance(step.get("provider"), str)
+        and step["provider"]
+    }
+    unsafe_fallback = any(
+        result.get("fallback_used") or result.get("degraded_mode") for result in results
+    )
+    if observed == {"mock"} and not unsafe_fallback:
+        return "deterministic_mock", sorted(observed)
+    if observed == {"external"} and not unsafe_fallback:
+        return "real_provider", sorted(observed)
+    return "mixed_or_degraded", sorted(observed)
 
 
 def _write_artifacts(metrics: dict[str, Any], output_path: Path) -> None:

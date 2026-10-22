@@ -3,10 +3,9 @@ import time
 from pathlib import Path
 from typing import Any
 
-import pandas as pd
-
 from src.api.services import ApplicationServices, build_services
 from src.evaluation.metrics import retrieval_metrics
+from src.evaluation.validation import load_evaluation_frame
 
 
 def evaluate_retrieval(
@@ -17,7 +16,7 @@ def evaluate_retrieval(
     services = services or build_services()
     if services.bootstrap_status.get("status") == "pending":
         services.bootstrap_demo()
-    frame = pd.read_csv(eval_path)
+    frame = load_evaluation_frame(eval_path)
     dataset_info = services.dataset_info()
     relevant_totals = dataset_info.get("intents", {})
     examples: list[dict[str, Any]] = []

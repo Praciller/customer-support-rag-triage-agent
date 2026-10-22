@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
@@ -24,11 +27,15 @@ jobs:
       - run: make demo
         env:
           EVAL_OUTPUT_PATH: /tmp/evaluation/results.json
-      - name: Export review snapshot
+      - name: Export bounded deterministic evaluation evidence
         uses: actions/upload-artifact@v4
         with:
-          name: review-snapshot
-          path: .
+          name: deterministic-review-evidence
+          path: |
+            /tmp/evaluation/results.json
+            /tmp/evaluation/summary.md
+            /tmp/evaluation/confusion_matrix.json
+            /tmp/adversarial_retrieval.md
           if-no-files-found: error
           retention-days: 1
 
