@@ -55,7 +55,7 @@ class ProviderRouter:
                     provider=cached["provider"],
                     model=cached["model"],
                     cached=True,
-                    degraded_mode=False,
+                    degraded_mode=provider_index > 0 and provider_name == "mock",
                     fallback_used=provider_index > 0,
                     latency_ms=0,
                 )
@@ -70,7 +70,7 @@ class ProviderRouter:
                         provider=response.provider,
                         model=response.model,
                         cached=False,
-                        degraded_mode=False,
+                        degraded_mode=provider_index > 0 and provider_name == "mock",
                         fallback_used=provider_index > 0,
                         latency_ms=latency_ms,
                     )

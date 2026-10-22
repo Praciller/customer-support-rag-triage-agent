@@ -70,3 +70,13 @@ When demo/mock mode is active, the route order is local-only, so configuration o
 ## Evaluation boundary
 
 The checked-in metrics use the deterministic route. They demonstrate workflow and retrieval behavior on a small rules-aligned fixture; they are not evidence of production language-model quality or policy correctness. External GenAI behavior requires a separate controlled evaluation before any production claim.
+
+
+## Mock fallback trust boundary
+
+When an active external route fails and the router uses the deterministic `mock` provider,
+the resulting inference is marked `fallback_used=true` and `degraded_mode=true`, whether
+the mock response is freshly generated or served from the cache. The graph accumulates
+degradation across intent, urgency, response generation, and grounding tasks. A degraded
+workflow cannot return `grounded=true`; it requires human review. Mock-only demo mode
+is not degraded merely because it intentionally runs without an external provider.
