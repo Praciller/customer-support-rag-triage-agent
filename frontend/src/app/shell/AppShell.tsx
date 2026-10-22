@@ -13,9 +13,10 @@ export function AppShell(props: {
 }): ReactElement {
   return (
     <div className="app-shell antialiased">
+      <a className="skip-link" href="#main-content">Skip to main content</a>
       <Sidebar view={props.view} setView={props.setView} />
       <ResponsiveNavigation view={props.view} setView={props.setView} apiStatus={props.apiStatus} />
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <Topbar view={props.view} apiStatus={props.apiStatus} />
         {props.children}
       </main>

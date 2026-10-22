@@ -48,8 +48,8 @@ component_state_rules:
   degraded: "show degraded state and preserve human review"
   ungrounded: "never present as grounded; route to manual review"
 v3_foundation:
-  status: "implemented foundation; future page migration remains separate"
-  tailwind: "3.4.19 retained"
+  status: "foundation and Slice C/D/E page migration implemented; Slice F release QA tracked separately"
+  tailwind: "4.3.3 with first-party PostCSS plugin and source-owned semantic tokens"
   primitive_base: "shadcn source ownership with React Aria"
   aliases: "@/* resolves through TypeScript and Vite to frontend/src"
   surfaces: [canvas, workspace, primary_decision, standard_section, subtle_item, technical_metadata]
@@ -67,15 +67,15 @@ v3_foundation:
 
 ## v3 foundation status
 
-The v3 foundation is implemented: Geist Variable is the UI family, Geist Mono Variable is the technical family, Tailwind 3 is retained, and shadcn source components use the React Aria primitive base. The `@/*` alias is defined consistently in TypeScript and Vite. ResolveOps owns the semantic tokens and domain composition; generated registry defaults are reference material, not product decisions.
+The v3 foundation is implemented: Geist Variable is the UI family, Geist Mono Variable is the technical family, Tailwind 4.3.3 is installed through the first-party PostCSS plugin (while the source-owned token configuration is retained), and shadcn source components use the React Aria primitive base. The `@/*` alias is defined consistently in TypeScript and Vite. ResolveOps owns the semantic tokens and domain composition; generated registry defaults are reference material, not product decisions.
 
 The surface hierarchy is: Canvas, Workspace, Primary decision surface, Standard section surface, Subtle item surface, and Technical metadata surface. Technical identifiers, scores, latency, runtime values, and metrics use Geist Mono with tabular numerals where alignment improves scanning. Consequential actions remain at least 14px, and focus-visible outlines and reduced-motion behavior remain required.
 
-This slice establishes foundation tokens, typography, primitives, and Storybook references. Shell/navigation, Triage, Evidence, Trace, and Evaluation layout migration remains future Slice C/D/E work and is not claimed as implemented here.
+Slices C, D, and E implemented the shell/navigation, decision/evidence hierarchy, compact seven-node Trace, and semantically grouped Evaluation. Their approved Windows browser screenshot baselines are checked into the repository. Slice F accessibility and live deployment verification remain separate; none of these changes proves a synchronized Hugging Face Space release.
 
 ResolveOps is a calm, precise, operational workspace for support agents working in a professional office environment. It is dense but readable: the interface supports quick triage while keeping consequential recommendations inspectable. The visual language refines the existing restrained OKLCH palette with cobalt/blue as the primary action accent and uses semantic colors only where they carry meaning.
 
-This specification is the v3 source of truth for the implemented foundation and future frontend implementation. It does not change runtime behavior.
+This specification is the v3 source of truth for the implemented frontend and future quality work. It does not change backend runtime behavior.
 
 ## Information hierarchy
 

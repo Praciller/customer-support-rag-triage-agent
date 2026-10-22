@@ -25,6 +25,24 @@ button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .6; }
 
+/* Keyboard-only bypass for the persistent desktop and mobile navigation. */
+.skip-link {
+  position: absolute;
+  left: var(--space-3);
+  top: 0;
+  z-index: 100;
+  transform: translateY(-150%);
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--color-focus);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-foreground);
+  font-weight: 700;
+}
+.skip-link:focus-visible {
+  transform: translateY(var(--space-2));
+}
+
 :focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
