@@ -53,6 +53,7 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - run: npm audit --audit-level=low
       - run: npm run lint
       - run: npm test
       - run: npm run build
@@ -83,7 +84,17 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npx playwright install chromium
+      - name: Functional browser regression
+        run: npx playwright test e2e/triage.spec.ts e2e/evaluation.spec.ts e2e/error-state.spec.ts
       - run: npm run test:e2e
+      - name: Upload Slice E visual review captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: slice-e-review-screenshots
+          path: frontend/review-evidence/
+          if-no-files-found: warn
+          retention-days: 7
       - name: Upload Playwright browser evidence
         if: failure()
         uses: actions/upload-artifact@v4
