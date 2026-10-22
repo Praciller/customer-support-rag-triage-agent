@@ -1,0 +1,46 @@
+name: Temporary Tailwind 4 compatibility security spike
+
+on:
+  push:
+    branches:
+      - codex/tailwind4-security-compat-spike-20261023
+
+permissions:
+  contents: write
+
+jobs:
+  validate-and-lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+      - name: Resolve new package lock, without force or peer-deps bypass
+        run: npm install --package-lock-only
+      - run: npm ci
+      - run: npm audit --audit-level=low
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm run build-storybook
+      - name: Confirm locked dependencies and push only lockfile
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const l=require("./package-lock.json");
+          const tw=l.packages["node_modules/tailwindcss"]?.version;
+          const ap=l.packages["node_modules/@tailwindcss/postcss"]?.version;
+          if (!tw?.startsWith("4.") || !ap?.startsWith("4.")) process.exit(1);
+          console.log("Verified Tailwind",tw,"PostCSS plugin",ap);
+          NODE
+          test "$(git status --porcelain -- package.json | wc -l)" -eq 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git diff --cached --quiet || git commit -m "chore(security): lock tested Tailwind 4-compatible toolchain"
+          git push origin "HEAD:refs/heads/codex/tailwind4-security-compat-spike-20261023"
