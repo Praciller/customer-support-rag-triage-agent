@@ -66,3 +66,12 @@ GitHub `main` is not yet enforced by a ruleset. Follow Issue #84 and
 `docs/repository-governance.md`: the repository owner must configure the
 four actual check contexts with GitHub Settings permissions and then verify
 the ruleset is **active**. A written checklist alone does not configure it.
+
+## Python production dependency audit
+
+The `backend` CI job additionally performs a strict, **blocking** scan of
+the currently resolvable `requirements.production.txt` dependency graph
+using `pip-audit==2.10.1`. The result is version-range resolution at run
+time, not an attestation of a Hugging Face Space's already-installed
+packages or the CPU PyTorch wheel installed separately during development.
+Keep live image/SBOM inspection in the production release gate.

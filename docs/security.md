@@ -65,3 +65,24 @@ classification or urgency detection propagates through the full graph.
 
 These safeguards enforce workflow invariants, not claim-level semantic entailment or policy
 correctness. Neither model self-report nor presence of retrieved text proves a response is supported.
+
+## Python production dependency advisory gate
+
+The backend GitHub Actions job now invokes the Python Packaging Authority's
+`pip-audit==2.10.1` on `requirements.production.txt` with strict dependency
+collection. Findings and resolution failures block the existing `backend`
+required check; it is not a best-effort `continue-on-error` step.
+This tool is installed **only inside CI**, not added to either production
+or development requirements.
+
+**Scope:** the file contains version ranges, not a hashed lockfile. The
+scanner resolves a fresh production-dependency graph at CI execution time.
+A clean result does **not** attest the exact wheels baked into a previously
+deployed Hugging Face image, the explicitly installed CPU PyTorch wheel,
+the native/shared libraries inside containers, or the OS image. Those require
+release-specific SBOM and image scanning. The public demo is not a
+multi-tenant customer production system.
+
+If advisories appear, keep the check failing and open a focused remediation
+issue with exact affected package, version and advisory; do not suppress
+failures or widen dependency ranges silently.
