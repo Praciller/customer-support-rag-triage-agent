@@ -117,7 +117,7 @@ describe("TriageView", () => {
       next_action: "manual_review",
     });
 
-    expect(screen.getByText(/degraded/i)).toBeInTheDocument();
+    expect(screen.getByText("degraded", { selector: ".badge" })).toBeInTheDocument();
     expect(screen.getByText(/review retrieved evidence and respond manually/i)).toBeInTheDocument();
   });
 });
