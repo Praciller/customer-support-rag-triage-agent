@@ -30,7 +30,7 @@ services:
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
-      - huggingface_cache:/root/.cache/huggingface
+      - model_cache:/home/appuser/.cache
       - ./data:/app/data:ro
       - ./reports:/app/reports:ro
     depends_on:
@@ -55,4 +55,4 @@ services:
 
 volumes:
   qdrant_data:
-  huggingface_cache:
+  model_cache:

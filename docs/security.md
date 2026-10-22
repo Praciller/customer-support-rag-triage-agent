@@ -30,7 +30,7 @@ The SQLite inference cache hashes workflow request fields and typed retrieved ev
 The local Compose example binds UI, API, and Qdrant HTTP host ports to
 `127.0.0.1`, does not publish Qdrant's gRPC port, and mounts checked-in data
 and reports read-only. The Compose API runs as non-root UID 10001, with
-writable internal cache directories. Do not expose Compose to the public
+writable internal cache directories and a user-owned persistent model cache mount. Do not expose Compose to the public
 internet as a production support system: it intentionally lacks end-user
 authentication, multi-tenant authorization, and distributed rate limiting.
 

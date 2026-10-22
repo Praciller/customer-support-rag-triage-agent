@@ -104,7 +104,14 @@ are read-only in this review deployment. Ingestion in this configuration is inte
 disabled; an authorized writable ingestion deployment needs its own explicit data volume.
 
 The API image runs as non-root UID 10001 and owns its internal SQLite/cache
-directories. These defaults are not substitutes for authentication, TLS, network
+directories. Its HOME/XDG cache path is `/home/appuser/.cache`, mounted from the named
+`model_cache` volume. The previous root-owned `huggingface_cache` volume is no longer
+referenced; do not remove old Docker volumes until their contents are reviewed.
+
+GitHub Actions also builds this Docker image, checks the numeric UID and writable cache,
+and performs a key-free API smoke against in-memory Qdrant and hashing embeddings with
+read-only fixture mounts. This isolated smoke does not exercise the FastEmbed model download,
+Compose networking, or the external Qdrant service. These defaults are not substitutes for authentication, TLS, network
 policies, or a hardened multi-tenant production deployment.
 
 Run `docker compose config --quiet` before building to validate Compose syntax.
