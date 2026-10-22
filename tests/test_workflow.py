@@ -250,9 +250,9 @@ def test_classifier_fallback_remains_degraded_through_final_decision() -> None:
                 )
             return response
 
-    result = TriageWorkflow(
-        router=DegradedClassificationRouter(), retriever=FakeRetriever()
-    ).run("My order has not arrived", top_k=3)
+    result = TriageWorkflow(router=DegradedClassificationRouter(), retriever=FakeRetriever()).run(
+        "My order has not arrived", top_k=3
+    )
 
     assert result["retrieved_cases"]
     assert result["degraded_mode"] is True
@@ -276,9 +276,9 @@ def test_non_boolean_escalation_is_not_trusted_for_low_urgency() -> None:
                 )
             return super().generate(request, preferred_provider)
 
-    result = TriageWorkflow(
-        router=InvalidEscalationRouter(), retriever=FakeRetriever()
-    ).run("My order has not arrived", top_k=3)
+    result = TriageWorkflow(router=InvalidEscalationRouter(), retriever=FakeRetriever()).run(
+        "My order has not arrived", top_k=3
+    )
 
     assert result["urgency"] == "low"
     assert result["escalate"] is False
