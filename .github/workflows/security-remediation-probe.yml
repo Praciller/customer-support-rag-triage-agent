@@ -6,7 +6,7 @@ on:
       - codex/security-dependency-remediation-20261023
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   dependency-repair:
@@ -40,6 +40,32 @@ jobs:
           npm audit --json > dependency-audit.json || true
           npm ls tailwindcss --depth=0 > dependency-versions.txt 2>&1 || true
           npm ls storybook vite vitest --depth=0 >> dependency-versions.txt 2>&1 || true
+      - name: Verify bounded remediation and commit only lockfile to review branch
+        if: success()
+        shell: bash
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const result = JSON.parse(fs.readFileSync("dependency-audit.json", "utf8"));
+            const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+            const counts = result.metadata?.vulnerabilities;
+            if (!counts || counts.critical > 0 || counts.total > 7) process.exit(1);
+            if (lock.packages["node_modules/tailwindcss"]?.version !== "3.4.19") process.exit(1);
+            for (const name of ["storybook", "vite", "vitest"]) {
+              if (!lock.packages[`node_modules/${name}`]?.version) process.exit(1);
+            }
+          '
+          if ! git diff --quiet -- package.json; then
+            echo "Unsafe package manifest drift - review manually instead."
+            exit 1
+          fi
+          if ! git diff --quiet -- package-lock.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package-lock.json
+            git commit -m "fix(security): patch compatible frontend lockfile dependencies"
+            git push origin "HEAD:refs/heads/codex/security-dependency-remediation-20261023"
+          fi
       - name: Export reproducible lockfile and audit evidence
         if: always()
         uses: actions/upload-artifact@v4
