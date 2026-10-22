@@ -16,12 +16,42 @@ beforeEach(() => {
 });
 
 describe("EvaluationView", () => {
-  it("preserves deterministic methodology, precision, and limitations", async () => {
+  it("groups deterministic metrics by meaning without a repeated chart", async () => {
     vi.mocked(api.evaluation).mockResolvedValue(makeEvaluation());
-    render(<EvaluationView />);
+    const { container } = render(<EvaluationView />);
 
-    expect(await screen.findByText(/deterministic mock/i)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Retrieval quality" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Workflow checks" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Runtime profile" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Intent metrics by class" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Methodology and limitations" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: /precision/i })).toBeInTheDocument();
     expect(screen.getByText(/small deterministic fixture/i)).toBeInTheDocument();
+    expect(screen.getByText(/no external llm calls/i)).toBeInTheDocument();
+    expect(container.querySelector(".metric-grid")).toBeNull();
+    expect(container.querySelector(".evaluation-chart")).toBeNull();
+  });
+
+  it("preserves explicit zeros and shows unavailable values as dashes", async () => {
+    vi.mocked(api.evaluation).mockResolvedValue(makeEvaluation({
+      retrieval_precision_at_k: 0,
+      average_latency_ms: 0,
+      urgency_macro_f1: undefined,
+      fallback_count: 0,
+    }));
+    render(<EvaluationView />);
+    await screen.findByRole("heading", { name: "Retrieval quality" });
+    expect(screen.getByText("Precision@5").closest("div")).toHaveTextContent("0%");
+    expect(screen.getByText("Average latency").closest("div")).toHaveTextContent("0 ms");
+    expect(screen.getByText("Urgency macro F1").closest("div")).toHaveTextContent("--");
+    expect(screen.getByText("Provider fallbacks").closest("div")).toHaveTextContent("0");
+  });
+
+  it("does not claim an external-provider run used no external calls", async () => {
+    vi.mocked(api.evaluation).mockResolvedValue(makeEvaluation({ evaluation_mode: "real_provider" }));
+    render(<EvaluationView />);
+    expect(await screen.findByRole("heading", { name: "real provider" })).toBeInTheDocument();
+    expect(screen.queryByText(/no external llm calls/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/inspect provider provenance/i)).toBeInTheDocument();
   });
 });

@@ -39,3 +39,13 @@ export const Degraded: Story = {
 export const Empty: Story = {
   args: { trace: [] },
 };
+
+export const Incomplete: Story = {
+  args: {
+    trace: makeTriageResult().trace.map((step, index) =>
+      index === 4
+        ? { ...step, status: "failed", error_category: "ProviderError", output_summary: "Provider response unavailable." }
+        : step,
+    ),
+  },
+};

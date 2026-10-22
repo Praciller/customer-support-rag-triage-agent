@@ -36,7 +36,7 @@ test("escalated triage desktop baseline", async ({ page }) => {
 
 test("evaluation desktop baseline", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 }); await installVisualRoutes(page); await page.goto("/"); await page.getByRole("button", { name: "Evaluation", exact: true }).click();
-  await expect(page.getByText("Measured artifact", { exact: true })).toBeVisible(); await expect(page.getByRole("heading", { name: "Offline baseline metrics" })).toBeVisible(); await expect(page.getByRole("heading", { name: "Intent metrics by class" })).toBeVisible(); await expect(page.getByRole("heading", { name: "Methodology and limitations" })).toBeVisible(); await expect(page.getByText(/deterministic|not a production SLA/i).last()).toBeVisible(); await page.evaluate(() => document.fonts.ready);
+  await expect(page.getByText("Measured artifact", { exact: true })).toBeVisible(); await expect(page.getByRole("heading", { name: "Retrieval quality" })).toBeVisible(); await expect(page.getByRole("heading", { name: "Workflow checks" })).toBeVisible(); await expect(page.getByRole("heading", { name: "Intent metrics by class" })).toBeVisible(); await expect(page.getByRole("heading", { name: "Methodology and limitations" })).toBeVisible(); await expect(page.getByText(/deterministic|not a production SLA/i).last()).toBeVisible(); await page.evaluate(() => document.fonts.ready);
   await expect(page).toHaveScreenshot("evaluation-desktop.png", { fullPage: true, animations: "disabled", caret: "hide", scale: "css" });
 });
 
@@ -54,7 +54,7 @@ for (const width of [390, 768, 1440]) test(`responsive triage has no page overfl
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(() => document.documentElement.clientWidth));
 });
 
-test("evaluation has no page overflow at 390px", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 }); await installVisualRoutes(page); await page.goto("/"); await page.getByRole("button", { name: "Evaluation", exact: true }).click(); await expect(page.getByText("Measured artifact", { exact: true })).toBeVisible();
+for (const width of [390, 768, 1440]) test(`evaluation has no page overflow at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 }); await installVisualRoutes(page); await page.goto("/"); await page.getByRole("button", { name: "Evaluation", exact: true }).click(); await expect(page.getByRole("heading", { name: "Retrieval quality" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(() => document.documentElement.clientWidth));
 });
