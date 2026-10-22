@@ -10,3 +10,15 @@ test("Evaluation shows measured deterministic artifacts and limitations", async 
   await expect(page.getByRole("heading", { name: "Methodology and limitations" })).toBeVisible();
   await expect(page.getByText(/small|fixture|not a production SLA/i).last()).toBeVisible();
 });
+
+test("Evaluation groups retrieval, workflow and runtime at tablet width", async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Evaluation", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Retrieval quality" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Workflow checks" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Runtime profile" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    await page.evaluate(() => document.documentElement.clientWidth),
+  );
+});

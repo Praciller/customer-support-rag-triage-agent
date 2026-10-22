@@ -79,7 +79,7 @@ describe("App", () => {
 
     fireEvent.click(screen.getAllByRole("button", { name: /^evaluation$/i })[0]);
 
-    expect(await screen.findByText(/deterministic mock/i)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /deterministic mock/i })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: /precision/i })).toBeInTheDocument();
     expect(screen.getByText(/small deterministic fixture/i)).toBeInTheDocument();
   });

@@ -40,3 +40,5 @@ app.tar.gz
 
 # Local human evaluations can contain reviewer identifiers and sensitive annotations.
 private_evaluation/
+
+frontend/review-evidence/
