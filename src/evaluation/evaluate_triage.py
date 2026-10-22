@@ -147,8 +147,6 @@ def evaluate_triage(
     _write_artifacts(metrics, settings.eval_output_path)
     return metrics
 
-
-
 def _evaluation_mode(results: list[dict[str, Any]]) -> tuple[str, list[str]]:
     """Use executed graph traces, not registered provider configurations."""
     observed = {
