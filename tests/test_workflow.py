@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from src.graph.workflow import TriageWorkflow
 from src.llm.base import LLMRequest, ProviderResponse
 from src.retrieval.retriever import SearchResult
@@ -281,3 +283,42 @@ def test_non_boolean_escalation_is_not_trusted_for_low_urgency() -> None:
     assert result["urgency"] == "low"
     assert result["escalate"] is False
     assert result["next_action"] == "ask_for_order_id"
+
+
+@pytest.mark.parametrize(
+    ("intent", "urgency", "escalate", "grounded", "message", "expected"),
+    [
+        ("delivery_issue", "critical", True, True, "My order has not arrived", "escalate_to_human"),
+        ("delivery_issue", "high", True, True, "My order has not arrived", "escalate_to_human"),
+        ("delivery_issue", "medium", False, True, "My order has not arrived", "ask_for_order_id"),
+        ("delivery_issue", "medium", False, True, "Here is my order id 12", "reply_to_customer"),
+        ("refund_request", "high", False, True, "I need a refund", "escalate_to_human"),
+        ("complaint", "medium", True, True, "I have a complaint", "escalate_to_human"),
+        ("technical_issue", "low", False, True, "The app crashes", "request_more_info"),
+        ("billing_issue", "low", False, True, "What is this fee?", "reply_to_customer"),
+        ("billing_issue", "critical", True, False, "This is fraud", "manual_review"),
+        ("delivery_issue", "critical", True, False, "Card stolen", "manual_review"),
+    ],
+)
+def test_decision_rule_priority_matrix(
+    intent: str,
+    urgency: str,
+    escalate: bool,
+    grounded: bool,
+    message: str,
+    expected: str,
+) -> None:
+    workflow = TriageWorkflow(router=FakeRouter(), retriever=FakeRetriever())
+    state = {
+        "normalized_message": message,
+        "intent": intent,
+        "urgency": urgency,
+        "escalate": escalate,
+        "grounded": grounded,
+        "trace": [],
+    }
+
+    outcome = workflow._suggest_next_action(state)
+
+    assert outcome["next_action"] == expected
+    assert outcome["trace"][-1]["node"] == "suggest_next_action"
