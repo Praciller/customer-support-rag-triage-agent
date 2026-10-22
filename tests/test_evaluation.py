@@ -1,4 +1,8 @@
+import pytest
+
+from src.evaluation.evaluate_triage import _evaluation_mode
 from src.evaluation.metrics import classification_metrics, retrieval_metrics
+from src.evaluation.validation import load_evaluation_frame
 
 
 def test_evaluation_metrics_include_per_class_and_rank_quality() -> None:
@@ -22,12 +26,6 @@ def test_evaluation_metrics_include_per_class_and_rank_quality() -> None:
     assert retrieval["recall_at_k"] == 2 / 3
     assert retrieval["mrr"] == 1.0
     assert 0 < retrieval["ndcg_at_k"] < 1
-
-
-import pytest
-
-from src.evaluation.evaluate_triage import _evaluation_mode
-from src.evaluation.validation import load_evaluation_frame
 
 
 @pytest.mark.parametrize(
