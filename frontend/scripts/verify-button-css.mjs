@@ -12,7 +12,12 @@ if (!cssFile) throw new Error("Could not locate the Vite CSS bundle");
 const css = readFileSync(join(distAssets, cssFile), "utf8");
 const required = [".h-8", ".h-6", ".h-7", ".h-9", ".size-6", ".size-7", ".size-8", ".size-9", ":focus-visible"];
 const missing = required.filter((selector) => !css.includes(selector));
-const unsupported = ["has-data", "in-data", "ring-3", "active:not-aria", "aria-invalid"].filter((pattern) => css.includes(pattern));
+// Tailwind 4 supports ring-* and aria-* variants that were unsupported in our v3 compatibility spike.
+const tailwindVersion = JSON.parse(readFileSync(join(process.cwd(), "node_modules", "tailwindcss", "package.json"), "utf8")).version;
+const unsupported = (tailwindVersion.startsWith("3.")
+  ? ["has-data", "in-data", "ring-3", "active:not-aria", "aria-invalid"]
+  : []
+).filter((pattern) => css.includes(pattern));
 
 if (missing.length || unsupported.length) {
   throw new Error(`Button CSS contract failed. Missing=${missing.join(",") || "none"}; Unsupported=${unsupported.join(",") || "none"}`);
