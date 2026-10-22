@@ -25,13 +25,6 @@ These controls do not prove semantic entailment and do not prevent every prompt-
 
 The SQLite inference cache hashes workflow request fields and typed retrieved evidence for keys but stores generated responses in plaintext. Keep it on trusted local storage, set retention appropriate to the data, and do not cache sensitive tickets without encryption and deletion controls. Application traces deliberately contain bounded summaries and evidence reference IDs rather than raw prompts, evidence text, or environment values.
 
-## Limitations
-
-The limiter is intentionally in-memory and per process; it is not a distributed abuse-control system. Embedded storage is single-instance. Add a trusted proxy, shared limiter, authentication, and persistent managed storage before multi-instance or sensitive-data use.
-
-The application drafts responses for human review. Banking77 is not company policy, and grounding against demo examples does not establish policy correctness.
-
-
 ## Local Compose and container boundary
 
 The local Compose example binds UI, API, and Qdrant HTTP host ports to
@@ -40,3 +33,10 @@ and reports read-only. The Compose API runs as non-root UID 10001, with
 writable internal cache directories. Do not expose Compose to the public
 internet as a production support system: it intentionally lacks end-user
 authentication, multi-tenant authorization, and distributed rate limiting.
+
+## Limitations
+
+The limiter is intentionally in-memory and per process; it is not a distributed abuse-control system. Embedded storage is single-instance. Add a trusted proxy, shared limiter, authentication, and persistent managed storage before multi-instance or sensitive-data use.
+
+The application drafts responses for human review. Banking77 is not company policy, and grounding against demo examples does not establish policy correctness.
+
