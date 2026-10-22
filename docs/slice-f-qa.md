@@ -67,18 +67,15 @@ GitHub `main` is not yet enforced by a ruleset. Follow Issue #84 and
 four actual check contexts with GitHub Settings permissions and then verify
 the ruleset is **active**. A written checklist alone does not configure it.
 
-## Python production dependency audit
+## Python advisory visibility (unresolved security gate)
 
-The `backend` CI job additionally performs a strict, **blocking** scan of
-the currently resolvable `requirements.production.txt` dependency graph
-using `pip-audit==2.10.1`. The result is version-range resolution at run
-time, not an attestation of a Hugging Face Space's already-installed
-packages or the CPU PyTorch wheel installed separately during development.
-Keep live image/SBOM inspection in the production release gate.
-
-First Python audit identified advisory-bearing `datasets`, `fsspec`,
-and `Pillow` versions (37 records in 3 packages). Both production and
-development requirements were updated with security minimum versions;
-a successful CI audit and import-smoke must be verified before this
-is considered remediated. This is not a live Space software bill of
-materials.
+The `backend` workflow adds a reporting-only
+`pip-audit==2.10.1` scan for `requirements.production.txt`.
+It is deliberately **nonblocking** because [Issue #93](https://github.com/Praciller/customer-support-rag-triage-agent/issues/93)
+tracks 37 advisory records in three packages. In particular,
+FastEmbed 0.9.0 requires `Pillow<13`, while the reported Pillow
+fix requires version 13. The directly attempted dependency-floor
+upgrade failed Docker/Windows installation, and was **reverted**.
+This does not grant a risk exception or attest deployed-image
+safety. A clean audit must become a required gate once a supported
+remediation is verified.
