@@ -1,4 +1,6 @@
-datasets>=3.5,<5
+datasets>=5.0.1,<6
+fsspec>=2026.6.0,<2027
+pillow>=13.0.0,<14
 fastembed>=0.7,<1
 fastapi>=0.115,<1
 httpx>=0.28,<1

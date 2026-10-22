@@ -75,3 +75,10 @@ using `pip-audit==2.10.1`. The result is version-range resolution at run
 time, not an attestation of a Hugging Face Space's already-installed
 packages or the CPU PyTorch wheel installed separately during development.
 Keep live image/SBOM inspection in the production release gate.
+
+First Python audit identified advisory-bearing `datasets`, `fsspec`,
+and `Pillow` versions (37 records in 3 packages). Both production and
+development requirements were updated with security minimum versions;
+a successful CI audit and import-smoke must be verified before this
+is considered remediated. This is not a live Space software bill of
+materials.

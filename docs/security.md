@@ -86,3 +86,17 @@ multi-tenant customer production system.
 If advisories appear, keep the check failing and open a focused remediation
 issue with exact affected package, version and advisory; do not suppress
 failures or widen dependency ranges silently.
+
+### October 2026 remediation after first scan
+
+The first strict scan in [run 39843328801](https://github.com/Praciller/customer-support-rag-triage-agent/actions/runs/39843328801)
+**failed** with 37 advisory records across three resolved packages:
+`datasets@4.8.5` (fixed in 5.0.1), `fsspec@2026.2.0` (fixed in
+2026.6.0), and `Pillow@12.3.0` (fixed in 13.0.0). These were
+**37 advisory records, not 37 separately exploitable application paths**.
+Both the development and production requirements now specify explicit
+security minimums for these three packages, including the necessary
+Datasets major-version upgrade. CI rechecks exact resolved versions
+and basic imports; the offline synthetic workflow does not exercise
+a remote Hugging Face dataset download, and no production deploy
+is implied. Do not waive a failing advisory gate.
