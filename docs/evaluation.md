@@ -92,3 +92,9 @@ traces, not providers merely configured in the application:
 The report also records `execution.observed_inference_providers`. The checked-in
 eight-ticket results remain the historical July 2026 mock baseline; CI regenerates
 new artifacts separately rather than updating the published fixture metrics implicitly.
+
+## Separate human-review track
+
+Human judgments are not inferred from the deterministic test set. Use the offline rubric
+and private CSV scorer in [human_review.md](human_review.md). Its results are not included in
+mock accuracy metrics or automatically published by CI.

@@ -37,3 +37,6 @@ playwright/.auth/
 browser-profile/
 app.tar.gz
 .release/
+
+# Local human evaluations can contain reviewer identifiers and sensitive annotations.
+private_evaluation/
