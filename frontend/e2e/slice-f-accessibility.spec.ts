@@ -55,7 +55,8 @@ test("degraded ungrounded triage retains explicit manual-review semantics and ke
   await expect(decision).toContainText("manual review");
   await expect(decision.getByLabel("Grounding status: not grounded")).toBeVisible();
   await expect(decision).toContainText("Citation rejected");
-  await expect(decision.getByRole("status")).toContainText("Review retrieved evidence and respond manually.");
+  await expect(decision.getByRole("status").filter({ hasText: "A safe fallback was used." }))
+    .toContainText("Review retrieved evidence and respond manually.");
 
   const trace = page.getByRole("region", { name: "Workflow trace" });
   await expect(trace.getByRole("listitem")).toHaveCount(7);
