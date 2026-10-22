@@ -9,6 +9,14 @@
 - CORS origins are environment-configured.
 - `/provider-health` reports local inference and storage state without credentials or raw environment values.
 
+## CI evidence uploads
+
+The backend CI job uses a read-only `GITHUB_TOKEN` and uploads only the explicitly
+enumerated synthetic evaluation artifacts created under `/tmp/evaluation` plus the
+adversarial regression report. It no longer archives the entire checkout, which
+could accidentally include new local/generated data. Never insert real customer
+tickets or secrets into the public evaluation fixture or CI evidence artifacts.
+
 ## Retrieved-content and prompt boundaries
 
 Retrieved messages are untrusted text, not instructions or policy. The graph converts each result to a typed `RetrievedEvidence` record and passes it through a dedicated `evidence` field. Workflow instructions, the current user ticket, candidate response, and retrieved evidence are separate request fields; retrieved text is never assigned a system/developer role. Original evidence text remains available for traceability.
@@ -31,11 +39,3 @@ The limiter is intentionally in-memory and per process; it is not a distributed 
 
 The application drafts responses for human review. Banking77 is not company policy, and grounding against demo examples does not establish policy correctness.
 
-
-## CI evidence uploads
-
-The backend CI job uses a read-only `GITHUB_TOKEN` and uploads only the explicitly
-enumerated synthetic evaluation artifacts created under `/tmp/evaluation` plus the
-adversarial regression report. It no longer archives the entire checkout, which
-could accidentally include new local/generated data. Never insert real customer
-tickets or secrets into the public evaluation fixture or CI evidence artifacts.
