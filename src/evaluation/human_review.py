@@ -37,7 +37,8 @@ def summarize_human_review(path: Path, expected_samples: int | None = None) -> d
         unexpected = set(headers) - set(FIELDS)
         if missing or unexpected:
             raise ValueError(
-                f"Invalid review columns; missing={sorted(missing)}, unexpected={sorted(unexpected)}"
+                "Invalid review columns; "
+                f"missing={sorted(missing)}, unexpected={sorted(unexpected)}"
             )
         rows = list(reader)
 
