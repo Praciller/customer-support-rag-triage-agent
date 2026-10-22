@@ -82,15 +82,11 @@ def summarize_human_review(path: Path, expected_samples: int | None = None) -> d
                 raise ValueError(f"Row {row_number} has invalid {dimension} judgment")
         samples[data["sample_id"]].append(data)
 
-    if expected_samples is not None and (
-        expected_samples < 1 or expected_samples < len(samples)
-    ):
+    if expected_samples is not None and (expected_samples < 1 or expected_samples < len(samples)):
         raise ValueError("Expected sample count must cover all reviewed samples")
 
     counts = dict.fromkeys(STATUSES, 0)
-    dimension_counts = {
-        dim: dict.fromkeys((*STATUSES, "not_applicable"), 0) for dim in DIMENSIONS
-    }
+    dimension_counts = {dim: dict.fromkeys((*STATUSES, "not_applicable"), 0) for dim in DIMENSIONS}
     single_reviewer_samples = 0
 
     for annotations in samples.values():
