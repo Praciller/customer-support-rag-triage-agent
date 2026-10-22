@@ -66,3 +66,16 @@ GitHub `main` is not yet enforced by a ruleset. Follow Issue #84 and
 `docs/repository-governance.md`: the repository owner must configure the
 four actual check contexts with GitHub Settings permissions and then verify
 the ruleset is **active**. A written checklist alone does not configure it.
+
+## Python advisory visibility (unresolved security gate)
+
+The `backend` workflow adds a reporting-only
+`pip-audit==2.10.1` scan for `requirements.production.txt`.
+It is deliberately **nonblocking** because [Issue #93](https://github.com/Praciller/customer-support-rag-triage-agent/issues/93)
+tracks 37 advisory records in three packages. In particular,
+FastEmbed 0.9.0 requires `Pillow<13`, while the reported Pillow
+fix requires version 13. The directly attempted dependency-floor
+upgrade failed Docker/Windows installation, and was **reverted**.
+This does not grant a risk exception or attest deployed-image
+safety. A clean audit must become a required gate once a supported
+remediation is verified.

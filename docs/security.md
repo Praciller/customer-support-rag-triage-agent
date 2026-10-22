@@ -65,3 +65,32 @@ classification or urgency detection propagates through the full graph.
 
 These safeguards enforce workflow invariants, not claim-level semantic entailment or policy
 correctness. Neither model self-report nor presence of retrieved text proves a response is supported.
+
+## Python production dependency advisories — unresolved
+
+As of October 23, 2026, the Python Packaging Authority's
+`pip-audit==2.10.1` is run on `requirements.production.txt` in
+GitHub Actions' `backend` job. Unlike the **blocking** frontend npm
+audit, this scan is currently **reporting-only** with
+`continue-on-error: true` because the verified supported package
+graph has unresolved advisories. A successful CI workflow **does not
+mean Python dependency vulnerabilities are absent**.
+
+Evidence: [Actions run 39843328801](https://github.com/Praciller/customer-support-rag-triage-agent/actions/runs/39843328801)
+detected **37 advisory records in three packages**: `datasets@4.8.5`
+(1; fixes at `5.0.1`), `fsspec@2026.2.0` (1; fixes at `2026.6.0`),
+and `Pillow@12.3.0` (35; fixes at `13.0.0`). These are advisory
+records, **not** 37 independently proven exploitable application
+paths. An attempted fix conflicted with the current supported
+`FastEmbed` line's `Pillow<13` constraint and failed Windows and
+Docker dependency installation. The incompatible attempted changes
+were **not** merged into `main`.
+
+Track the supported remediation and any explicitly time-bounded,
+owner-approved risk decision in
+[Issue #93](https://github.com/Praciller/customer-support-rag-triage-agent/issues/93).
+Do not bypass resolver constraints, suppress specific advisory IDs,
+or claim the public demo is production-ready. React/npm audit results
+are independent. The scan resolves current ranges at CI runtime,
+not the exact Hugging Face deployment artifact or external CPU
+PyTorch wheel.
