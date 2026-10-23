@@ -68,6 +68,12 @@ correctness. Neither model self-report nor presence of retrieved text proves a r
 
 ## Python production dependency advisories — unresolved
 
+A source-level [FastEmbed/Pillow reachability review](pillow-fastembed-reachability-20261024.md)
+separates the real text-only public API controls from transitive dependency
+uncertainty and explains why the hashing CI smoke does not validate the
+FastEmbed Hugging Face release image. Its source regression tests do not
+eliminate advisories or grant release approval.
+
 As of October 23, 2026, the Python Packaging Authority's
 `pip-audit==2.10.1` is run on `requirements.production.txt` in
 GitHub Actions' `backend` job. Unlike the **blocking** frontend npm
