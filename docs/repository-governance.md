@@ -26,11 +26,14 @@ remaining verification required by [Issue #84](https://github.com/Praciller/cust
 
 ## Remaining enforcement verification
 
-**Issue #84 remains open** until a harmless test PR demonstrates that a
-pending/failing required check blocks merge. Do not deliberately break
-the default branch or forge a failing status. The active-rule metadata
-and a successful normal PR merge are positive evidence but do not by
-themselves exercise the negative/blocked case.
+The harmless [PR #96](https://github.com/Praciller/customer-support-rag-triage-agent/pull/96)
+provided a **pending-check negative case**: GitHub returned
+`mergeable: true` but `mergeable_state: blocked` for exact head
+`d35825bd4d1235b21b8696d5dad2d14112ec8572` while all four
+required CI jobs were still in progress. This is a read-only GitHub
+merge-gate observation, not an attempted unsafe merge or a test of
+failing-check behavior. Confirm the same PR changes to eligible once
+all four required jobs pass before closing Issue #84.
 
 A repository owner can review and maintain the rule under
 **Settings → Rules → Rulesets → Main PR and four CI checks**.
@@ -78,6 +81,7 @@ for remaining live-release and manual accessibility gates.
 | Ruleset `25716747` on `main` | **Active**, branch `protected: true` |
 | Required CI checks | Four checks, pinned to GitHub Actions integration 15368 |
 | Normal PR merge | Verified on PR #95 |
-| Blocked pending/failing merge behavior | **Not yet directly tested**; Issue #84 open |
+| Pending-check merge block | **Observed** on PR #96 (`mergeable_state: blocked`) |
+| Failing-check merge block | Not separately tested; do not forge failures |
 | Python dependency risk | Pillow issue #93 unresolved; no exception granted |
 | Hugging Face main-to-Space synchronization | Not performed; separate owner release |

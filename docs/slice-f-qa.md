@@ -66,9 +66,10 @@ human review without actual independently adjudicated evidence.
 GitHub `main` is now protected by active ruleset `25716747`, requiring PRs,
 up-to-date passing `backend`, `frontend`, `browser`, and `docker-smoke` checks,
 and blocking deletion/force pushes. Read-back confirmed `protected: true`
-after owner-authenticated configuration on October 23, 2026. The negative
-check-enforcement test (pending/failing check prevents merge) is still
-outstanding; Issue #84 remains open. See `docs/repository-governance.md`.
+after owner-authenticated configuration on October 23, 2026. A pending-check merge block was observed on PR #96 (`mergeable_state:
+blocked`) while the four required checks were in progress. Failure-state
+enforcement has not been separately tested; see Issue #84 and
+`docs/repository-governance.md`.
 This repository protection does not authorize any Hugging Face deployment.
 
 ## Python advisory visibility (unresolved security gate)
