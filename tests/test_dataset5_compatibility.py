@@ -38,7 +38,8 @@ def test_huggingface_classlabel_mapping_on_supported_datasets(monkeypatch) -> No
     records = _load_huggingface(settings, sample_size=2)
     assert [record["intent"] for record in records] == ["delivery_issue", "billing_issue"]
     assert [record["metadata"]["original_intent"] for record in records] == [
-        "card_arrival", "cash_withdrawal",
+        "card_arrival",
+        "cash_withdrawal",
     ]
     assert all(record["source"] == "mteb/banking77" for record in records)
 
