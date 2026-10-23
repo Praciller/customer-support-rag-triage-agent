@@ -69,6 +69,12 @@ This is a single-ticket deployment smoke result, separate from the deterministic
 
 ### GitHub and Space synchronization
 
+Before a release, run the non-deploying public-Space preflight in
+[`scripts/verify_live_space.py`](../scripts/verify_live_space.py) and consult
+[`docs/live-space-preflight-20261023.md`](live-space-preflight-20261023.md).
+The preflight records **current Space health and revision only**; it does not
+establish a reviewed GitHub source SHA to live-image mapping.
+
 The Space is a separate Hugging Face Git repository and is updated manually; pushing GitHub does
 not rebuild it automatically. `Dockerfile.hf` is the canonical source build. The verified Space
 pull requests used `deploy/huggingface/Dockerfile.bundle` plus an `app.tar.gz` generated from exact,
