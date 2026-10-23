@@ -1,9 +1,12 @@
 # Slice F: keyboard, semantic UI and release-evidence gates
 
-Last verified GitHub main: `5f84ae3dfaa24c8d457c1422777ad5372a4121b8`,
-with all four GitHub Actions push-CI jobs successful on that exact SHA
-([run 39943448783](https://github.com/Praciller/customer-support-rag-triage-agent/actions/runs/39943448783)).
-This SHA describes the **repository**, not the Hugging Face Space.
+Verified application baseline (October 23, 2026):
+`2ebfe6b2b7f7259f0987d125837d81b826a7274a`, with all four
+GitHub Actions push-CI jobs successful on that exact SHA
+([run 39980406963](https://github.com/Praciller/customer-support-rag-triage-agent/actions/runs/39980406963)).
+This historical checkpoint is **not** a dynamic latest-`main` status;
+subsequent documentation commits need their own CI evidence.
+The SHA describes the **GitHub repository**, not the Hugging Face Space.
 
 ## Offline, automated checks (no secrets or third-party API keys)
 
@@ -24,13 +27,13 @@ This SHA describes the **repository**, not the Hugging Face Space.
   regression scan of Triage and Evaluation at 390px and 1440px, with no
   rule suppression. It caught an actual contrast issue in the desktop sidebar
   demo footer, now corrected by lightening only that footer's small text.
-- **Four proposed desktop screenshot baselines require owner visual approval
-  before merge.** The original baselines passed 11/11 with the previous CSS.
-  After the contrast fix, exactly 1,329 RGB pixels per desktop screenshot
-  changed, confined to the same sidebar footer text box (x=28..190, width
-  163px, height 28px); the mobile screenshot baseline remains unchanged.
-  The new baselines are review candidates, not automatically approved.
-  A clean scan is not full accessibility certification.
+- The owner **approved all four desktop screenshot baselines** for
+  [PR #97](https://github.com/Praciller/customer-support-rag-triage-agent/pull/97)
+  on October 23, 2026, before its protected-branch merge. The original
+  baselines passed 11/11 with the previous CSS; the 1,329 changed RGB pixels
+  per new desktop screenshot are confined to the same sidebar footer text box
+  (x=28..190, width 163px, height 28px). The mobile baseline is unchanged.
+  This explicit visual acceptance does **not** constitute WCAG certification.
 - These deterministic checks are **not** a comprehensive WCAG 2.2 AA audit.
   They do not cover every foreground/background combination, actual browser
   zoom, screen-reader traversal, or assistive-technology combinations.
@@ -50,8 +53,10 @@ This SHA describes the **repository**, not the Hugging Face Space.
 ## Production release gate (not satisfied by CI)
 
 The Hugging Face Space is a **separate Git repository**. The README and
-`docs/deployment.md` contain a September 2026 historical verification,
-not proof that the new GitHub SHA is currently live.
+`docs/deployment.md` contain a September 2026 historical verification.
+The [October 23 live Space preflight](live-space-preflight-20261023.md)
+confirmed the old Space revision `a2661562ff1a2a7b7f15e4b9145cb007c98444a5`
+was still healthy; it does **not** prove the current GitHub SHA is live.
 
 Before publishing updated portfolio captures:
 
@@ -73,15 +78,15 @@ No screenshot, saved deterministic fixture, or successful GitHub CI run by
 itself certifies the live Space. Never claim semantic policy correctness or
 human review without actual independently adjudicated evidence.
 
-## Governance verification still pending
+## Governance verification boundary
 
-GitHub `main` is now protected by active ruleset `25716747`, requiring PRs,
+GitHub `main` is protected by active ruleset `25716747`, requiring PRs,
 up-to-date passing `backend`, `frontend`, `browser`, and `docker-smoke` checks,
-and blocking deletion/force pushes. Read-back confirmed `protected: true`
-after owner-authenticated configuration on October 23, 2026. A pending-check merge block was observed on PR #96 (`mergeable_state:
-blocked`) while the four required checks were in progress. Failure-state
-enforcement has not been separately tested; see Issue #84 and
-`docs/repository-governance.md`.
+and blocking deletion/force pushes. Owner-authenticated readback confirmed
+`protected: true` on October 23, 2026. A pending-check merge block was
+observed on PR #96 while required checks ran. [Issue #84](https://github.com/Praciller/customer-support-rag-triage-agent/issues/84)
+was closed after these verified checks; a deliberately failing-check test was
+**not** performed. See `docs/repository-governance.md`.
 This repository protection does not authorize any Hugging Face deployment.
 
 ## Python advisory visibility (unresolved security gate)
