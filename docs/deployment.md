@@ -31,6 +31,14 @@ docker build -f Dockerfile.hf -t support-rag-hf .
 docker run --rm -p 7860:7860 support-rag-hf
 ```
 
+For a **repeatable local, true-FastEmbed image smoke**, run
+[`scripts/verify_local_fastembed.py`](../scripts/verify_local_fastembed.py)
+after the container starts, following the reproducible
+[October 24 evidence and test procedure](local-fastembed-smoke-20261024.md).
+Unlike CI's hashing smoke, this validates the real FastEmbed provider and
+an explicitly denied public ingestion request using only synthetic tickets.
+It is not a vulnerability scan or authorization to deploy the Space.
+
 The existing Docker Space runs on `cpu-basic`. No secret is required for demo mode. A deployment is
 only considered verified after the live UI loads, `/ready` returns 200, and a live deterministic
 triage request returns seven trace nodes.
