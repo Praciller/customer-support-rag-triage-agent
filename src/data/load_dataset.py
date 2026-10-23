@@ -139,8 +139,13 @@ def _load_csv(settings: Settings, sample_size: int | None) -> list[dict[str, Any
 def write_raw_dataset(
     settings: Settings,
     sample_size: int | None = None,
+    *,
+    records: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    records = load_records(settings, sample_size)
+    # Reuse the exact source snapshot when ingestion has already loaded it.
+    # The standalone dataset CLI continues loading records on its own.
+    if records is None:
+        records = load_records(settings, sample_size)
     output = Path("data/raw/support_dataset.csv")
     output.parent.mkdir(parents=True, exist_ok=True)
     frame = pd.DataFrame(records)

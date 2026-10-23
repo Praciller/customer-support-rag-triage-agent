@@ -168,8 +168,9 @@ class ApplicationServices:
         ]
 
     def ingest(self, recreate: bool, sample_size: int | None) -> dict[str, Any]:
-        metadata = write_raw_dataset(self.settings, sample_size)
-        records = [clean_record(record) for record in load_records(self.settings, sample_size)]
+        source_records = load_records(self.settings, sample_size)
+        metadata = write_raw_dataset(self.settings, sample_size, records=source_records)
+        records = [clean_record(record) for record in source_records]
         documents = [
             SupportDocument(
                 ticket_id=record["id"],
