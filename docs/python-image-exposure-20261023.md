@@ -38,7 +38,13 @@ public image-upload endpoint in the inspected `src/` tree. A synthetic
 live request for `/triage` completed all seven trace nodes, and unauthenticated
 `/ingest` returned HTTP 403. The tests in
 `tests/test_public_text_only_boundary.py` add regression guards for image-shaped
-JSON keys and binary request bodies on the three text endpoints.
+JSON keys, binary image payloads, and multipart bodies on the three text
+endpoints. A malformed binary request with an explicit non-JSON Content-Type
+previously raised a FastAPI/Pydantic Unicode decoding exception in CI. The
+bounded middleware now returns HTTP 415 before parsing such a body; recognized
+`application/json` and `application/*+json` types still reach schema validation.
+This is a narrow invalid-request behavior fix, **not** evidence that Pillow
+is free of vulnerabilities or unreachable in every transitive dependency.
 
 ## Residual risk and limits
 

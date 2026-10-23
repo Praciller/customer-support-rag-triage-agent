@@ -50,6 +50,30 @@ def test_text_endpoints_reject_binary_request_bodies(
         headers={"Content-Type": content_type},
     )
 
+    assert response.status_code == 415
+    assert response.json() == {"detail": "This endpoint accepts JSON requests only"}
+
+
+@pytest.mark.parametrize("endpoint", ["/triage", "/answer", "/search-similar"])
+def test_text_endpoints_reject_image_multipart_bodies(
+    public_client: TestClient, endpoint: str
+) -> None:
+    response = public_client.post(
+        endpoint,
+        content=b'--t\r\nContent-Disposition: form-data; name="image"\r\n\r\nPNG\r\n--t--',
+        headers={"Content-Type": "multipart/form-data; boundary=t"},
+    )
+
+    assert response.status_code == 415
+
+
+def test_vendor_json_type_is_not_rejected_as_binary(public_client: TestClient) -> None:
+    response = public_client.post(
+        "/triage",
+        content=b'{"message":"test","image":"not-supported"}',
+        headers={"Content-Type": "application/vnd.example+json"},
+    )
+
     assert response.status_code == 422
 
 

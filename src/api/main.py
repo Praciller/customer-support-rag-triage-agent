@@ -60,6 +60,24 @@ def create_app(
         except TimeoutError:
             return JSONResponse(status_code=504, content={"detail": "Request timed out"})
 
+    @app.middleware("http")
+    async def require_json_for_text_endpoints(request: Request, call_next):
+        if request.method == "POST" and request.url.path in {
+            "/triage",
+            "/answer",
+            "/search-similar",
+        }:
+            content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+            valid_json = content_type == "application/json" or (
+                content_type.startswith("application/") and content_type.endswith("+json")
+            )
+            if content_type and not valid_json:
+                return JSONResponse(
+                    status_code=415,
+                    content={"detail": "This endpoint accepts JSON requests only"},
+                )
+        return await call_next(request)
+
     @app.exception_handler(Exception)
     async def controlled_error_response(_: Request, __: Exception) -> JSONResponse:
         return JSONResponse(
