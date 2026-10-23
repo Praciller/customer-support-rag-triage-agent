@@ -10,7 +10,18 @@ The SHA describes the **GitHub repository**, not the Hugging Face Space.
 
 ## Offline, automated checks (no secrets or third-party API keys)
 
-- Existing Playwright and Storybook checks remain authoritative for UI behavior.
+- Existing Playwright checks remain authoritative for app-wide UI behavior.
+- `npm run test:storybook:a11y` runs isolated Storybook component axe-core WCAG
+  A/AA scans in the Windows `browser` CI job. The separate Storybook Playwright
+  config starts an ephemeral local Storybook server; the tests **fail closed**
+  if the expected story is blank or missing before scanning `#storybook-root`.
+  Eight real states are scanned at 390px and 1440px (**16 browser checks**):
+  Trace normal/fallback/degraded/incomplete/empty; EvaluationChart
+  deterministic fixture; ungrounded TriageDecision; and ungrounded/manual-review
+  DecisionWorkspace. This specifically extends component-state coverage, not
+  the deployed Hugging Face UI. No WCAG rules are suppressed and no golden
+  screenshots are replaced. It does not substitute for a human screen-reader,
+  keyboard or full WCAG 2.2 AA review.
 - `frontend/e2e/slice-f-accessibility.spec.ts` adds repeatable smoke checks for a
   keyboard skip-navigation link at 390, 768 and 1440 pixels; mobile
   classification-table column semantics; degraded/ungrounded manual-review

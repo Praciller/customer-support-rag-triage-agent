@@ -92,6 +92,8 @@ jobs:
       - name: Functional browser regression
         run: npx playwright test e2e/triage.spec.ts e2e/evaluation.spec.ts e2e/error-state.spec.ts
       - run: npm run test:e2e
+      - name: Storybook component WCAG A/AA regression
+        run: npm run test:storybook:a11y
       - name: Upload Slice E visual review captures
         if: always()
         uses: actions/upload-artifact@v6
