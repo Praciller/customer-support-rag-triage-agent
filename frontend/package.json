@@ -12,6 +12,7 @@
     "build-storybook": "storybook build",
     "verify:button-css": "node scripts/verify-button-css.mjs",
     "test:e2e": "playwright test",
+    "test:storybook:a11y": "playwright test --config playwright.storybook.config.ts",
     "test:e2e:report": "playwright show-report",
     "test:e2e:visual": "playwright test e2e/visual.spec.ts"
   },
