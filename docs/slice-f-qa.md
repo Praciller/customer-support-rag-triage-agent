@@ -28,10 +28,19 @@ The SHA describes the **GitHub repository**, not the Hugging Face Space.
   **degraded manual-review triage**, and **unavailable Evaluation** states,
   with no rule suppression. The earlier scan caught a real contrast issue in
   the desktop sidebar demo footer, corrected by lightening only its small text.
-  These automated scans do not replace human screen-reader use or real 200%
-  browser zoom: Chromium pinch-zoom/page-scale does not exercise CSS reflow
-  the same way as desktop browser zoom, and a narrow CSS viewport is only a
-  reflow proxy.
+  These automated axe scans do not replace human screen-reader use.
+  `frontend/e2e/slice-f-native-zoom.spec.ts` additionally uses the native
+  Chromium `chrome.tabs.setZoom(tabId, 2)` browser zoom API through an
+  **ephemeral isolated extension and temporary browser profile**, asserting
+  `chrome.tabs.getZoom() === 2` and the actual CSS viewport change from
+  1280/768/640 physical pixels to 640/384/320 CSS pixels. It checks Triage,
+  seven-stage Trace, Evaluation and no page-level horizontal overflow at
+  all three effective widths; at 320 CSS pixels it also checks the skip-link
+  keyboard focus and scoped axe WCAG A/AA scans on both views.
+  This is native browser zoom (not pinch scaling, DevTools page-scale, or
+  a narrow viewport being presented as zoom). It remains an **automated
+  Chromium-only regression**, not hands-on browser UI, screen-reader,
+  assistive-technology, or comprehensive WCAG 2.2 AA certification.
 - The owner **approved all four desktop screenshot baselines** for
   [PR #97](https://github.com/Praciller/customer-support-rag-triage-agent/pull/97)
   on October 23, 2026, before its protected-branch merge. The original
@@ -40,8 +49,9 @@ The SHA describes the **GitHub repository**, not the Hugging Face Space.
   (x=28..190, width 163px, height 28px). The mobile baseline is unchanged.
   This explicit visual acceptance does **not** constitute WCAG certification.
 - These deterministic checks are **not** a comprehensive WCAG 2.2 AA audit.
-  They do not cover every foreground/background combination, actual browser
-  zoom, screen-reader traversal, or assistive-technology combinations.
+  They do not cover every foreground/background combination, manual
+  browser-zoom visual review across browsers, screen-reader traversal, or
+  assistive-technology combinations.
 
 ## Human accessibility review required
 
@@ -50,8 +60,13 @@ The SHA describes the **GitHub repository**, not the Hugging Face Space.
   error-status announcement and focused navigation at desktop and mobile sizes.
 - Verify contrast with actual computed foreground/background colors, including
   transparent/color-mixed text states, on the changed views.
-- Verify real 200% browser zoom and 320px narrow reflow beyond the automated 320px CSS-viewport smoke; document any horizontal
-  scroll container that is intentionally local instead of page-level overflow.
+- Independently review 200% zoom **by hand in Chrome/Edge browser UI** and
+  320px narrow reflow, including visual clipping, local table scrolling,
+  focus indicators and readable touch targets. Automated *native* Chromium
+  200% browser zoom now covers 640/384/320 effective CSS widths; it cannot
+  replace that human visual/interaction review or cover every browser.
+  Document any horizontal scroll container that is intentionally local
+  instead of page-level overflow.
 - Check reduced motion, focus retention during asynchronous triage, and empty,
   loading, success, degraded and error states.
 
