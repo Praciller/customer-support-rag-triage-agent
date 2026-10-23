@@ -13,12 +13,24 @@ This SHA describes the **repository**, not the Hugging Face Space.
   classification-table column semantics; degraded/ungrounded manual-review
   status; keyboard expansion of trace diagnostics; unavailable evaluation
   announcement; and reduced-motion CSS behavior.
-- Continue the complete `npm run test:e2e` suite and the existing owner-reviewed
-  Windows Chromium visual screenshots rather than regenerating baselines.
+- Continue the complete `npm run test:e2e` suite. Preserve owner-reviewed
+  Windows Chromium screenshot baselines unless each proposed change has been
+  separately inspected and explicitly accepted before merge.
 - `npm audit --audit-level=low` remains a blocking frontend CI command.
 - `frontend/e2e/slice-f-contrast-reflow.spec.ts` adds 320px CSS-viewport
   reflow checks for Triage/Evaluation and a browser-computed text-contrast
   sample (neutral/success/warning/danger badge states; minimum 4.5:1).
+- `frontend/e2e/slice-f-axe.spec.ts` runs a browser-level axe-core WCAG A/AA
+  regression scan of Triage and Evaluation at 390px and 1440px, with no
+  rule suppression. It caught an actual contrast issue in the desktop sidebar
+  demo footer, now corrected by lightening only that footer's small text.
+- **Four proposed desktop screenshot baselines require owner visual approval
+  before merge.** The original baselines passed 11/11 with the previous CSS.
+  After the contrast fix, exactly 1,329 RGB pixels per desktop screenshot
+  changed, confined to the same sidebar footer text box (x=28..190, width
+  163px, height 28px); the mobile screenshot baseline remains unchanged.
+  The new baselines are review candidates, not automatically approved.
+  A clean scan is not full accessibility certification.
 - These deterministic checks are **not** a comprehensive WCAG 2.2 AA audit.
   They do not cover every foreground/background combination, actual browser
   zoom, screen-reader traversal, or assistive-technology combinations.
