@@ -1,67 +1,83 @@
 # GitHub main-branch governance and release gates
 
-This is an owner-operated checklist, not a report that protections are already enabled.
+This document records the repository's **active** main ruleset and the
+remaining verification required by [Issue #84](https://github.com/Praciller/customer-support-rag-triage-agent/issues/84).
 
-## Verified starting point
+## Verified current configuration — October 23, 2026
 
-- On October 23, 2026, the GitHub repository's `main` branch reported
-  `protected: false`, and the read-only repository ruleset listing was empty.
-- The connected GitHub integration returned HTTP 403 for branch-protection
-  administration and cannot install or modify repository rules.
-- No repository setting was changed by this document.
+- Repository ruleset `25716747`, **Main PR and four CI checks**, has
+  `enforcement: active` and targets only `refs/heads/main`.
+- A separate read of `GET /branches/main` returned `protected: true`.
+- The ruleset requires pull requests and zero approvals (compatible with a
+  solo maintainer). Review threads must be resolved; a separate reviewer
+  is not silently required for ordinary maintenance.
+- Required GitHub Actions check contexts are `backend`, `frontend`,
+  `browser`, and `docker-smoke`; each pins the GitHub Actions app
+  integration ID `15368`. Strict up-to-date checks are enabled.
+- Deletion and non-fast-forward pushes to `main` are forbidden. The
+  ruleset has no bypass actors.
+- This was applied with the repository owner's authenticated GitHub CLI
+  session. The separate GitHub App integration can inspect the result,
+  but does not have permission to administer GitHub rulesets.
+- [PR #95](https://github.com/Praciller/customer-support-rag-triage-agent/pull/95)
+  merged through the standard pull-request path at GitHub commit
+  `5f84ae3dfaa24c8d457c1422777ad5372a4121b8`, after all four
+  exact-head jobs passed.
 
-## Configure the ruleset in GitHub
+## Remaining enforcement verification
 
-An owner with Settings access can navigate to **Settings → Rules → Rulesets →
-New branch ruleset** and configure:
+**Issue #84 remains open** until a harmless test PR demonstrates that a
+pending/failing required check blocks merge. Do not deliberately break
+the default branch or forge a failing status. The active-rule metadata
+and a successful normal PR merge are positive evidence but do not by
+themselves exercise the negative/blocked case.
 
-1. Target only `main`; mark the ruleset **Active** rather than Evaluate.
-2. Require pull requests for changes to `main`. Do not require an approval from the
-   PR author; if review approvals are mandated, confirm a separate reviewer is available.
-3. Require passing checks corresponding to all four jobs in
-   `.github/workflows/ci.yml`: `backend`, `frontend`, `browser`, and
-   `docker-smoke`. Select the **actual check contexts and GitHub Actions source**
-   as displayed by the Rulesets UI rather than copying a guessed check name.
-4. Require the branch to be up to date with `main` before merging if the
-   repository workflow can support it. Rerun tests after resolving conflicts.
-5. Block force pushes and branch deletion. Limit bypass to a documented break-glass
-   recovery policy, ideally with an audit trail; avoid broad everyday bypasses.
-6. Save and inspect the ruleset configuration in read-only mode. Confirm it
-   applies to `main` and does not unexpectedly block authorized maintenance.
+A repository owner can review and maintain the rule under
+**Settings → Rules → Rulesets → Main PR and four CI checks**.
+Keep the required contexts aligned with the actual check-run names
+and GitHub Actions source. When changing CI job names, update and
+re-verify the ruleset before merging the workflow rename.
 
-Depending on repository ownership and the GitHub plan, some controls may not
-be available; use the strongest supported settings and record that limitation.
+## Safe operation
 
-## Verify enforcement
+1. Open a pull request for each source or documentation change.
+2. Confirm all four required checks pass on the exact PR head and that
+   the head is up to date with `main`; resolve review threads.
+3. Merge only after GitHub marks the branch eligible. Record the merged
+   SHA and verify the post-merge CI push run separately.
+4. For a security emergency, document the owner-approved recovery
+   path and audit trail before changing protections. Never use a
+   routine force-push or delete `main` to test protection.
+5. Keep the last known-good `main` commit and release revision available
+   for ordinary revert-based recovery.
 
-- Open a small, harmless pull request from a branch and ensure the four required
-  checks appear. Confirm the merge gate blocks while any required check is pending
-  or failing, and permits merge only when the applicable policy passes.
-- Confirm that the rule is **active**, not simply saved, and that bypassers are explicit.
-- Check that security fixes can still be delivered through a normal PR. Keep the
-  current, known-good `main` SHA as a rollback reference.
-- Do **not** test branch restrictions by force-pushing or deleting `main`.
+## Independent Hugging Face Space release
 
-## Separation of environments
+GitHub and Hugging Face Spaces are separate Git repositories. A merged
+PR or successful GitHub CI **does not** deploy to the live Space.
 
-A successful GitHub CI run does not constitute a Hugging Face deployment.
-Treat changes to Hugging Face Spaces, authentication, datasets, secrets, and DNS
-as separate approved operations. For any release:
+- Record the reviewed GitHub source SHA, exact Space Git revision or
+  image digest, deploy timestamp, and tested rollback target.
+- Verify live `/ready`, the synthetic seven-node triage, unauthenticated
+  ingestion rejection, page identity, 390/768/1440 rendering, browser
+  console errors, and accessibility before claiming a v3 release.
+- Keep unverified Python/Pillow advisories and the deterministic
+  8-ticket evaluation limitations visible.
+- Never publish credentials, customer-sensitive test records, or raw
+  prompt contents; do not trigger paid Hugging Face resources.
 
-- Record the reviewed GitHub merge SHA, the CI run URL, and the exact Space revision.
-- Smoke-test live `/ready`, one deterministic triage path with seven trace nodes,
-  public-ingestion rejection, desktop/mobile rendering, and no secrets in output.
-- Keep a verified Space rollback revision before publishing.
-- Never infer live benchmark quality from the 8-case mock dataset or from the
-  offline human-review scoring tool until actual reviewed labels exist.
+As of October 23, 2026 the live Space remains on the older revision
+`a2661562ff1a2a7b7f15e4b9145cb007c98444a5`, which is **not** the
+current GitHub main commit. Refer to [Issue #89](https://github.com/Praciller/customer-support-rag-triage-agent/issues/89)
+for remaining live-release and manual accessibility gates.
 
 ## Review record
 
 | Item | State |
 | --- | --- |
-| GitHub ruleset protection for `main` | **Not configured at last read-only check** |
-| Required four CI checks | Defined in workflow; owner must select live check contexts |
-| External inference or sensitive real customer data | Not approved |
-| Hugging Face production synchronization | Separate release approval required |
-
-This document does not itself change any GitHub setting or production deployment.
+| Ruleset `25716747` on `main` | **Active**, branch `protected: true` |
+| Required CI checks | Four checks, pinned to GitHub Actions integration 15368 |
+| Normal PR merge | Verified on PR #95 |
+| Blocked pending/failing merge behavior | **Not yet directly tested**; Issue #84 open |
+| Python dependency risk | Pillow issue #93 unresolved; no exception granted |
+| Hugging Face main-to-Space synchronization | Not performed; separate owner release |

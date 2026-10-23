@@ -1,7 +1,8 @@
 # Slice F: keyboard, semantic UI and release-evidence gates
 
-Last verified GitHub starting point: `ddef3782c678c6eb9f00af111f8d8c7c86d79236`,
-with all four GitHub Actions CI jobs successful on the same SHA (run `39834335720`).
+Last verified GitHub main: `5f84ae3dfaa24c8d457c1422777ad5372a4121b8`,
+with all four GitHub Actions push-CI jobs successful on that exact SHA
+([run 39943448783](https://github.com/Praciller/customer-support-rag-triage-agent/actions/runs/39943448783)).
 This SHA describes the **repository**, not the Hugging Face Space.
 
 ## Offline, automated checks (no secrets or third-party API keys)
@@ -60,22 +61,26 @@ No screenshot, saved deterministic fixture, or successful GitHub CI run by
 itself certifies the live Space. Never claim semantic policy correctness or
 human review without actual independently adjudicated evidence.
 
-## Governance blocker
+## Governance verification still pending
 
-GitHub `main` is not yet enforced by a ruleset. Follow Issue #84 and
-`docs/repository-governance.md`: the repository owner must configure the
-four actual check contexts with GitHub Settings permissions and then verify
-the ruleset is **active**. A written checklist alone does not configure it.
+GitHub `main` is now protected by active ruleset `25716747`, requiring PRs,
+up-to-date passing `backend`, `frontend`, `browser`, and `docker-smoke` checks,
+and blocking deletion/force pushes. Read-back confirmed `protected: true`
+after owner-authenticated configuration on October 23, 2026. The negative
+check-enforcement test (pending/failing check prevents merge) is still
+outstanding; Issue #84 remains open. See `docs/repository-governance.md`.
+This repository protection does not authorize any Hugging Face deployment.
 
 ## Python advisory visibility (unresolved security gate)
 
 The `backend` workflow adds a reporting-only
 `pip-audit==2.10.1` scan for `requirements.production.txt`.
 It is deliberately **nonblocking** because [Issue #93](https://github.com/Praciller/customer-support-rag-triage-agent/issues/93)
-tracks 37 advisory records in three packages. In particular,
-FastEmbed 0.9.0 requires `Pillow<13`, while the reported Pillow
-fix requires version 13. The directly attempted dependency-floor
-upgrade failed Docker/Windows installation, and was **reverted**.
-This does not grant a risk exception or attest deployed-image
-safety. A clean audit must become a required gate once a supported
-remediation is verified.
+tracks 35 remaining advisory records in Pillow after [PR #94](https://github.com/Praciller/customer-support-rag-triage-agent/pull/94)
+patched Datasets and fsspec compatibility. FastEmbed 0.9.0 still requires
+`Pillow<13`, while reported Pillow fixes require version 13. The direct
+forced-version attempt previously failed Docker/Windows dependency
+resolution and was reverted. [PR #95](https://github.com/Praciller/customer-support-rag-triage-agent/pull/95)
+adds text-ingress guards and static risk documentation, not a Pillow fix.
+This does not grant a risk exception or attest deployed-image safety.
+A clean audit must become a required gate once supported remediation is verified.
