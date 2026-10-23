@@ -23,10 +23,15 @@ The SHA describes the **GitHub repository**, not the Hugging Face Space.
 - `frontend/e2e/slice-f-contrast-reflow.spec.ts` adds 320px CSS-viewport
   reflow checks for Triage/Evaluation and a browser-computed text-contrast
   sample (neutral/success/warning/danger badge states; minimum 4.5:1).
-- `frontend/e2e/slice-f-axe.spec.ts` runs a browser-level axe-core WCAG A/AA
-  regression scan of Triage and Evaluation at 390px and 1440px, with no
-  rule suppression. It caught an actual contrast issue in the desktop sidebar
-  demo footer, now corrected by lightening only that footer's small text.
+- `frontend/e2e/slice-f-axe.spec.ts` runs browser-level axe-core WCAG A/AA
+  regression scans at 390px and 1440px, covering normal Triage/Evaluation,
+  **degraded manual-review triage**, and **unavailable Evaluation** states,
+  with no rule suppression. The earlier scan caught a real contrast issue in
+  the desktop sidebar demo footer, corrected by lightening only its small text.
+  These automated scans do not replace human screen-reader use or real 200%
+  browser zoom: Chromium pinch-zoom/page-scale does not exercise CSS reflow
+  the same way as desktop browser zoom, and a narrow CSS viewport is only a
+  reflow proxy.
 - The owner **approved all four desktop screenshot baselines** for
   [PR #97](https://github.com/Praciller/customer-support-rag-triage-agent/pull/97)
   on October 23, 2026, before its protected-branch merge. The original
