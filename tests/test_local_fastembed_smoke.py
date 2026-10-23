@@ -2,8 +2,17 @@
 
 import copy
 import unittest
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from threading import Thread
 
-from scripts.verify_local_fastembed import BASE_URL, SYNTHETIC_TICKET, check, validate_base_url
+from scripts.verify_local_fastembed import (
+    BASE_URL,
+    SYNTHETIC_TICKET,
+    WORKFLOW_STAGES,
+    check,
+    fetch_json,
+    validate_base_url,
+)
 
 
 def responses():
@@ -29,10 +38,12 @@ def responses():
         "/dataset-info": {"records": 27},
         "/eval/results": {"evaluation_mode": "deterministic_mock", "dataset": {"sample_size": 8}},
         "/triage": {
-            "trace": [{"node": i} for i in range(7)],
+            "trace": [{"node": node, "status": "completed"} for node in WORKFLOW_STAGES],
             "provider_used": "mock",
             "grounded": True,
             "citation_integrity": True,
+            "fallback_used": False,
+            "degraded_mode": False,
             "next_action": "ask_for_order_id",
         },
         "/ingest": {},
@@ -100,7 +111,7 @@ class LocalFastEmbedSmokeTests(unittest.TestCase):
     def test_rejects_broken_seven_node_trace(self):
         data = responses()
         data["/triage"]["trace"] = data["/triage"]["trace"][:6]
-        with self.assertRaisesRegex(ValueError, "seven-stage"):
+        with self.assertRaisesRegex(ValueError, "workflow/grounding"):
             check(fake_fetch(data))
 
     def test_rejects_public_ingest_success(self):
@@ -112,6 +123,80 @@ class LocalFastEmbedSmokeTests(unittest.TestCase):
         data["/eval/results"]["evaluation_mode"] = "unknown"
         with self.assertRaisesRegex(ValueError, "evaluation"):
             check(fake_fetch(data))
+
+    def test_rejects_wrong_stage_order_and_incomplete_status(self):
+        data = responses()
+        data["/triage"]["trace"][2]["node"] = "normalize_message"
+        with self.assertRaisesRegex(ValueError, "workflow/grounding"):
+            check(fake_fetch(data))
+        data = responses()
+        data["/triage"]["trace"][3]["status"] = "pending"
+        with self.assertRaisesRegex(ValueError, "workflow/grounding"):
+            check(fake_fetch(data))
+
+    def test_rejects_false_grounding_and_invalid_manual_review(self):
+        for key, value in (
+            ("grounded", False),
+            ("citation_integrity", False),
+            ("degraded_mode", True),
+            ("fallback_used", True),
+            ("next_action", "reply_to_customer"),
+        ):
+            with self.subTest(field=key):
+                data = responses()
+                data["/triage"][key] = value
+                with self.assertRaisesRegex(ValueError, "workflow/grounding"):
+                    check(fake_fetch(data))
+
+    def test_rejects_unexpected_model(self):
+        data = responses()
+        data["/provider-health"]["embedding_model"] = "unreviewed-model"
+        with self.assertRaisesRegex(ValueError, "boundary"):
+            check(fake_fetch(data))
+
+    def test_local_fetch_does_not_follow_redirect_to_other_port(self):
+        # Both servers bind only to loopback: this test never needs the internet.
+        hits = []
+
+        class RedirectTarget(BaseHTTPRequestHandler):
+            def do_GET(self):
+                hits.append(self.path)
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'{"ok":true}')
+
+            def log_message(self, *_args):
+                pass
+
+        target = ThreadingHTTPServer(("127.0.0.1", 0), RedirectTarget)
+
+        class RedirectSource(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(302)
+                self.send_header(
+                    "Location",
+                    f"http://127.0.0.1:{target.server_port}/untrusted",
+                )
+                self.end_headers()
+
+            def log_message(self, *_args):
+                pass
+
+        source = ThreadingHTTPServer(("127.0.0.1", 0), RedirectSource)
+        workers = [Thread(target=s.serve_forever, daemon=True) for s in (target, source)]
+        try:
+            for worker in workers:
+                worker.start()
+            status, body = fetch_json(f"http://127.0.0.1:{source.server_port}/ready")
+            self.assertEqual(status, 302)
+            self.assertEqual(body, {})
+            self.assertEqual(hits, [])
+        finally:
+            for server in (source, target):
+                server.shutdown()
+                server.server_close()
+            for worker in workers:
+                worker.join(timeout=3)
 
     def test_refuses_nonloopback_or_ambiguous_urls(self):
         for url in (

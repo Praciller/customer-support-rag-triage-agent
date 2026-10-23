@@ -12,9 +12,9 @@
     docker rm --force csrta-fastembed-audit
     docker image rm csrta-fastembed-audit:local
 
-The new script permits only loopback HTTP origins (127.0.0.1 or localhost). It reads /ready, /provider-health, /dataset-info and /eval/results; sends one *fixed synthetic* /triage request; and only after checking the public ingestion setting is explicitly false, sends an unauthenticated /ingest probe requiring HTTP 403. No token, real ticket, arbitrary remote URL, model-provider bill, or ingestion write.
+The script permits only loopback HTTP origins (127.0.0.1 or localhost), **disables environment HTTP proxies and refuses all HTTP redirects** so a misconfigured local server cannot silently forward the preflight to a different host/port. It reads /ready, /provider-health, /dataset-info and /eval/results; sends one *fixed synthetic* /triage request; and only after checking the public ingestion setting is explicitly false, sends an unauthenticated /ingest probe requiring HTTP 403. It requires the **exact seven ordered, completed workflow stages**, expected embedding model, true grounding/citation integrity, no degraded/fallback mode, and the reviewed next action. No token, real ticket, arbitrary remote URL, model-provider bill, or ingestion write.
 
-Eight offline regression tests in tests/test_local_fastembed_smoke.py verify correct behavior and failure on hashing mode, enabled public ingestion, missing records, incomplete trace, unexpected ingest success, evaluation drift, and non-loopback URLs. Automated GitHub docker-smoke still uses hashing: this optional local test is deliberately distinct and downloads public FastEmbed model files.
+Twelve offline regression tests in tests/test_local_fastembed_smoke.py verify correct behavior and failure on hashing mode, incorrect model, enabled public ingestion, missing records, incomplete/wrong-order/pending trace, false grounding/citations, degraded/fallback decisions, unexpected ingest success, evaluation drift, non-loopback URLs, and HTTP redirects to an untrusted listener (using only local sockets). Automated GitHub docker-smoke still uses hashing: this optional local test is deliberately distinct and downloads public FastEmbed model files.
 
 ## Observed evidence on Windows pracill
 
@@ -24,7 +24,7 @@ Eight offline regression tests in tests/test_local_fastembed_smoke.py verify cor
 - pip check: No broken requirements found. Non-root runtime: uid 1000. Bound resources: 2 CPUs, 3 GiB limit; one sampled idle memory usage approximately 357 MiB (not a peak benchmark).
 - Five public model files downloaded with no Hugging Face token. Application startup completed. Frontend GET / returned HTTP 200.
 - Local smoke: **PASS**; 27/27 indexed, embedding_provider fastembed, model BAAI/bge-small-en-v1.5, mock inference, seven triage trace stages, grounded true, citation_integrity true, next_action ask_for_order_id, eight synthetic evaluation records, and unauthorized /ingest HTTP 403.
-- Eight new offline regression cases passed.
+- Eight original offline regression cases passed on the historical image baseline. **October 24 hardening:** four additional regression cases passed (12/12 total). This later testing validates the preflight logic but does **not** claim the historical image was rebuilt.
 
 ## Unsatisfied release/security gates
 
