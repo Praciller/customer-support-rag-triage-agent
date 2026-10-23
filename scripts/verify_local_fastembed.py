@@ -17,7 +17,28 @@ from urllib.parse import urlsplit
 BASE_URL = "http://127.0.0.1:17860"
 SYNTHETIC_TICKET = {"message": "My card has not arrived. How can I track it?", "top_k": 5}
 MAX_BYTES = 2_000_000
+WORKFLOW_STAGES = (
+    "normalize_message",
+    "classify_intent",
+    "detect_urgency",
+    "retrieve_similar_cases",
+    "generate_support_response",
+    "grounding_check",
+    "suggest_next_action",
+)
 Fetch = Callable[[str, dict[str, Any] | None], tuple[int, dict[str, Any]]]
+
+
+class RejectRedirects(request.HTTPRedirectHandler):
+    """Do not follow a localhost redirect to an unreviewed endpoint."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+# Deliberately ignores proxy environment variables, avoiding proxying a local
+# inspection request through an external service.
+LOCAL_OPENER = request.build_opener(request.ProxyHandler({}), RejectRedirects())
 
 
 def validate_base_url(url: str) -> str:
@@ -46,7 +67,7 @@ def fetch_json(url: str, body: dict[str, Any] | None = None) -> tuple[int, dict[
         headers=headers,
     )
     try:
-        with request.urlopen(req, timeout=35) as response:
+        with LOCAL_OPENER.open(req, timeout=35) as response:
             raw = response.read(MAX_BYTES + 1)
             if len(raw) > MAX_BYTES:
                 raise ValueError("Response exceeded byte limit")
@@ -77,6 +98,7 @@ def check(fetch: Fetch, base: str = BASE_URL) -> dict[str, Any]:
     if not (
         status == 200
         and provider.get("embedding_provider") == "fastembed"
+        and provider.get("embedding_model") == "BAAI/bge-small-en-v1.5"
         and provider.get("demo_mode") is True
         and provider.get("mock_mode") is True
         and provider.get("live_provider_calls_enabled") is False
@@ -98,12 +120,22 @@ def check(fetch: Fetch, base: str = BASE_URL) -> dict[str, Any]:
         raise ValueError("Expected deterministic mock evaluation fixture is unavailable")
 
     status, triage = fetch(base + "/triage", SYNTHETIC_TICKET)
+    trace = triage.get("trace")
     if not (
         status == 200
-        and len(triage.get("trace", [])) == 7
+        and isinstance(trace, list)
+        and len(trace) == len(WORKFLOW_STAGES)
+        and all(isinstance(step, dict) for step in trace)
+        and tuple(step.get("node") for step in trace) == WORKFLOW_STAGES
+        and all(step.get("status") == "completed" for step in trace)
         and triage.get("provider_used") == "mock"
+        and triage.get("grounded") is True
+        and triage.get("citation_integrity") is True
+        and triage.get("degraded_mode") is False
+        and triage.get("fallback_used") is False
+        and triage.get("next_action") == "ask_for_order_id"
     ):
-        raise ValueError("Synthetic seven-stage FastEmbed triage failed")
+        raise ValueError("Synthetic FastEmbed workflow/grounding contract failed")
 
     # The public-ingest flag MUST be false before any denial probe is made.
     status, _ = fetch(base + "/ingest", {"recreate": False, "sample_size": 1})
