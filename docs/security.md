@@ -94,3 +94,22 @@ or claim the public demo is production-ready. React/npm audit results
 are independent. The scan resolves current ranges at CI runtime,
 not the exact Hugging Face deployment artifact or external CPU
 PyTorch wheel.
+
+## Partial Python remediation: Datasets and fsspec
+
+An isolated update raises the `datasets` minimum to 5.0.1 and
+`fsspec` minimum to 2026.6.0 in both development and production
+requirements, without changing FastEmbed, Pillow or embedding behavior.
+A new offline, real-Datasets `Dataset.from_dict` test checks that the
+lazy Hugging Face loader continues to map ClassLabel records and respect
+sample limits after the Datasets major-version change. It deliberately
+does not download from the Hugging Face Hub.
+
+This addresses the two advisory records for the prior Datasets and
+fsspec versions **only after a passing exact-head pip-audit and full
+CI confirms it**. The 35 Pillow advisory records remain pending
+upstream FastEmbed support for Pillow 13. Track this in
+[Issue #93](https://github.com/Praciller/customer-support-rag-triage-agent/issues/93).
+The Python audit remains reporting-only; a passing CI workflow is
+not evidence of zero Python advisories or a deployed-image security
+attestation.
