@@ -232,6 +232,19 @@ class ApplicationServices:
             }
             failures = ",".join(k for k, passed in checks.items() if not passed)
             diagnostic_codes.append(f"{label}:{failures or 'incompatible'}")
+
+        if self.settings.demo_mode and self.settings.mock_llm_mode:
+            # Render's native Python runtime can omit the non-package
+            # reports/ tree. This versioned, digest-checked Python resource
+            # is always shipped alongside src/api/services.py.
+            from src.api.reviewed_onnx_report import load_reviewed_onnx_report
+
+            embedded = load_reviewed_onnx_report()
+            if self._compatible_demo_report(embedded):
+                _evaluation_logger.info("Serving packaged pinned ONNX evaluation snapshot")
+                return embedded
+            diagnostic_codes.append("packaged:incompatible")
+
         _evaluation_logger.warning(
             "No matching evaluation evidence: %s",
             "; ".join(diagnostic_codes),
