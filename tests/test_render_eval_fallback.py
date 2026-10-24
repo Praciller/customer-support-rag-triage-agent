@@ -35,9 +35,14 @@ def test_bundled_onnx_mock_report_fills_missing_host_output(tmp_path):
     assert report["limitations"]
 
 
-def test_mismatched_provider_does_not_serve_embedded_old_report(tmp_path):
+def test_mismatched_provider_does_not_serve_embedded_old_report(tmp_path, caplog):
     service = make_services(tmp_path, embedding_provider="hashing")
     assert service.evaluation_results() == {"status": "not_evaluated"}
+    assert "bundled:provider" in caplog.text
+    assert "configured:missing" in caplog.text
+    # Diagnostics contain only the allowlisted source label and mismatch codes.
+    assert str(tmp_path) not in caplog.text
+    assert "BAAI/bge-small-en-v1.5" not in caplog.text
 
 
 def test_nonmock_or_nondemo_never_falls_back_to_bundled_mock_report(tmp_path):
