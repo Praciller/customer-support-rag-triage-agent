@@ -1,12 +1,12 @@
 # Deterministic Evaluation Summary
 
-Generated: 2026-07-19T08:49:55.980413+00:00
+Generated: 2026-10-24T16:59:56.670459+00:00
 Command: `python -m src.evaluation.evaluate_triage`
 Mode: `deterministic_mock`
 Dataset: Banking77-derived deterministic evaluation fixture
 Sample size: 8
 Retrieval corpus: 27 records
-Embeddings: `fastembed` / `BAAI/bge-small-en-v1.5`
+Embeddings: `onnx` / `BAAI/bge-small-en-v1.5`
 
 | Metric | Measured result |
 | --- | ---: |
@@ -23,8 +23,8 @@ Embeddings: `fastembed` / `BAAI/bge-small-en-v1.5`
 | Workflow success rate | 100.0% |
 | Fallback rate | 0.0% |
 | Cache hit rate | 0.0% |
-| Average latency | 18.8 ms |
-| P50 / P95 latency | 16.2 / 28.8 ms |
+| Average latency | 9.4 ms |
+| P50 / P95 latency | 8.4 / 13.7 ms |
 
 ## Failed examples
 
