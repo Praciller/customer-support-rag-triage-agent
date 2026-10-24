@@ -75,7 +75,9 @@ def run_check(
     triage: bool = False,
     expected_space_sha: str | None = None,
     expected_records: int = 27,
+    expected_provider: str = "fastembed",
 ) -> dict[str, Any]:
+    require(expected_provider in {"fastembed", "onnx"}, "Unreviewed provider type")
     if expected_space_sha is not None:
         require(
             bool(re.fullmatch(r"[0-9a-f]{40}", expected_space_sha)),
@@ -114,7 +116,7 @@ def run_check(
     )
     require(provider.get("mock_mode") is True, "Live mock provider mode changed")
     require(
-        provider.get("embedding_provider") == "fastembed"
+        provider.get("embedding_provider") == expected_provider
         and provider.get("embedding_model") == "BAAI/bge-small-en-v1.5"
         and provider.get("qdrant_mode") == "local"
         and provider.get("live_provider_calls_enabled") is False,
@@ -197,6 +199,7 @@ def main() -> int:
     parser.add_argument(
         "--expected-records", type=int, default=27, help="Expected bounded demo record count"
     )
+    parser.add_argument("--expected-provider", choices=("fastembed", "onnx"), default="fastembed")
     args = parser.parse_args()
     try:
         result = run_check(
@@ -204,6 +207,7 @@ def main() -> int:
             triage=args.triage,
             expected_space_sha=args.expected_space_sha,
             expected_records=args.expected_records,
+            expected_provider=args.expected_provider,
         )
     except (ValueError, TypeError, AttributeError, KeyError, error.URLError, OSError) as exc:
         # Do not expose raw HTTP bodies or tokens in diagnostic output.
