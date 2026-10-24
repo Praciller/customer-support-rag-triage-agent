@@ -212,6 +212,11 @@ jobs:
           print("ONNX", version("onnxruntime"), "without FastEmbed or Pillow")
           '
           docker run --rm --entrypoint python resolveops-space-onnx:review -m pip check
+      - name: Strict audit of exact packages installed in Hugging Face image
+        run: |
+          docker run --rm --entrypoint python resolveops-space-onnx:review -m pip freeze > /tmp/space-image-installed.txt
+          python -m pip install pip-audit==2.10.1
+          python -m pip_audit --strict --requirement /tmp/space-image-installed.txt --progress-spinner off
       - name: Run pinned ONNX model and seven-node synthetic API smoke
         run: |
           docker run -d --name resolveops-space-onnx-smoke \
