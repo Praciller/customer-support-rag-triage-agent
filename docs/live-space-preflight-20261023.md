@@ -66,3 +66,31 @@ secrets safety, or user-facing UI identity.
 
 [Slice F tracking issue #89](https://github.com/Praciller/customer-support-rag-triage-agent/issues/89)
 remains open. No Space deployment, secrets mutation or paid resource was made.
+
+
+## Reverification — October 24, 2026 (no deployment)
+
+The existing read-only Hub metadata and public demo endpoints were queried
+again using `python scripts/verify_live_space.py --triage
+--expected-space-sha a2661562ff1a2a7b7f15e4b9145cb007c98444a5`.
+Result: **PASS** for the historical Space SHA `a2661562...`, `RUNNING`
+on `cpu-basic`, demo/mock provider with FastEmbed BGE-small, 27/27
+indexed synthetic records, deterministic eight-ticket evaluation, and a
+single synthetic `ask_for_order_id` triage. The synthetic response had
+exactly the seven ordered, completed workflow nodes, `grounded=true`,
+`citation_integrity=true`, and `fallback_used=false`/
+`degraded_mode=false`. No `/ingest` mutation or privileged call was sent.
+
+The hardened preflight uses no ambient proxy and refuses HTTP redirects.
+It verifies explicit FastEmbed/model/local-Qdrant/mock/no-live-provider
+settings before running the optional synthetic triage. The opt-in triage
+path additionally checks ordered stage names/status and evidence grounding,
+not merely trace length; four additional offline regression cases cover
+fail-closed behavior and a two-server redirect probe.
+
+**Release boundary unchanged:** this is a read of the older Space only.
+GitHub `main` is a **different Git repository**, and no source-bundle/
+image-digest mapping, new Space deployment, security waiver, manual
+screen-reader review, or rollback rehearsal is attested. The Python
+FastEmbed/Pillow 13 version conflict remains unresolved; owner closure of
+Issue #93 does not repair the transitive vulnerability findings.

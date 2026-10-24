@@ -19,7 +19,29 @@ HUB_URL = f"https://huggingface.co/api/spaces/{SPACE_ID}"
 BASE_URL = "https://pracill-customer-support-rag-triage-agent.hf.space"
 TEST_TICKET = {"message": "My new card has not arrived. How can I track it?", "top_k": 5}
 MAX_RESPONSE_BYTES = 2_000_000
+# Keep this direct-invocation script self-contained (stdlib-only).
+WORKFLOW_STAGES = (
+    "normalize_message",
+    "classify_intent",
+    "detect_urgency",
+    "retrieve_similar_cases",
+    "generate_support_response",
+    "grounding_check",
+    "suggest_next_action",
+)
 Fetcher = Callable[[str, dict[str, Any] | None], tuple[int, dict[str, Any]]]
+
+
+class RejectRedirects(request.HTTPRedirectHandler):
+    """Never follow a redirect from a fixed public release-verification URL."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+# Ignore proxy environment variables so preflight traffic only targets the
+# reviewed HTTPS endpoints, not an injected or accidental HTTP proxy.
+SAFE_OPENER = request.build_opener(request.ProxyHandler({}), RejectRedirects())
 
 
 def fetch_json(url: str, payload: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:
@@ -30,7 +52,7 @@ def fetch_json(url: str, payload: dict[str, Any] | None = None) -> tuple[int, di
         body = json.dumps(payload).encode("utf-8")
     req = request.Request(url, data=body, headers=headers)
     try:
-        with request.urlopen(req, timeout=35) as resp:
+        with SAFE_OPENER.open(req, timeout=35) as resp:
             raw = resp.read(MAX_RESPONSE_BYTES + 1)
             if len(raw) > MAX_RESPONSE_BYTES:
                 raise ValueError("JSON response exceeds the bounded size limit")
@@ -92,6 +114,13 @@ def run_check(
     )
     require(provider.get("mock_mode") is True, "Live mock provider mode changed")
     require(
+        provider.get("embedding_provider") == "fastembed"
+        and provider.get("embedding_model") == "BAAI/bge-small-en-v1.5"
+        and provider.get("qdrant_mode") == "local"
+        and provider.get("live_provider_calls_enabled") is False,
+        "Live embedding/model/provider boundary differs from the reviewed demo",
+    )
+    require(
         provider.get("ingestion_enabled") is False,
         "Public ingestion is enabled; preflight fails closed",
     )
@@ -112,9 +141,22 @@ def run_check(
         require(
             status == 200 and isinstance(decision.get("trace"), list), "Synthetic triage failed"
         )
-        trace_nodes = len(decision["trace"])
-        require(trace_nodes == 7, "Synthetic triage is missing workflow nodes")
-        next_action = decision.get("next_action")
+        trace = decision["trace"]
+        trace_nodes = len(trace)
+        require(
+            trace_nodes == len(WORKFLOW_STAGES)
+            and all(isinstance(step, dict) for step in trace)
+            and tuple(step.get("node") for step in trace) == WORKFLOW_STAGES
+            and all(step.get("status") == "completed" for step in trace)
+            and decision.get("provider_used") == "mock"
+            and decision.get("grounded") is True
+            and decision.get("citation_integrity") is True
+            and decision.get("fallback_used") is False
+            and decision.get("degraded_mode") is False
+            and decision.get("next_action") == "ask_for_order_id",
+            "Synthetic triage workflow/grounding contract changed",
+        )
+        next_action = decision["next_action"]
 
     status, second_hub = fetch(HUB_URL, None)
     require(
