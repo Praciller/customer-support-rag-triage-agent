@@ -1,39 +1,51 @@
-# Production Python dependency advisory gate
+# Python production dependency security
 
-**Status (2026-10-24): Release blocked. No risk waiver.**
+## Candidate remediation — 2026-10-24
 
-The project's FastEmbed 0.9.0 resolver currently requires Pillow below 13 on
-Python 3.12. The available fixed Pillow 13 does **not** satisfy that upstream
-constraint. Never use `--no-deps`, ignore the resolver, or silently replace
-the embedding provider. The latest strict production audit yielded **37
-advisory IDs in Pillow 12.3.0**, with no findings in other resolved packages
-at the time of this scan. Advisory counts may increase as the database changes.
+The new proposed Hugging Face Docker recipe and `requirements.production.txt`
+use a **pinned direct ONNX Runtime** implementation of the existing
+`BAAI/bge-small-en-v1.5` embedding model instead of FastEmbed. The exact
+Qdrant model snapshot revision is hardcoded in
+`src/retrieval/onnx_bge.py` (`aa8f8b060edb00e03bfdd08813a2949946c8ba55`).
+It uses the same tokenizer, CLS pooling and L2 normalization as
+FastEmbed 0.9.0. It supports text-only input and 384-dimensional vectors.
 
-The tracked list in `security/python-advisory-baseline.json` is an **exact
-identifier allowlist for CI regression detection only**, not an acceptance of
-those vulnerabilities. GitHub CI now **fails** if another production package
-acquires an advisory, if any **new** Pillow advisory ID appears, or if audit
-output is missing/malformed. Old Pillow IDs are always printed as unresolved.
-This check does not make CI or the deployed Space advisory-free.
+Strict `pip-audit==2.10.1` of the candidate production dependency graph
+passed with **zero known advisories** on Windows Python 3.12
+(October 24, 2026); neither `fastembed` nor `pillow` resolved. This does
+**not** attest a future image, eliminate unknown vulnerabilities, or certify
+production.
 
-**Reproduce with Python 3.12 and network access:**
+The previous baseline of 37 unresolved Pillow advisories was **removed**:
+the production CI gate now fails on *any* resolved dependency advisory, with
+no exceptions or `continue-on-error`. The old baseline and special comparison
+script are no longer used. No `--no-deps`, package override, or security
+waiver was applied.
+
+## Reproduce
 
 ```sh
 python -m pip install pip-audit==2.10.1
-python -m pip_audit --strict -r requirements.production.txt --format json --output python-audit.json
-# pip-audit returns nonzero for vulnerabilities; do NOT ignore scan or parse failures.
-python scripts/check_python_audit.py --report python-audit.json --baseline security/python-advisory-baseline.json
-# Strict release gate: must return 0 with ZERO known or novel vulnerabilities.
-python scripts/check_python_audit.py --report python-audit.json --baseline security/python-advisory-baseline.json --require-clean
+python -m pip_audit --strict --requirement requirements.production.txt --progress-spinner off
+python -m pytest tests/test_onnx_bge.py tests/test_space_release_boundaries.py
+# Opt-in only: separately install legacy fastembed to compare, never in production:
+python scripts/verify_onnx_equivalence.py
 ```
 
-**Before actual Hugging Face release:** first obtain a **published, supported**
-FastEmbed / Pillow 13 dependency resolution or separately approved,
-time-bounded security decision. Run a strict audit against the **exact image
-packages**, run FastEmbed model/27-record/seven-node retrieval and citation
-checks, and document image/source provenance, live Space revision, rollback,
-and human accessibility review. Do not confuse the existing historical Space
-smoke test with newly built release evidence.
+The equivalence test checks 27 bundled synthetic passages and 8 evaluation
+queries, 384-d output, maximum vector difference and retrieval top-5
+ranking against the previous FastEmbed behavior. FastEmbed is an
+**independent development-only benchmark prerequisite**, not a production
+requirement.
 
-See [Issue #89](https://github.com/Praciller/customer-support-rag-triage-agent/issues/89)
-and [Issue #93](https://github.com/Praciller/customer-support-rag-triage-agent/issues/93).
+## Remaining deployment gates
+
+Build the exact production container, audit the **installed image** rather
+than only dependency resolution, run the pinned model/27-record index,
+seven-node triage and citation-integrity tests, verify public ingestion
+denial, and complete manual screen-reader/zoom QA. Finally secure a
+write-authorized Hugging Face deployment path and record exact GitHub
+source checksum, Space revision and rollback evidence. The historical
+public Space still uses its previous deployment until separately released.
+
+See [Issue #89](https://github.com/Praciller/customer-support-rag-triage-agent/issues/89).

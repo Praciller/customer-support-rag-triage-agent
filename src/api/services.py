@@ -13,8 +13,8 @@ from src.llm.cache import SQLiteLLMCache
 from src.llm.external import ExternalProvider
 from src.llm.mock import MockProvider
 from src.llm.router import ProviderRouter
+from src.retrieval.onnx_bge import OnnxBgeEmbedder
 from src.retrieval.retriever import (
-    FastEmbedder,
     HashingEmbedder,
     QdrantRetriever,
     SentenceTransformerEmbedder,
@@ -278,16 +278,18 @@ def build_qdrant_client(settings: Settings) -> QdrantClient:
 
 def build_embedder(
     settings: Settings,
-) -> FastEmbedder | HashingEmbedder | SentenceTransformerEmbedder:
+) -> OnnxBgeEmbedder | HashingEmbedder | SentenceTransformerEmbedder:
     provider = settings.embedding_provider.lower()
-    if provider == "fastembed":
-        return FastEmbedder(
+    if provider == "onnx":
+        return OnnxBgeEmbedder(
             settings.embedding_model,
             dimension=settings.qdrant_vector_size,
             batch_size=settings.embedding_batch_size,
         )
     if provider == "hashing":
         return HashingEmbedder(dimension=settings.qdrant_vector_size)
+    if provider not in {"sentence-transformers", "sentence_transformers"}:
+        raise ValueError(f"Unsupported embedding provider: {provider}")
     return SentenceTransformerEmbedder(
         settings.embedding_model,
         device=settings.embedding_device,

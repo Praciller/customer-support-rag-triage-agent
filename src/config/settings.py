@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     qdrant_distance: str = "Cosine"
     qdrant_recreate_collection: bool = False
 
-    embedding_provider: str = "fastembed"
+    embedding_provider: str = "onnx"
     embedding_model: str = "BAAI/bge-small-en-v1.5"
     embedding_device: str = "cpu"
     embedding_batch_size: int = 32
