@@ -45,10 +45,29 @@ def test_mismatched_provider_does_not_serve_embedded_old_report(tmp_path, caplog
     assert "BAAI/bge-small-en-v1.5" not in caplog.text
 
 
-def test_nonmock_or_nondemo_never_falls_back_to_bundled_mock_report(tmp_path):
-    assert make_services(tmp_path, mock_llm_mode=False).evaluation_results() == {
-        "status": "not_evaluated"
-    }
+def test_demo_mode_uses_mock_report_even_with_mock_llm_flag_disabled(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    # Demo mode itself forces the application onto mock inference even if
+    # Render retains MOCK_LLM_MODE=false in its older environment.
+    service = make_services(tmp_path, mock_llm_mode=False)
+    assert service.provider_health()["mock_mode"] is True
+    monkeypatch.setattr(Path, "is_file", lambda self: False)
+    report = service.evaluation_results()
+    assert report["evaluation_mode"] == "deterministic_mock"
+    assert report["execution"]["embedding_provider"] == "onnx"
+    assert report["dataset"]["sample_size"] == 8
+
+
+def test_demo_mode_rejects_mismatched_provider_without_mock_flag(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    service = make_services(tmp_path, mock_llm_mode=False, embedding_provider="hashing")
+    monkeypatch.setattr(Path, "is_file", lambda self: False)
+    assert service.evaluation_results() == {"status": "not_evaluated"}
+
+
+def test_nondemo_never_falls_back_to_bundled_mock_report(tmp_path):
     assert make_services(tmp_path, demo_mode=False).evaluation_results() == {
         "status": "not_evaluated"
     }
