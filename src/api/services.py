@@ -200,7 +200,7 @@ class ApplicationServices:
         # in a synthetic demo. Every candidate is subject to the same strict
         # embedding/model/fixture compatibility checks.
         candidates = [("configured", self.settings.eval_output_path)]
-        if self.settings.demo_mode and self.settings.mock_llm_mode:
+        if self.settings.demo_mode:
             candidates.append(
                 ("bundled", Path(__file__).resolve().parents[2] / "reports/evaluation/results.json")
             )
@@ -233,7 +233,7 @@ class ApplicationServices:
             failures = ",".join(k for k, passed in checks.items() if not passed)
             diagnostic_codes.append(f"{label}:{failures or 'incompatible'}")
 
-        if self.settings.demo_mode and self.settings.mock_llm_mode:
+        if self.settings.demo_mode:
             # Render's native Python runtime can omit the non-package
             # reports/ tree. This versioned, digest-checked Python resource
             # is always shipped alongside src/api/services.py.
@@ -252,7 +252,7 @@ class ApplicationServices:
         return {"status": "not_evaluated"}
 
     def _compatible_demo_report(self, report: dict[str, Any]) -> bool:
-        if not self.settings.demo_mode or not self.settings.mock_llm_mode:
+        if not self.settings.demo_mode:
             return True
         if report.get("evaluation_mode") != "deterministic_mock":
             return False
