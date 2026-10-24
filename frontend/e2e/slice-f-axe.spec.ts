@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { makeTriageResult } from "../src/test/fixtures";
+import { installReviewedOnnxEvaluation } from "./support/reviewed-evaluation";
 
 // Axe checks are a repeatable, scoped WCAG A/AA regression gate, not a
 // replacement for manual screen-reader, focus, or browser-zoom review.
@@ -18,6 +19,7 @@ async function expectNoWcagViolations(page: Page, screen: string): Promise<void>
 
 for (const width of [390, 1440]) {
   test(`axe WCAG smoke: triage and evaluation at ${width}px`, async ({ page }) => {
+    await installReviewedOnnxEvaluation(page);
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "Customer message" })).toBeVisible();

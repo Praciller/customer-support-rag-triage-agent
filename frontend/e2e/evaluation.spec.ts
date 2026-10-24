@@ -1,20 +1,9 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
 import { expect, test } from "@playwright/test";
 
-async function useReviewedOnnxSnapshot(page: import("@playwright/test").Page) {
-  const reportPath = resolve(test.info().config.rootDir, "../../reports/evaluation/results.json");
-  const report = JSON.parse(readFileSync(reportPath, "utf-8"));
-  expect(report.execution.embedding_provider).toBe("onnx");
-  expect(report.dataset.sample_size).toBe(8);
-  await page.route("**/eval/results", async (route) => {
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(report) });
-  });
-}
+import { installReviewedOnnxEvaluation } from "./support/reviewed-evaluation";
 
 test("Evaluation renders reviewed ONNX mock metrics and limitations", async ({ page }) => {
-  await useReviewedOnnxSnapshot(page);
+  await installReviewedOnnxEvaluation(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Evaluation", exact: true }).click();
   await expect(page.getByText("Measured artifact", { exact: true })).toBeVisible();
@@ -26,7 +15,7 @@ test("Evaluation renders reviewed ONNX mock metrics and limitations", async ({ p
 });
 
 test("Evaluation groups reviewed ONNX metrics at tablet width", async ({ page }) => {
-  await useReviewedOnnxSnapshot(page);
+  await installReviewedOnnxEvaluation(page);
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.goto("/");
   await page.getByRole("button", { name: "Evaluation", exact: true }).click();

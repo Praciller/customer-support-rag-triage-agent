@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { installReviewedOnnxEvaluation } from "./support/reviewed-evaluation";
 
 async function assertNoDocumentOverflow(page: Page) {
   const dimensions = await page.evaluate(() => ({
@@ -10,6 +11,7 @@ async function assertNoDocumentOverflow(page: Page) {
 }
 
 test("320px reflow keeps triage and evaluation usable", async ({ page }) => {
+  await installReviewedOnnxEvaluation(page);
   await page.setViewportSize({ width: 320, height: 780 });
   await page.goto("/");
   await expect(page.getByRole("link", { name: "Skip to main content" })).toBeAttached();

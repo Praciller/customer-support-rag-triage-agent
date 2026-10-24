@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { makeTriageResult } from "../src/test/fixtures";
+import { installReviewedOnnxEvaluation } from "./support/reviewed-evaluation";
 
 for (const width of [390, 768, 1440]) {
   test(`keyboard skip link reaches main at ${width}px`, async ({ page }) => {
@@ -18,6 +19,7 @@ for (const width of [390, 768, 1440]) {
 }
 
 test("mobile classification table exposes all column labels and values", async ({ page }) => {
+  await installReviewedOnnxEvaluation(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await page.getByRole("button", { name: "Evaluation", exact: true }).click();
