@@ -10,7 +10,9 @@ production bank support system, or an assessment of real LLM response quality.
 - Existing **free** Render API service: `customer-support-rag-triage-api`
 - Demo provider: `EMBEDDING_PROVIDER=onnx` using the pinned quantized
   `BAAI/bge-small-en-v1.5` model; `QDRANT_MODE=memory`
-- `DEMO_MODE=true`, `MOCK_LLM_MODE=true`, `ALLOW_PUBLIC_INGEST=false`
+- `DEMO_MODE=true`, `ALLOW_PUBLIC_INGEST=false`. Demo mode always forces
+  deterministic mock inference, even if the independent `MOCK_LLM_MODE`
+  flag is unset or false; live external LLM routing stays disabled.
 - Index reboots from **27 synthetic fixtures**, never customer records.
   The Qdrant memory index and any local cache are ephemeral on Render Free.
 - Readiness, all seven trace stages, mock grounding and citations, CORS
@@ -32,7 +34,7 @@ on real support tickets. The limitations and evaluation mode are retained
 alongside the scores.
 
 For free/demo environments whose writable `EVAL_OUTPUT_PATH` is missing,
-the API serves this **committed** report only when mode is demo+mock and
+the API serves this **committed** report only in synthetic demo mode and
 its embedding provider/model and fixture identity match. Render native builds
 may omit the non-package `reports/` JSON directory entirely. A checked-in
 `src/api/reviewed_onnx_report.py` resource contains the exact same dated
