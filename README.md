@@ -103,7 +103,7 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:5173`. The first FastEmbed run downloads the public BGE ONNX model. CI can use hashing embeddings for a network-free workflow check.
+Open `http://localhost:5173`. The first ONNX provider run downloads the pinned public Qdrant BGE model (384 dimensions). CI can use hashing embeddings for a network-free workflow check.
 
 ### Optional external GenAI route
 
@@ -153,7 +153,7 @@ Reproduce the checked-in evaluation from the repository root:
 $env:DEMO_MODE="true"
 $env:MOCK_LLM_MODE="true"
 $env:QDRANT_MODE="memory"
-$env:EMBEDDING_PROVIDER="fastembed"
+$env:EMBEDDING_PROVIDER="onnx"
 $env:LLM_CACHE_ENABLED="false"
 .venv\Scripts\python.exe -m src.evaluation.evaluate_triage
 ```

@@ -129,3 +129,33 @@ Compose networking, or the external Qdrant service. These defaults are not subst
 policies, or a hardened multi-tenant production deployment.
 
 Run `docker compose config --quiet` before building to validate Compose syntax.
+
+
+## 2026-10-24 pinned-ONNX production candidate (not deployed)
+
+A proposed follow-up release removes FastEmbed from both production Docker
+recipes and uses the **same Qdrant BGE-small quantized ONNX model**, pinned
+at revision `aa8f8b060edb00e03bfdd08813a2949946c8ba55`.
+This supersedes the **local release-candidate** FastEmbed instructions above;
+the earlier public Space remains the historical FastEmbed build until a
+separate authorized deployment is verified.
+
+The proposal has a strict, exception-free Python production dependency audit.
+The previous 37-advisory Pillow baseline is removed, not waived. Regression
+evidence for 27 synthetic records, 8 evaluation queries and retrieval top-5
+ranking is documented in [the ONNX candidate review](onnx-bge-security-candidate-20261024.md).
+
+For a new **local** ONNX release-image verification:
+
+```powershell
+docker build -f Dockerfile.hf -t csrta-onnx-review .
+docker run --rm --name csrta-onnx-review -p 127.0.0.1:17860:7860 csrta-onnx-review
+# In another terminal, only when /ready is ready:
+python scripts/verify_local_onnx.py
+```
+
+The verifier sends only synthetic data, checks strict provider/trace/grounding
+contracts, and checks unauthenticated ingestion returns 403. Do **not** use
+this as proof of the installed image dependency versions, human accessibility
+review, production Hugging Face provenance or rollback. No paid build or
+deployment is authorized by these commands.

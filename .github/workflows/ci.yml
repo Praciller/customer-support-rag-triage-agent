@@ -21,16 +21,10 @@ jobs:
           cache: pip
       - run: docker compose config --quiet
       - run: sh scripts/install-cpu-deps.sh
-      - name: Fail on NEW Python production advisories (legacy Pillow risk remains unresolved)
+      - name: Block ALL Python production dependency advisories (zero exceptions)
         run: |
           python -m pip install pip-audit==2.10.1
-          audit_exit=0
-          python -m pip_audit --strict --requirement requirements.production.txt --progress-spinner off --format json --output python-audit-ci.json || audit_exit=$?
-          if [ "$audit_exit" -gt 1 ]; then exit "$audit_exit"; fi
-          python scripts/check_python_audit.py --report python-audit-ci.json --baseline security/python-advisory-baseline.json
-          python -m ruff check scripts/check_python_audit.py
-          python -m ruff format --check scripts/check_python_audit.py
-          rm -f python-audit-ci.json
+          python -m pip_audit --strict --requirement requirements.production.txt --progress-spinner off
       - run: ruff check src tests
       - run: ruff format --check src tests
       - run: python -m pytest
@@ -194,3 +188,52 @@ jobs:
       - name: Stop isolated container
         if: always()
         run: docker rm --force resolveops-api-smoke || true
+
+  space-onnx-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build actual Hugging Face ONNX release recipe (no deploy)
+        run: docker build --file Dockerfile.hf --tag resolveops-space-onnx:review .
+      - name: Assert installed image boundary and non-root runtime
+        run: |
+          docker run --rm --entrypoint python resolveops-space-onnx:review -c '
+          import os
+          from importlib import util
+          from importlib.metadata import version
+          assert os.getuid() == 1000
+          assert os.getenv("EMBEDDING_PROVIDER") == "onnx"
+          assert os.getenv("APP_ENV") == "production"
+          assert os.getenv("DEMO_MODE") == "true"
+          assert os.getenv("ALLOW_PUBLIC_INGEST") == "false"
+          assert util.find_spec("fastembed") is None
+          assert util.find_spec("PIL") is None
+          print("ONNX", version("onnxruntime"), "without FastEmbed or Pillow")
+          '
+          docker run --rm --entrypoint python resolveops-space-onnx:review -m pip check
+      - name: Run pinned ONNX model and seven-node synthetic API smoke
+        run: |
+          docker run -d --name resolveops-space-onnx-smoke \
+            --publish 127.0.0.1:17860:7860 \
+            resolveops-space-onnx:review
+          ready=0
+          for attempt in $(seq 1 180); do
+            if curl --fail --silent --max-time 10 http://127.0.0.1:17860/ready > /tmp/onnx-ready.json; then
+              ready=1
+              break
+            fi
+            if ! test "$(docker inspect -f '{{.State.Running}}' resolveops-space-onnx-smoke)" = true; then
+              echo "Release image terminated before /ready"
+              exit 1
+            fi
+            sleep 3
+          done
+          test "$ready" = 1
+          python scripts/verify_local_onnx.py
+      - name: Show bounded image logs on failure
+        if: failure()
+        run: docker logs --tail 120 resolveops-space-onnx-smoke || true
+      - name: Cleanup isolated ONNX container
+        if: always()
+        run: docker rm --force resolveops-space-onnx-smoke || true
