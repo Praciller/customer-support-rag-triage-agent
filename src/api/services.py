@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,8 @@ from src.retrieval.retriever import (
     SentenceTransformerEmbedder,
     SupportDocument,
 )
+
+_evaluation_logger = logging.getLogger(__name__)
 
 
 class ApplicationServices:
@@ -196,23 +199,43 @@ class ApplicationServices:
         # must never prevent the current reviewed ONNX fixture from displaying
         # in a synthetic demo. Every candidate is subject to the same strict
         # embedding/model/fixture compatibility checks.
-        candidates = [self.settings.eval_output_path]
+        candidates = [("configured", self.settings.eval_output_path)]
         if self.settings.demo_mode and self.settings.mock_llm_mode:
             candidates.append(
-                Path(__file__).resolve().parents[2] / "reports/evaluation/results.json"
+                ("bundled", Path(__file__).resolve().parents[2] / "reports/evaluation/results.json")
             )
-        candidates.append(Path("reports/evaluation_metrics.json"))
+        candidates.append(("legacy", Path("reports/evaluation_metrics.json")))
         inspected: set[Path] = set()
-        for path in candidates:
+        diagnostic_codes: list[str] = []
+        for label, path in candidates:
             absolute = path.resolve()
             if absolute in inspected:
                 continue
             inspected.add(absolute)
             if not absolute.is_file():
+                diagnostic_codes.append(f"{label}:missing")
                 continue
             report = json.loads(absolute.read_text(encoding="utf-8"))
             if self._compatible_demo_report(report):
                 return report
+
+            # Use codes only: do not log report bodies, file paths, or env values.
+            execution = report.get("execution") or {}
+            dataset = report.get("dataset") or {}
+            checks = {
+                "mode": report.get("evaluation_mode") == "deterministic_mock",
+                "provider": execution.get("embedding_provider") == self.settings.embedding_provider,
+                "model": execution.get("embedding_model") == self.settings.embedding_model,
+                "fixture": dataset.get("fixture_revision") == "demo-fixture-v1",
+                "samples": dataset.get("sample_size") == 8,
+                "corpus": dataset.get("retrieval_corpus_size") == 27,
+            }
+            failures = ",".join(k for k, passed in checks.items() if not passed)
+            diagnostic_codes.append(f"{label}:{failures or 'incompatible'}")
+        _evaluation_logger.warning(
+            "No matching evaluation evidence: %s",
+            "; ".join(diagnostic_codes),
+        )
         return {"status": "not_evaluated"}
 
     def _compatible_demo_report(self, report: dict[str, Any]) -> bool:
