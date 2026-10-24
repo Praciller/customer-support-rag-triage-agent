@@ -109,6 +109,7 @@ def test_manual_workflow_has_no_automatic_deploy_triggers():
     assert "spaces/Pracill/customer-support-rag-triage-agent" in workflow
     assert "--expected-current-sha" in workflow
     assert "--expected-provider onnx" in workflow
+    assert "${{ env.RELEASE_DIR }}/release-manifest.json" in workflow
 
 
 def test_deployed_revision_and_source_provenance_validation():

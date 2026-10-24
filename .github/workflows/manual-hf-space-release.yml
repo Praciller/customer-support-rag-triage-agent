@@ -167,7 +167,7 @@ jobs:
         with:
           name: hf-space-release-evidence
           path: |
-            ${{ runner.temp }}/space-release/release-manifest.json
+            ${{ env.RELEASE_DIR }}/release-manifest.json
             ${{ runner.temp }}/hf-published.json
           if-no-files-found: warn
           retention-days: 14
