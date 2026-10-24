@@ -150,10 +150,10 @@ This supersedes the **local release-candidate** FastEmbed instructions above;
 the earlier public Space remains the historical FastEmbed build until a
 separate authorized deployment is verified.
 
-The proposal has a strict, exception-free Python production dependency audit.
-The previous 37-advisory Pillow baseline is removed, not waived. Regression
-evidence for 27 synthetic records, 8 evaluation queries and retrieval top-5
-ranking is documented in [the ONNX candidate review](onnx-bge-security-candidate-20261024.md).
+The verified production-image CI enforces a strict, exception-free Python dependency
+audit. The prior Pillow exception baseline was removed, not waived. The latest
+pinned-ONNX regression covers 27 synthetic records, 8 evaluation queries and
+retrieval top-5 ranking, documented in [the ONNX security review](onnx-bge-security-candidate-20261024.md).
 
 For a new **local** ONNX release-image verification:
 
