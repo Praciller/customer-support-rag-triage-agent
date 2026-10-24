@@ -192,26 +192,25 @@ class ApplicationServices:
         }
 
     def evaluation_results(self) -> dict[str, Any]:
-        path = self.settings.eval_output_path
-        if path.exists():
-            report = json.loads(path.read_text(encoding="utf-8"))
-            if self._compatible_demo_report(report):
-                return report
-            return {"status": "not_evaluated"}
-
-        # Some hosts configure a different writable evaluation output path.
-        # For the key-free demo only, serve the reviewed, committed mock
-        # snapshot if and only if its embedding and fixture contract match.
+        # Explicit evaluation outputs are preferred, but an outdated report
+        # must never prevent the current reviewed ONNX fixture from displaying
+        # in a synthetic demo. Every candidate is subject to the same strict
+        # embedding/model/fixture compatibility checks.
+        candidates = [self.settings.eval_output_path]
         if self.settings.demo_mode and self.settings.mock_llm_mode:
-            bundled = Path(__file__).resolve().parents[2] / "reports/evaluation/results.json"
-            if bundled.is_file():
-                report = json.loads(bundled.read_text(encoding="utf-8"))
-                if self._compatible_demo_report(report):
-                    return report
-
-        legacy = Path("reports/evaluation_metrics.json")
-        if legacy.exists():
-            report = json.loads(legacy.read_text(encoding="utf-8"))
+            candidates.append(
+                Path(__file__).resolve().parents[2] / "reports/evaluation/results.json"
+            )
+        candidates.append(Path("reports/evaluation_metrics.json"))
+        inspected: set[Path] = set()
+        for path in candidates:
+            absolute = path.resolve()
+            if absolute in inspected:
+                continue
+            inspected.add(absolute)
+            if not absolute.is_file():
+                continue
+            report = json.loads(absolute.read_text(encoding="utf-8"))
             if self._compatible_demo_report(report):
                 return report
         return {"status": "not_evaluated"}
