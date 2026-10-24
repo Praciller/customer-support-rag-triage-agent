@@ -1,0 +1,181 @@
+name: Manual existing Hugging Face Space release
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Dry-run first; deploy requires explicit free-tier confirmation and HF publisher"
+        type: choice
+        options:
+          - dry-run
+          - deploy
+        default: dry-run
+        required: true
+      expected_current_space_sha:
+        description: "Full immutable SHA of current HF Space; drift fails closed"
+        type: string
+        required: true
+        default: a2661562ff1a2a7b7f15e4b9145cb007c98444a5
+      confirm_free_existing_space:
+        description: "For deploy ONLY: enter CONFIRM_EXISTING_CPU_BASIC_NO_CHARGE after confirming HF entitlement"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: existing-hf-space-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and verify existing Space release bundle
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      HF_SPACE_ID: Pracill/customer-support-rag-triage-agent
+      EXPECTED_SPACE_SHA: ${{ inputs.expected_current_space_sha }}
+      RELEASE_MODE: ${{ inputs.mode }}
+      FREE_CONFIRMATION: ${{ inputs.confirm_free_existing_space }}
+      RELEASE_DIR: /tmp/csrta-hf-space-release
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      HF_HUB_DISABLE_UPDATE_CHECK: "1"
+    steps:
+      - name: Require exact target, main branch and deliberate deploy approval
+        run: |
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$HF_SPACE_ID" = "Pracill/customer-support-rag-triage-agent"
+          if [ "$RELEASE_MODE" = "deploy" ]; then
+            test "$FREE_CONFIRMATION" = "CONFIRM_EXISTING_CPU_BASIC_NO_CHARGE" || {
+              echo "Deployment blocked: explicit existing-Space free-tier confirmation is missing"
+              exit 1
+            }
+          else
+            test "$RELEASE_MODE" = "dry-run"
+          fi
+
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Verify existing Space identity, old revision and free CPU hardware (read-only)
+        run: python scripts/preflight_existing_space.py --expected-sha "$EXPECTED_SPACE_SHA"
+
+      - name: Construct deterministic, allowlisted release bundle
+        run: |
+          python scripts/prepare_hf_release.py --output "$RELEASE_DIR"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          data = json.loads((Path(os.environ["RELEASE_DIR"]) / "release-manifest.json").read_text())
+          assert data["source_sha"] == os.environ["GITHUB_SHA"]
+          print("Source / bundle provenance verified for", data["source_sha"])
+          PY
+
+      - name: Build exact Hugging Face bundle Dockerfile (no HF deployment)
+        run: docker build --file "$RELEASE_DIR/Dockerfile" --tag csrta-reviewed-hf-release "$RELEASE_DIR"
+
+      - name: Check deployed recipe image security and ownership
+        run: |
+          docker run --rm --entrypoint python csrta-reviewed-hf-release -c '
+          import os
+          from importlib.util import find_spec
+          assert os.getuid() == 1000
+          assert os.getenv("EMBEDDING_PROVIDER") == "onnx"
+          assert os.getenv("APP_ENV") == "production"
+          assert os.getenv("DEMO_MODE") == "true"
+          assert os.getenv("MOCK_LLM_MODE") == "true"
+          assert os.getenv("ALLOW_PUBLIC_INGEST") == "false"
+          assert find_spec("PIL") is None
+          assert find_spec("fastembed") is None
+          print("Installed production image boundary PASS")
+          '
+          docker run --rm --entrypoint python csrta-reviewed-hf-release -m pip check
+          docker run --rm --entrypoint python csrta-reviewed-hf-release -m pip freeze > "$RUNNER_TEMP/image-installed.txt"
+          python -m pip install pip-audit==2.10.1
+          python -m pip_audit --strict --requirement "$RUNNER_TEMP/image-installed.txt" --progress-spinner off
+
+      - name: Smoke exact bundled image with synthetic workflow
+        run: |
+          docker run --detach --name csrta-reviewed-hf-smoke \
+            --publish 127.0.0.1:17860:7860 \
+            csrta-reviewed-hf-release
+          ready=0
+          for attempt in $(seq 1 180); do
+            if curl --fail --silent --max-time 5 http://127.0.0.1:17860/ready > /dev/null; then
+              ready=1
+              break
+            fi
+            if [ "$(docker inspect -f '{{.State.Running}}' csrta-reviewed-hf-smoke)" != "true" ]; then
+              echo "Container exited before readiness"
+              exit 1
+            fi
+            sleep 3
+          done
+          test "$ready" = 1
+          python scripts/verify_local_onnx.py
+
+      - name: Report dry-run result with no Hugging Face writes
+        if: inputs.mode == 'dry-run'
+        run: |
+          echo "DRY-RUN PASS: no Hugging Face write or billing change was attempted"
+          echo "Source GitHub SHA: $GITHUB_SHA"
+          echo "Existing Hugging Face SHA: $EXPECTED_SPACE_SHA"
+
+      - name: Install Hugging Face OIDC client
+        if: inputs.mode == 'deploy'
+        run: python -m pip install "huggingface_hub>=1.19,<2"
+
+      - name: Publish one parent-locked commit to EXISTING Space (manual authorized deploy only)
+        if: inputs.mode == 'deploy'
+        env:
+          HF_OIDC_RESOURCE: spaces/Pracill/customer-support-rag-triage-agent
+        run: |
+          HF_TOKEN="$(hf auth token)"
+          test -n "$HF_TOKEN"
+          echo "::add-mask::$HF_TOKEN"
+          export HF_TOKEN
+          python scripts/publish_existing_hf_space.py \
+            --directory "$RELEASE_DIR" \
+            --expected-current-sha "$EXPECTED_SPACE_SHA" \
+            --github-sha "$GITHUB_SHA" \
+            --result-file "$RUNNER_TEMP/hf-published.json"
+          unset HF_TOKEN
+
+      - name: Verify deployed manifest, runtime and synthetic live ONNX workflow
+        if: inputs.mode == 'deploy'
+        run: |
+          python scripts/verify_hf_publish_result.py \
+            --result-file "$RUNNER_TEMP/hf-published.json" \
+            --release-dir "$RELEASE_DIR"
+          NEW_SHA="$(python -c 'import json,sys;print(json.load(open(sys.argv[1]))["new_space_sha"])' "$RUNNER_TEMP/hf-published.json")"
+          python scripts/verify_live_space.py --triage \
+            --expected-provider onnx \
+            --expected-space-sha "$NEW_SHA"
+
+      - name: Attach nonsecret dry-run manifest or deployment provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hf-space-release-evidence
+          path: |
+            ${{ runner.temp }}/space-release/release-manifest.json
+            ${{ runner.temp }}/hf-published.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Show bounded container logs if workflow fails
+        if: failure()
+        run: docker logs --tail 100 csrta-reviewed-hf-smoke || true
+
+      - name: Clean temporary Docker container
+        if: always()
+        run: docker rm --force csrta-reviewed-hf-smoke || true

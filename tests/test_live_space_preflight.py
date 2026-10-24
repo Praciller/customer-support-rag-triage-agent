@@ -214,3 +214,13 @@ def test_live_preflight_http_client_refuses_redirect_to_other_listener():
             server.server_close()
         for thread in threads:
             thread.join(timeout=3)
+
+
+def test_onnx_live_verifier_needs_explicit_provider_switch():
+    data = fixtures()
+    data[BASE_URL + "/provider-health"]["embedding_provider"] = "onnx"
+    with pytest.raises(ValueError, match="embedding/model/provider"):
+        run_check(fetcher(data))
+    report = run_check(fetcher(data), expected_space_sha=SHA, expected_provider="onnx", triage=True)
+    assert report["trace_nodes"] == 7
+    assert report["expected_sha_matched"] is True
