@@ -1,5 +1,16 @@
 # Deployment
 
+## Current public demo — Render (verified October 25, 2026 ICT)
+
+- **Frontend:** https://customer-support-rag-triage-agent.onrender.com/
+- **API:** https://customer-support-rag-triage-api.onrender.com/ready
+- **Evaluation:** https://customer-support-rag-triage-api.onrender.com/eval/results
+- **Source:** protected GitHub `main` SHA `a45a9abaae2881bbf14133f981c317206fa7e65c` ([5/5 post-merge CI](https://github.com/Praciller/customer-support-rag-triage-agent/actions/runs/40120551076)).
+- **Deployment:** existing Render free API, `EMBEDDING_PROVIDER=onnx`, `QDRANT_MODE=memory`, synthetic/demo mock routing, public ingestion disabled; 27/27 indexed, seven-stage grounded synthetic triage and anonymous ingestion HTTP 403 verified live.
+- **Evaluation:** the API serves the committed eight-case synthetic ONNX report generated on October 24, 2026. Scores do **not** measure real-customer accuracy or live Render latency.
+
+The Render memory index is ephemeral, so restarts/cold starts re-index the demo. Memory headroom is narrow on the free tier; do not silently upgrade to paid resources. See [the full Render evidence guide](render-free-onnx-demo-evaluation.md).
+
 ## Docker Compose
 
 ```powershell
@@ -7,7 +18,7 @@ docker compose up --build
 ```
 
 The command requires no `.env` file. Compose defaults to demo/mock mode, blocks public ingestion,
-loads FastEmbed on CPU, starts Qdrant, waits for `/ready`, and then starts the React console.
+loads pinned ONNX BGE-small on CPU, starts Qdrant, waits for `/ready`, and then starts the React console.
 
 ```powershell
 Invoke-RestMethod http://localhost:8000/ready
@@ -16,9 +27,11 @@ Invoke-RestMethod http://localhost:8000/triage -Method Post `
   -Body '{"message":"My card has not arrived","top_k":5}'
 ```
 
-## Hugging Face Spaces CPU
+## Hugging Face Spaces CPU — historical Space, release on hold
 
-Live demo: https://pracill-customer-support-rag-triage-agent.hf.space/
+Legacy Hugging Face Space (not the current recommended demo): https://pracill-customer-support-rag-triage-agent.hf.space/
+
+This Space still has the old revision described below; newer GitHub/Render security fixes have **not** been deployed to it. Do not call it the current secure production version. Updates require an authorized owner-scoped publisher and independent verification of no-charge existing Docker Space rebuild eligibility. See [the manual release gate](hf-existing-space-manual-release.md) and [Issue #89](https://github.com/Praciller/customer-support-rag-triage-agent/issues/89).
 
 `Dockerfile.hf` is the canonical single-container image. It builds the React app, installs only
 production Python dependencies, serves UI and API from FastAPI on port 7860, uses a non-root user,
@@ -31,19 +44,16 @@ docker build -f Dockerfile.hf -t support-rag-hf .
 docker run --rm -p 7860:7860 support-rag-hf
 ```
 
-For a **repeatable local, true-FastEmbed image smoke**, run
-[`scripts/verify_local_fastembed.py`](../scripts/verify_local_fastembed.py)
-after the container starts, following the reproducible
-[October 24 evidence and test procedure](local-fastembed-smoke-20261024.md).
-Unlike CI's hashing smoke, this validates the real FastEmbed provider and
-an explicitly denied public ingestion request using only synthetic tickets.
-It is not a vulnerability scan or authorization to deploy the Space.
+For a **repeatable pinned-ONNX image smoke**, run
+[`scripts/verify_local_onnx.py`](../scripts/verify_local_onnx.py)
+after starting the container; CI also builds the exact reviewed Docker bundle and
+runs the real ONNX 27-record / seven-node synthetic smoke with blocking installed-image vulnerability audits. This does **not** authorize deployment to Hugging Face. Older FastEmbed-specific evidence remains [historical](local-fastembed-smoke-20261024.md).
 
 The existing Docker Space runs on `cpu-basic`. No secret is required for demo mode. A deployment is
 only considered verified after the live UI loads, `/ready` returns 200, and a live deterministic
 triage request returns seven trace nodes.
 
-### Current verified deployment — September 5, 2026
+### Historical Hugging Face verification — September 5, 2026
 
 - GitHub source SHA: `11df5035e3f4f96b78b21f5c1d993bb6d6deaaba`.
 - Current Space revision: `a2661562ff1a2a7b7f15e4b9145cb007c98444a5`.
@@ -98,7 +108,7 @@ Space and copy the GitHub repository with `Dockerfile.hf` renamed to `Dockerfile
 ## Resource controls
 
 - 27-record startup fixture; no full dataset download.
-- FastEmbed BGE model with batch size 8.
+- Pinned ONNX BGE-small embeddings with bounded batch size (current GitHub and Render demo).
 - CPU-only production dependencies; no CUDA packages.
 - No paid database, vector service, or LLM required.
 - Embedded Qdrant and SQLite are ephemeral on free hosts unless persistent storage is added.
@@ -131,9 +141,9 @@ policies, or a hardened multi-tenant production deployment.
 Run `docker compose config --quiet` before building to validate Compose syntax.
 
 
-## 2026-10-24 pinned-ONNX production candidate (not deployed)
+## 2026-10-24 pinned-ONNX production image (deployed on Render, not on Hugging Face)
 
-A proposed follow-up release removes FastEmbed from both production Docker
+The verified GitHub and Render release removes FastEmbed from both production Docker
 recipes and uses the **same Qdrant BGE-small quantized ONNX model**, pinned
 at revision `aa8f8b060edb00e03bfdd08813a2949946c8ba55`.
 This supersedes the **local release-candidate** FastEmbed instructions above;
