@@ -55,3 +55,11 @@ describe("EvaluationView", () => {
     expect(screen.getByText(/inspect provider provenance/i)).toBeInTheDocument();
   });
 });
+
+  it("clearly hides stale metrics when no compatible report is available", async () => {
+    vi.mocked(api.evaluation).mockResolvedValue({ status: "not_evaluated" });
+    render(<EvaluationView />);
+    expect(await screen.findByRole("heading", { name: "No compatible evaluation report" })).toBeInTheDocument();
+    expect(screen.queryByText("Measured artifact")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Retrieval quality" })).not.toBeInTheDocument();
+  });
