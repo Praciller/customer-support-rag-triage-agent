@@ -38,6 +38,18 @@ export function EvaluationView() {
   if (metrics.status === "unavailable") {
     return <ErrorNotice message="Evaluation artifacts are unavailable. Run the documented evaluation command." />;
   }
+  if (metrics.status === "not_evaluated") {
+    return (
+      <section className="panel" role="status" aria-live="polite">
+        <h2>No compatible evaluation report</h2>
+        <p>
+          This environment has no validated evaluation results for its active embedding
+          provider. The measured metrics are deliberately hidden until the matching
+          synthetic evaluation is generated and reviewed.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <div className="evaluation-layout">

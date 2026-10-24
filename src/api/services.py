@@ -193,12 +193,43 @@ class ApplicationServices:
 
     def evaluation_results(self) -> dict[str, Any]:
         path = self.settings.eval_output_path
-        if not path.exists():
-            legacy_path = Path("reports/evaluation_metrics.json")
-            path = legacy_path if legacy_path.exists() else path
-        if not path.exists():
+        if path.exists():
+            report = json.loads(path.read_text(encoding="utf-8"))
+            if self._compatible_demo_report(report):
+                return report
             return {"status": "not_evaluated"}
-        return json.loads(path.read_text(encoding="utf-8"))
+
+        # Some hosts configure a different writable evaluation output path.
+        # For the key-free demo only, serve the reviewed, committed mock
+        # snapshot if and only if its embedding and fixture contract match.
+        if self.settings.demo_mode and self.settings.mock_llm_mode:
+            bundled = Path(__file__).resolve().parents[2] / "reports/evaluation/results.json"
+            if bundled.is_file():
+                report = json.loads(bundled.read_text(encoding="utf-8"))
+                if self._compatible_demo_report(report):
+                    return report
+
+        legacy = Path("reports/evaluation_metrics.json")
+        if legacy.exists():
+            report = json.loads(legacy.read_text(encoding="utf-8"))
+            if self._compatible_demo_report(report):
+                return report
+        return {"status": "not_evaluated"}
+
+    def _compatible_demo_report(self, report: dict[str, Any]) -> bool:
+        if not self.settings.demo_mode or not self.settings.mock_llm_mode:
+            return True
+        if report.get("evaluation_mode") != "deterministic_mock":
+            return False
+        execution = report.get("execution") or {}
+        dataset = report.get("dataset") or {}
+        return (
+            execution.get("embedding_provider") == self.settings.embedding_provider
+            and execution.get("embedding_model") == self.settings.embedding_model
+            and dataset.get("fixture_revision") == "demo-fixture-v1"
+            and dataset.get("sample_size") == 8
+            and dataset.get("retrieval_corpus_size") == 27
+        )
 
 
 def build_services(settings: Settings | None = None) -> ApplicationServices:
