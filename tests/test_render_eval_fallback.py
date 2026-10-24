@@ -49,7 +49,7 @@ def test_nonmock_or_nondemo_never_falls_back_to_bundled_mock_report(tmp_path):
     }
 
 
-def test_existing_incompatible_mock_report_is_rejected(tmp_path):
+def test_existing_incompatible_mock_report_falls_back_to_verified_onnx_snapshot(tmp_path):
     report_path = tmp_path / "chosen.json"
     report_path.write_text(
         json.dumps(
@@ -64,7 +64,19 @@ def test_existing_incompatible_mock_report_is_rejected(tmp_path):
         encoding="utf-8",
     )
     service = make_services(tmp_path, eval_output_path=report_path)
-    assert service.evaluation_results() == {"status": "not_evaluated"}
+    selected = service.evaluation_results()
+    assert selected["execution"]["embedding_provider"] == "onnx"
+    assert selected["dataset"]["sample_size"] == 8
+    assert selected["generated_at"].startswith("2026-10-24T16:59:56")
+
+
+def test_existing_matching_report_still_takes_precedence(tmp_path):
+    report_path = tmp_path / "chosen.json"
+    bundled = make_services(tmp_path).evaluation_results()
+    bundled["selected_test_marker"] = "explicit-compatible"
+    report_path.write_text(json.dumps(bundled), encoding="utf-8")
+    service = make_services(tmp_path, eval_output_path=report_path)
+    assert service.evaluation_results()["selected_test_marker"] == "explicit-compatible"
 
 
 def test_existing_non_demo_report_retains_existing_behavior(tmp_path):
