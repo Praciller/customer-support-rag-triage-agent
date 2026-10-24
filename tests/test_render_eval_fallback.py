@@ -89,3 +89,37 @@ def test_existing_non_demo_report_retains_existing_behavior(tmp_path):
     report_path.write_text(json.dumps({"intent_accuracy": 0.9}), encoding="utf-8")
     service = make_services(tmp_path, demo_mode=False, eval_output_path=report_path)
     assert service.evaluation_results() == {"intent_accuracy": 0.9}
+
+
+def test_packaged_onnx_resource_exactly_matches_reviewed_json():
+    import hashlib
+    from pathlib import Path
+
+    from src.api.reviewed_onnx_report import SOURCE_SHA256, load_reviewed_onnx_report
+
+    source = Path(__file__).resolve().parents[1] / "reports/evaluation/results.json"
+    raw = source.read_text(encoding="utf-8")
+    assert hashlib.sha256(raw.encode("utf-8")).hexdigest() == SOURCE_SHA256
+    report = load_reviewed_onnx_report()
+    assert report == json.loads(raw)
+    assert report["execution"]["embedding_provider"] == "onnx"
+    assert report["dataset"]["sample_size"] == 8
+
+
+def test_packaged_onnx_resource_survives_missing_json_report_directories(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    from src.api.reviewed_onnx_report import load_reviewed_onnx_report
+
+    # Import the trusted Python source before simulating a Render build which
+    # omits both custom and repository-level JSON report directories.
+    assert load_reviewed_onnx_report()["evaluation_mode"] == "deterministic_mock"
+    services = make_services(tmp_path)
+    monkeypatch.setattr(Path, "is_file", lambda self: False)
+    report = services.evaluation_results()
+    assert report["execution"]["embedding_provider"] == "onnx"
+    assert report["dataset"]["sample_size"] == 8
+    assert report["dataset"]["retrieval_corpus_size"] == 27
+
+    incompatible = make_services(tmp_path, embedding_provider="hashing")
+    assert incompatible.evaluation_results() == {"status": "not_evaluated"}

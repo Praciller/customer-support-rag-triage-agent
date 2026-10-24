@@ -1,0 +1,460 @@
+"""Reviewable snapshot of the 2026-10-24 pinned ONNX mock evaluation.
+The source report lives in reports/evaluation/results.json.
+This duplicate is required on hosts that omit the reports/ directory.
+The regression suite enforces byte-normalized SHA-256 equivalence.
+"""
+
+import hashlib
+import json
+
+SOURCE_SHA256 = "6b268636b670179ec087fc1ebc6795a6f212925b98d80f3dd1ea8fb91d9c76b4"
+
+_REPORT_JSON = r"""{
+  "generated_at": "2026-10-24T16:59:56.670459+00:00",
+  "command": "python -m src.evaluation.evaluate_triage",
+  "evaluation_mode": "deterministic_mock",
+  "dataset": {
+    "name": "Banking77-derived deterministic evaluation fixture",
+    "path": "data\\eval\\eval_set.csv",
+    "sample_size": 8,
+    "retrieval_corpus_size": 27,
+    "fixture_revision": "demo-fixture-v1"
+  },
+  "execution": {
+    "embedding_provider": "onnx",
+    "embedding_model": "BAAI/bge-small-en-v1.5",
+    "provider_names": [
+      "mock"
+    ],
+    "observed_inference_providers": [
+      "mock"
+    ],
+    "qdrant_mode": "memory",
+    "cache_enabled": false
+  },
+  "classification": {
+    "intent": {
+      "accuracy": 1.0,
+      "macro_f1": 1.0,
+      "labels": [
+        "account_access",
+        "billing_issue",
+        "cancellation",
+        "complaint",
+        "delivery_issue",
+        "product_question",
+        "refund_request",
+        "technical_issue"
+      ],
+      "per_class": {
+        "account_access": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 1
+        },
+        "billing_issue": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 1
+        },
+        "cancellation": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 1
+        },
+        "complaint": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 1
+        },
+        "delivery_issue": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 1
+        },
+        "product_question": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 1
+        },
+        "refund_request": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 1
+        },
+        "technical_issue": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 1
+        }
+      },
+      "confusion_matrix": [
+        [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1
+        ]
+      ]
+    },
+    "urgency": {
+      "accuracy": 1.0,
+      "macro_f1": 1.0,
+      "labels": [
+        "critical",
+        "high",
+        "low",
+        "medium"
+      ],
+      "per_class": {
+        "critical": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 1
+        },
+        "high": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 2
+        },
+        "low": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 3
+        },
+        "medium": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 2
+        }
+      },
+      "confusion_matrix": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          2,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          2
+        ]
+      ]
+    }
+  },
+  "retrieval": {
+    "precision_at_k": 0.375,
+    "recall_at_k": 0.625,
+    "mrr": 0.7708333333333334,
+    "ndcg_at_k": 0.6106824851964359,
+    "zero_result": 0.0,
+    "average_score": 0.7343724846664359,
+    "latency_ms": 4.043487500894116,
+    "top_k": 5,
+    "sample_size": 8,
+    "examples": [
+      {
+        "message": "My card has still not arrived and I travel tomorrow",
+        "expected_intent": "delivery_issue",
+        "retrieved_ids": [
+          "demo-delivery-estimate",
+          "demo-delivery-tracking",
+          "demo-delivery-late",
+          "demo-billing-pending-transfer",
+          "demo-technical-transfer"
+        ],
+        "precision_at_k": 0.6,
+        "recall_at_k": 1.0,
+        "mrr": 1.0,
+        "ndcg_at_k": 1.0,
+        "zero_result": 0.0,
+        "average_score": 0.7481246695830743,
+        "latency_ms": 4.3126000091433525
+      },
+      {
+        "message": "I want a refund for this payment",
+        "expected_intent": "refund_request",
+        "retrieved_ids": [
+          "demo-refund-policy",
+          "demo-cancel-typo",
+          "demo-refund-reversed-payment",
+          "demo-cancel-transfer",
+          "demo-complaint-duplicate"
+        ],
+        "precision_at_k": 0.4,
+        "recall_at_k": 0.6666666666666666,
+        "mrr": 1.0,
+        "ndcg_at_k": 0.7039180890341347,
+        "zero_result": 0.0,
+        "average_score": 0.7802156388638991,
+        "latency_ms": 4.206600016914308
+      },
+      {
+        "message": "Why was I charged an extra fee",
+        "expected_intent": "billing_issue",
+        "retrieved_ids": [
+          "demo-complaint-duplicate",
+          "demo-billing-withdrawal-fee",
+          "demo-refund-reversed-payment",
+          "demo-cancel-typo",
+          "demo-refund-topup"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 0.3333333333333333,
+        "mrr": 0.5,
+        "ndcg_at_k": 0.2960819109658652,
+        "zero_result": 0.0,
+        "average_score": 0.7585768822803503,
+        "latency_ms": 3.502199979266152
+      },
+      {
+        "message": "The mobile payment feature is not working",
+        "expected_intent": "technical_issue",
+        "retrieved_ids": [
+          "demo-refund-reversed-payment",
+          "demo-cancel-typo",
+          "demo-technical-transfer",
+          "demo-access-verification",
+          "demo-delivery-tracking"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 0.3333333333333333,
+        "mrr": 0.3333333333333333,
+        "ndcg_at_k": 0.23463936301137822,
+        "zero_result": 0.0,
+        "average_score": 0.6569871391107422,
+        "latency_ms": 3.480999992461875
+      },
+      {
+        "message": "I forgot my passcode and cannot sign in",
+        "expected_intent": "account_access",
+        "retrieved_ids": [
+          "demo-access-passcode",
+          "demo-access-verification",
+          "demo-complaint-phone",
+          "demo-cancel-transfer",
+          "demo-cancel-account"
+        ],
+        "precision_at_k": 0.4,
+        "recall_at_k": 0.6666666666666666,
+        "mrr": 1.0,
+        "ndcg_at_k": 0.7653606369886217,
+        "zero_result": 0.0,
+        "average_score": 0.6961826916747039,
+        "latency_ms": 4.4661000138148665
+      },
+      {
+        "message": "Which countries support this card",
+        "expected_intent": "product_question",
+        "retrieved_ids": [
+          "demo-product-countries",
+          "demo-product-disposable",
+          "demo-delivery-late",
+          "demo-other-currency",
+          "demo-delivery-estimate"
+        ],
+        "precision_at_k": 0.4,
+        "recall_at_k": 0.6666666666666666,
+        "mrr": 1.0,
+        "ndcg_at_k": 0.7653606369886217,
+        "zero_result": 0.0,
+        "average_score": 0.7137124844381623,
+        "latency_ms": 4.0788000042084605
+      },
+      {
+        "message": "This transaction is not mine and my card may be stolen",
+        "expected_intent": "complaint",
+        "retrieved_ids": [
+          "demo-refund-reversed-payment",
+          "demo-delivery-late",
+          "demo-complaint-fraud",
+          "demo-delivery-tracking",
+          "demo-complaint-phone"
+        ],
+        "precision_at_k": 0.4,
+        "recall_at_k": 0.6666666666666666,
+        "mrr": 0.3333333333333333,
+        "ndcg_at_k": 0.41618115554873086,
+        "zero_result": 0.0,
+        "average_score": 0.7533344737041447,
+        "latency_ms": 4.475800000363961
+      },
+      {
+        "message": "Please cancel my transfer immediately",
+        "expected_intent": "cancellation",
+        "retrieved_ids": [
+          "demo-cancel-transfer",
+          "demo-technical-beneficiary",
+          "demo-cancel-typo",
+          "demo-billing-pending-transfer",
+          "demo-technical-error"
+        ],
+        "precision_at_k": 0.4,
+        "recall_at_k": 0.6666666666666666,
+        "mrr": 1.0,
+        "ndcg_at_k": 0.7039180890341347,
+        "zero_result": 0.0,
+        "average_score": 0.7678458976764108,
+        "latency_ms": 3.8247999909799546
+      }
+    ]
+  },
+  "grounding_workflow": {
+    "grounded_response_rate": 1.0,
+    "grounding_failure_rate": 0.0,
+    "unsupported_claim_rate": 0.0,
+    "degraded_mode_rate": 0.0,
+    "fallback_rate": 0.0,
+    "cache_hit_rate": 0.0,
+    "workflow_success_rate": 1.0,
+    "average_latency_ms": 9.37375,
+    "p50_latency_ms": 8.445,
+    "p95_latency_ms": 13.704499999999996,
+    "provider_usage": {
+      "mock": 8
+    }
+  },
+  "limitations": [
+    "The fixture is small and deterministic; results are not a production SLA.",
+    "Relevance uses mapped intent labels, not human-graded policy relevance.",
+    "Mock generation measures workflow determinism, not real-model answer quality."
+  ],
+  "failed_examples": [],
+  "retrieval_precision_at_k": 0.375,
+  "retrieval_recall_at_k": 0.625,
+  "retrieval_mrr": 0.7708333333333334,
+  "retrieval_ndcg_at_k": 0.6106824851964359,
+  "retrieval_zero_result_rate": 0.0,
+  "retrieval_average_score": 0.7343724846664359,
+  "retrieval_latency_ms": 4.043487500894116,
+  "top_k": 5,
+  "intent_accuracy": 1.0,
+  "intent_macro_f1": 1.0,
+  "urgency_accuracy": 1.0,
+  "urgency_macro_f1": 1.0,
+  "groundedness_pass_rate": 1.0,
+  "unsupported_claim_rate": 0.0,
+  "degraded_mode_rate": 0.0,
+  "average_latency_ms": 9.37375,
+  "p50_latency_ms": 8.445,
+  "p95_latency_ms": 13.704499999999996,
+  "cache_hit_rate": 0.0,
+  "provider_fallback_rate": 0.0,
+  "workflow_success_rate": 1.0,
+  "fallback_count": 0,
+  "provider_usage": {
+    "mock": 8
+  },
+  "examples": 8,
+  "mock_mode": true,
+  "recommendations": [
+    "Expand the human-labeled fixture before treating these metrics as production evidence.",
+    "Add reranking or metadata filters to improve precision@k."
+  ]
+}"""
+
+
+def load_reviewed_onnx_report() -> dict:
+    if hashlib.sha256(_REPORT_JSON.encode("utf-8")).hexdigest() != SOURCE_SHA256:
+        raise RuntimeError("Embedded ONNX evaluation resource digest mismatch")
+    return json.loads(_REPORT_JSON)

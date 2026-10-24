@@ -33,10 +33,16 @@ alongside the scores.
 
 For free/demo environments whose writable `EVAL_OUTPUT_PATH` is missing,
 the API serves this **committed** report only when mode is demo+mock and
-its embedding provider/model and fixture identity match. It deliberately
-returns `not_evaluated` for a non-demo environment, a provider mismatch
-or missing/invalid fixture evidence. It never runs costly evaluations in
-the unauthenticated HTTP request handler.
+its embedding provider/model and fixture identity match. Render native builds
+may omit the non-package `reports/` JSON directory entirely. A checked-in
+`src/api/reviewed_onnx_report.py` resource contains the exact same dated
+synthetic report, validated against the source JSON with a normalized
+SHA-256 regression test. It is used only after report-file candidates
+are missing or incompatible, and only if its ONNX provider/model and
+fixture identity also match. It deliberately returns `not_evaluated`
+for a non-demo environment, a provider mismatch or missing/invalid
+fixture evidence. It never runs costly evaluations in the
+unauthenticated HTTP request handler.
 
 ## Free-tier operational constraints
 
