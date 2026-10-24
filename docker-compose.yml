@@ -24,7 +24,7 @@ services:
       QDRANT_MODE: server
       QDRANT_URL: http://qdrant:6333
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
-      EMBEDDING_PROVIDER: fastembed
+      EMBEDDING_PROVIDER: onnx
       EMBEDDING_BATCH_SIZE: "8"
       EVAL_OUTPUT_PATH: reports/evaluation/results.json
     ports:
