@@ -65,3 +65,15 @@ def test_ci_audits_every_production_vulnerability_without_exceptions() -> None:
     assert "continue-on-error: true" not in ci
     assert "python-advisory-baseline.json" not in ci
     assert not (ROOT / "security/python-advisory-baseline.json").exists()
+
+
+def test_local_compose_never_uses_removed_fastembed_dependency() -> None:
+    """The user-facing Compose demo must use the reviewed production embedder."""
+    compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+    assert re.search(r"(?m)^\s+EMBEDDING_PROVIDER:\s+onnx\s*$", compose)
+    assert not re.search(r"(?m)^\s+EMBEDDING_PROVIDER:\s+fastembed\s*$", compose)
+    assert re.search(r"(?m)^\s+ALLOW_PUBLIC_INGEST:\s+[\"']false[\"']\s*$", compose)
+    assert re.search(r"(?m)^\s+MOCK_LLM_MODE:\s+[\"']true[\"']\s*$", compose)
+    requirements = (ROOT / "requirements.production.txt").read_text(encoding="utf-8")
+    assert re.search(r"(?im)^onnxruntime[<=>]", requirements)
+    assert not re.search(r"(?im)^fastembed[<=>]", requirements)

@@ -6,7 +6,7 @@
 $env:DEMO_MODE="true"
 $env:MOCK_LLM_MODE="true"
 $env:QDRANT_MODE="memory"
-$env:EMBEDDING_PROVIDER="fastembed"
+$env:EMBEDDING_PROVIDER="onnx"
 $env:LLM_CACHE_ENABLED="false"
 $env:EVAL_OUTPUT_PATH="reports/evaluation/results.json"
 .venv\Scripts\python.exe -m src.evaluation.evaluate_triage
@@ -46,7 +46,7 @@ local `BAAI/bge-small-en-v1.5` embeddings, and the deterministic mock provider.
 - Mock grounding-verifier pass rate: the deterministic verifier passed and the graph confirmed that
   retrieval was non-empty and generation was not degraded.
 
-## Measured result: July 19, 2026
+## Measured synthetic result: October 24, 2026 (ONNX; local environment)
 
 | Metric | Result |
 | --- | ---: |
@@ -58,7 +58,7 @@ local `BAAI/bge-small-en-v1.5` embeddings, and the deterministic mock provider.
 | Grounded / unsupported claim | 100.0% / 0.0% |
 | Degraded / fallback / cache hit | 0.0% / 0.0% / 0.0% |
 | Workflow success | 100.0% |
-| Average / P50 / P95 latency | 18.8 / 16.2 / 28.8 ms |
+| Average / P50 / P95 local latency | 9.4 / 8.4 / 13.7 ms |
 
 ## Limitations
 
@@ -68,9 +68,7 @@ grounding checks evidence presence and deterministic workflow guards, not semant
 policy correctness. Mock results measure regression stability, not real-provider answer quality.
 Optional real-provider evaluation must be run manually and never runs in normal CI.
 
-The deployed public Evaluation view can lag the checked-in artifact because the Hugging Face Space
-is synchronized manually. Deployment smoke evidence must be reported separately from this local
-regression artifact and from any production-performance claim.
+The current public Render demo serves the reviewed ONNX synthetic artifact (generated October 24, 2026) through `/eval/results` and `/metrics/sample`, independently verified after deployment. The legacy Hugging Face Space is synchronized separately and remains on an older build. Deployment smoke evidence must be reported separately from this local regression artifact and from any production-performance claim.
 
 
 ## Evidence integrity and provider attribution
@@ -90,7 +88,7 @@ traces, not providers merely configured in the application:
 - `mixed_or_degraded`: fallback, degraded, or mixed provider execution.
 
 The report also records `execution.observed_inference_providers`. The checked-in
-eight-ticket results remain the historical July 2026 mock baseline; CI regenerates
+eight-ticket results are the October 24, 2026 pinned-ONNX mock baseline; CI regenerates
 new artifacts separately rather than updating the published fixture metrics implicitly.
 
 ## Separate human-review track
