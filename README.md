@@ -6,20 +6,20 @@ A typed, inspectable RAG triage workflow that retrieves support evidence, drafts
 
 **Signal:** Evidence-grounded AI workflow with inspectable traces and explicit human-action routing.
 
-[Repository](https://github.com/Praciller/customer-support-rag-triage-agent) · [Live demo](https://pracill-customer-support-rag-triage-agent.hf.space/) · [Dream Logs case study](https://dreamlogsdata.com/en/projects/customer-support-rag-triage-agent)
+[Repository](https://github.com/Praciller/customer-support-rag-triage-agent) · [Live demo](https://customer-support-rag-triage-agent.onrender.com/) · [Dream Logs case study](https://dreamlogsdata.com/en/projects/customer-support-rag-triage-agent)
 
 **What this demonstrates:** typed RAG orchestration · grounding and retrieval evidence · deterministic evaluation with a human-review boundary.
 
-**Boundary:** the public path is a bounded zero-key fixture; it demonstrates workflow inspectability, not production support quality.
+**Boundary:** the public Render demo uses 27 synthetic records, pinned ONNX embeddings, and deterministic mock generation. It is for portfolio review—not real customer support or production-quality inference. The older Hugging Face Space is a separate, unreleased legacy build.
 
-**[Open the live zero-key demo](https://pracill-customer-support-rag-triage-agent.hf.space/)**
+**[Open the live zero-key demo](https://customer-support-rag-triage-agent.onrender.com/)**
 
 ![Ticket triage result](docs/screenshots/triage-result.png)
 
 ## Evidence-backed outcomes
 
 - Runs a fixed seven-node LangGraph workflow with typed state and an inspectable per-node trace.
-- Retrieves bounded Banking77-derived evidence from Qdrant with local BGE embeddings and stable, idempotent fixture IDs.
+- Retrieves bounded Banking77-derived evidence from in-memory Qdrant with pinned ONNX BGE-small embeddings and stable, idempotent fixture IDs.
 - Exposes inference mode, cache, fallback, degraded-mode, retrieval, grounding, and human-action metadata.
 - Ships a zero-key deterministic review path plus a checked-in 8-ticket regression artifact. The fixture demonstrates reproducibility, not real-world model quality.
 - Preserves an optional generic external GenAI route without coupling the public repository to a specific inference vendor.
@@ -44,7 +44,7 @@ flowchart LR
   UI[React operations console] --> API[FastAPI]
   API --> G[Typed LangGraph workflow]
   G --> Q[Qdrant]
-  Q --> E[Local BGE embeddings]
+  Q --> E[Pinned ONNX BGE-small embeddings]
   G --> C[SQLite response cache]
   G --> R[Inference router]
   R --> M[Deterministic local generator]
@@ -69,7 +69,7 @@ Each successful node records duration, bounded input/output summaries, component
 
 ## Deterministic evaluation
 
-The checked-in evaluation uses local `BAAI/bge-small-en-v1.5` embeddings, deterministic generation, 27 indexed demo records, and 8 labeled evaluation tickets.
+The checked-in evaluation was regenerated on October 24, 2026 with pinned ONNX `BAAI/bge-small-en-v1.5`, deterministic mock generation, 27 indexed synthetic records, and 8 labeled synthetic evaluation tickets. The Render demo serves that exact dated artifact; the measured local latency below is **not** a Render-hosted latency benchmark.
 
 | Metric | Result |
 | --- | ---: |
@@ -81,7 +81,7 @@ The checked-in evaluation uses local `BAAI/bge-small-en-v1.5` embeddings, determ
 | Grounding-verifier pass rate | 100.0% |
 | Unsupported-claim flag rate | 0.0% |
 | Workflow success rate | 100.0% |
-| P50 / P95 local latency | 16.2 ms / 28.8 ms |
+| P50 / P95 local latency | 8.4 ms / 13.7 ms |
 
 Recall and nDCG use the three known relevant fixture records per intent. These are deterministic regression results from a deliberately small, rules-aligned fixture. They are not production latency, policy correctness, semantic-entailment, or universal model-quality claims. See the [generated summary](reports/evaluation/summary.md) and [methodology](docs/evaluation.md).
 
@@ -145,7 +145,7 @@ npm run build-storybook
 npm run test:e2e
 ```
 
-CI builds Storybook and runs the 14-test Chromium browser suite. The current live demo was verified from Space revision `a2661562ff1a2a7b7f15e4b9145cb007c98444a5`; it remains a bounded zero-key fixture, not production support quality.
+CI builds Storybook and runs the Chromium browser and accessibility suites. The verified public demo is hosted on **Render** at GitHub SHA `a45a9abaae2881bbf14133f981c317206fa7e65c` ([post-merge 5/5 CI](https://github.com/Praciller/customer-support-rag-triage-agent/actions/runs/40120551076)); it serves a bounded zero-key fixture, not production support quality. The separate Hugging Face Space is still on legacy revision `a2661562ff1a2a7b7f15e4b9145cb007c98444a5` and is **not** the current recommended demo.
 
 Reproduce the checked-in evaluation from the repository root:
 
@@ -200,6 +200,8 @@ curl.exe http://localhost:8000/eval/results
 - [Evaluation methodology](docs/evaluation.md)
 - [Qdrant lifecycle](docs/qdrant.md)
 - [Deployment](docs/deployment.md)
+- [Free Render demo and dated ONNX evaluation](docs/render-free-onnx-demo-evaluation.md)
+- [Outstanding Hugging Face release gates](https://github.com/Praciller/customer-support-rag-triage-agent/issues/89)
 - [Security](docs/security.md)
 - [Operations runbook](docs/runbook.md)
 - [Portfolio review](PORTFOLIO_REVIEW.md)
