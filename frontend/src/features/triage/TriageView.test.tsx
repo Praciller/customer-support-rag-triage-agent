@@ -22,6 +22,7 @@ describe("TriageView", () => {
     renderTriage();
 
     expect(screen.getByRole("textbox", { name: /customer message/i })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Example tickets" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /run triage/i })).toBeEnabled();
     expect(screen.getByText("My card has not arrived.")).toBeInTheDocument();
     expect(screen.getByText("delivery issue", { selector: "strong" })).toBeInTheDocument();
