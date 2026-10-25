@@ -58,7 +58,7 @@ export function TicketComposer({
         onChange={(event) => setMessage(event.target.value)}
         maxLength={2000}
       />
-      <div className="example-tickets" aria-label="Example tickets">
+      <div className="example-tickets" role="group" aria-label="Example tickets">
         {demoTickets.map((ticket) => (
           <button
             className="example-ticket"
