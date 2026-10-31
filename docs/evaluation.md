@@ -29,6 +29,16 @@ It tests structural authority isolation, provider-role separation, evidence prov
 integrity, grounding guards, unsupported-claim handling, and human-review/escalation routing. It
 does not establish semantic LLM prompt-injection immunity.
 
+## Independent Thai policy retrieval slice
+
+`data/eval/thai_policy_slice.json` contains synthetic Thai policy records and questions with explicit
+scope and permission labels. `src.evaluation.evaluate_thai_policy` filters by both labels before
+scoring character-bigram overlap, and abstains when no authorized record passes the lexical threshold.
+The evaluation reports positive, negative/abstention, and prompt-injection counts alongside the
+denominator. It is offline and does not use the production RAG graph, Banking77 fixtures, external
+models, or embeddings. Permission labels demonstrate filter behavior only; they are not an identity
+system or production authorization control. See the [generated report](../reports/evaluation/thai_policy_slice.md).
+
 ## Fixture and definitions
 
 The evaluation uses 8 labeled tickets from `data/eval/eval_set.csv`, 27 indexed demo records,

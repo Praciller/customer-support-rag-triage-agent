@@ -166,6 +166,21 @@ Run the deterministic adversarial evidence-boundary evaluation and regenerate it
 
 See the [adversarial retrieval report](reports/evaluation/adversarial_retrieval.md) for the committed fixture and measured invariant checks.
 
+### Separate synthetic Thai policy slice
+
+`data/eval/thai_policy_slice.json` is an independent, explicitly synthetic fixture for offline
+Thai-language policy retrieval evaluation. Its `scope` and `permission` labels are fixture metadata
+used to filter records before lexical scoring; they are not connected to user identity or production
+authorization. The character-bigram baseline is deterministic and needs no model download or API.
+It does not alter the English Banking77 demo, imply Thai embedding support, or establish policy
+correctness. Positive retrieval, denied cross-scope access, missing-evidence abstention, and an
+injection attempt are included with explicit denominators.
+
+Run it with `python -m src.evaluation.evaluate_thai_policy --report-path reports/evaluation/thai_policy_slice.md`.
+The existing optional external inference route is separate from this offline evaluation. See the
+[Thai slice report](reports/evaluation/thai_policy_slice.md) for measured checks and a practical
+upgrade roadmap.
+
 ## API review points
 
 ```powershell

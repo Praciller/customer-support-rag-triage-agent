@@ -1,4 +1,4 @@
-.PHONY: setup lint format test eval api demo clean
+.PHONY: setup lint format test eval eval-thai-policy api demo clean
 
 DEMO_ENV = DEMO_MODE=true MOCK_LLM_MODE=true QDRANT_MODE=memory EMBEDDING_PROVIDER=hashing RETRIEVAL_MIN_SCORE=0 LLM_CACHE_ENABLED=false
 
@@ -18,6 +18,9 @@ test:
 
 eval:
 	$(DEMO_ENV) python -m src.evaluation.evaluate_triage
+
+eval-thai-policy:
+	python -m src.evaluation.evaluate_thai_policy --report-path reports/evaluation/thai_policy_slice.md
 
 api:
 	uvicorn src.api.main:app --reload --host 127.0.0.1 --port 8000
