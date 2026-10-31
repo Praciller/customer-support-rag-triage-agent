@@ -1,3 +1,7 @@
+from dataclasses import replace
+
+import pytest
+
 from src.evaluation.evaluate_thai_policy import evaluate, load_dataset, retrieve
 
 
@@ -14,6 +18,31 @@ def test_scope_and_permission_filter_prevent_cross_scope_leakage() -> None:
     records, queries = load_dataset()
     query = next(item for item in queries if item.id == "q-finance-denied")
     assert retrieve(query, records) == []
+
+
+@pytest.mark.parametrize(
+    ("case_id", "corrected_dimension"),
+    [
+        ("q-finance-permission-denied", "permission"),
+        ("q-finance-scope-denied", "scope"),
+    ],
+)
+def test_scope_and_permission_are_independent_boundaries(
+    case_id: str, corrected_dimension: str
+) -> None:
+    records, queries = load_dataset()
+    denied_query = next(item for item in queries if item.id == case_id)
+
+    # This query repeats the synthetic finance record, exceeding the lexical
+    # threshold. Only access filters—not low lexical similarity—may abstain.
+    assert retrieve(denied_query, records) == []
+
+    if corrected_dimension == "permission":
+        allowed_query = replace(denied_query, permissions=frozenset({"finance_read"}))
+    else:
+        allowed_query = replace(denied_query, scope="finance")
+
+    assert retrieve(allowed_query, records)[0][0].id == "th-finance-refund"
 
 
 def test_prompt_injection_does_not_override_authorized_scope() -> None:
