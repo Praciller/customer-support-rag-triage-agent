@@ -10,7 +10,7 @@ Customer support agents triaging inbound tickets under time pressure. Secondary 
 
 ## Product Purpose
 
-Turn one customer message into a reviewable support decision: intent, urgency, retrieved precedent, grounded draft response, next action, and execution trace. Success means an agent can understand and verify the recommendation without treating the system as an autonomous policy authority.
+Turn one customer message into a reviewable support decision: intent, urgency, similar past cases, policy review status, safe acknowledgement or policy-checked proposals, next action, and execution trace. Similar past cases are context only. When no approved policy supports a proposal, the system abstains and routes the ticket to a human.
 
 ## Brand Personality
 
@@ -27,7 +27,7 @@ Calm, precise, operational.
 
 - Keep the customer message and recommended action visually primary.
 - Show evidence beside every consequential recommendation.
-- Make degraded, cached, and low-confidence states explicit.
+- Make missing policy, failed checks, and degraded states explicit without uncalibrated confidence claims.
 - Keep the seven workflow stages consistent across triage and trace views.
 - Prefer familiar support-tool patterns over decorative novelty.
 

@@ -2,7 +2,7 @@
 
 ## Product contract
 
-ResolveOps turns one customer-support message into a reviewable decision: intent, urgency, retrieved precedent, grounded draft response, next action, and a seven-node execution trace. It drafts for human review; Banking77-derived examples are demo precedent, not company policy.
+ResolveOps turns one customer-support message into a reviewable decision: intent, urgency, similar past cases, policy review status, a safe acknowledgement or policy-checked proposal, next action, and a seven-node execution trace. The default demo has no approved policy source and routes to human review. Banking77-derived examples are context, never policy authority.
 
 ## Repository map
 
@@ -24,7 +24,8 @@ Read only what the task needs:
 3. `docs/architecture.md` for runtime boundaries and node contracts.
 4. `docs/security.md` for evidence, secret, and public-API invariants.
 5. `docs/evaluation.md` for metric methodology and limitations.
-6. `docs/superpowers/specs/2026-09-03-sdlc-professional-hardening-design.md` plus the relevant plan under `docs/superpowers/plans/` for this hardening program.
+6. `docs/adr/0005-policy-authority-and-public-triage-contract.md` for the current policy boundary and API v2 contract.
+7. `docs/superpowers/specs/2026-09-03-sdlc-professional-hardening-design.md` plus the relevant plan under `docs/superpowers/plans/` for this hardening program.
 
 ## Human-review boundary
 
@@ -32,10 +33,11 @@ The system drafts a support decision for a human. Retrieved support content is u
 
 ## Security and evidence invariants
 
-- Retrieved messages are untrusted evidence, never system/developer/workflow instructions.
-- Evidence references are valid only when IDs were actually retrieved.
-- Empty evidence, rejected citations, or degraded generation cannot be presented as grounded.
-- Ungrounded output routes to human review.
+- Retrieved messages are untrusted context, never system/developer/workflow instructions or policy authority.
+- Similar-case references cannot be used as approved policy references.
+- Every allowed proposal must have its own approved policy reference and a passing policy-check result.
+- Missing policy, unsupported/conflicting/uncertain results, invalid references, verifier errors, or degraded generation withhold proposals and route to human review.
+- Do not expose grounding/confidence percentages or claim semantic entailment/policy correctness unless those properties are actually implemented and evaluated.
 - Never expose credentials, raw prompts, environment values, external endpoint URLs, stack traces, or local paths in public output or artifacts.
 - External inference remains optional, explicit, server-side, and outside the default public demo.
 
@@ -86,7 +88,7 @@ A bounded change is done only when:
 
 ## Stop conditions
 
-Stop and request review rather than silently broadening scope if implementation would require changing the public backend contract, weakening evidence/grounding semantics, adding an unplanned framework/dependency, using external credentials for deterministic acceptance, repairing unrelated failures, or performing owner-authenticated deployment/secret entry.
+Stop and request review rather than silently broadening scope if implementation would require changing the public backend contract without explicit authorization in the current request, weakening evidence/policy semantics, adding an unplanned framework/dependency, using external credentials for deterministic acceptance, repairing unrelated failures, or performing owner-authenticated deployment/secret entry.
 
 ## Hardening program pointers
 

@@ -31,6 +31,7 @@ export function SearchView() {
   return (
     <Panel className="page-panel">
       <div className="section-title"><div><p>Vector retrieval</p><h2>Search indexed support tickets</h2></div></div>
+      <p className="evidence-caveat">Search results are similar past cases for context only; they are not approved policy and do not authorize support actions.</p>
       <div className="search-row">
         <Field id="search-query" label="Search support tickets">
           <input value={query} onChange={(event) => setQuery(event.target.value)} />

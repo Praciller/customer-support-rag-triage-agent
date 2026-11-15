@@ -42,7 +42,7 @@ requirement.
 
 Build the exact production container, audit the **installed image** rather
 than only dependency resolution, run the pinned model/27-record index,
-seven-node triage and citation-integrity tests, verify public ingestion
+seven-node triage and policy-review tests, verify public ingestion
 denial, and complete manual screen-reader/zoom QA. Finally secure a
 write-authorized Hugging Face deployment path and record exact GitHub
 source checksum, Space revision and rollback evidence. The historical

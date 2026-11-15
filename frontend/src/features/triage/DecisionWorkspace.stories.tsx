@@ -7,7 +7,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Empty: Story = { args: { result: null } };
-export const Grounded: Story = { args: { result: makeTriageResult() } };
+export const NoApprovedPolicy: Story = { args: { result: makeTriageResult() } };
 export const Escalated: Story = { args: { result: makeTriageResult({ escalate: true, urgency: "high", escalation_reason: "The customer reports a potentially compromised card." }) } };
-export const UngroundedManualReview: Story = { args: { result: makeTriageResult({ grounded: false, grounding_score: 0.2, next_action: "manual_review", unsupported_claims: ["Evidence is insufficient."] }) } };
+export const NoPolicyManualReview: Story = { args: { result: makeTriageResult({ policy_status: "no_approved_policy", next_action: "manual_review" }) } };
 

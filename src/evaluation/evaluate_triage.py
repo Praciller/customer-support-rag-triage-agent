@@ -1,5 +1,6 @@
 import json
 import time
+from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -61,8 +62,6 @@ def evaluate_triage(
     urgency = classification_metrics(expected_urgencies, predicted_urgencies)
     retrieval = evaluate_retrieval(eval_path, services=services)
     sample_size = len(results)
-    grounded_count = sum(bool(result["grounded"]) for result in results)
-    unsupported_count = sum(bool(result["unsupported_claims"]) for result in results)
     degraded_count = sum(bool(result["degraded_mode"]) for result in results)
     fallback_count = sum(bool(result.get("fallback_used", False)) for result in results)
     cached_count = sum(bool(result["cached"]) for result in results)
@@ -73,8 +72,10 @@ def evaluate_triage(
     )
     evaluation_mode, observed_providers = _evaluation_mode(results)
     mock_mode = evaluation_mode == "deterministic_mock"
+    policy_review = _policy_review_metrics(results)
 
     metrics = {
+        "evaluation_schema_version": 2,
         "generated_at": datetime.now(UTC).isoformat(),
         "command": "python -m src.evaluation.evaluate_triage",
         "evaluation_mode": evaluation_mode,
@@ -98,10 +99,8 @@ def evaluate_triage(
             "urgency": urgency,
         },
         "retrieval": retrieval,
-        "grounding_workflow": {
-            "grounded_response_rate": grounded_count / sample_size,
-            "grounding_failure_rate": (sample_size - grounded_count) / sample_size,
-            "unsupported_claim_rate": unsupported_count / sample_size,
+        "policy_review": policy_review,
+        "runtime_workflow": {
             "degraded_mode_rate": degraded_count / sample_size,
             "fallback_rate": fallback_count / sample_size,
             "cache_hit_rate": cached_count / sample_size,
@@ -114,6 +113,10 @@ def evaluate_triage(
         "limitations": [
             "The fixture is small and deterministic; results are not a production SLA.",
             "Relevance uses mapped intent labels, not human-graded policy relevance.",
+            "The default workflow has no approved policy source and structurally withholds "
+            "all generated proposals.",
+            "Policy-gate counts measure routing and result-shape invariants only; they do not "
+            "establish semantic entailment or policy correctness.",
             "Mock generation measures workflow determinism, not real-model answer quality.",
         ],
         "failed_examples": failed_examples,
@@ -129,8 +132,6 @@ def evaluate_triage(
         "intent_macro_f1": intent["macro_f1"],
         "urgency_accuracy": urgency["accuracy"],
         "urgency_macro_f1": urgency["macro_f1"],
-        "groundedness_pass_rate": grounded_count / sample_size,
-        "unsupported_claim_rate": unsupported_count / sample_size,
         "degraded_mode_rate": degraded_count / sample_size,
         "average_latency_ms": sum(latencies) / sample_size,
         "p50_latency_ms": percentile(latencies, 0.5),
@@ -146,6 +147,43 @@ def evaluate_triage(
     metrics["recommendations"] = _recommendations(metrics)
     _write_artifacts(metrics, settings.eval_output_path)
     return metrics
+
+
+def _policy_review_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
+    """Report structural policy-gate outcomes without claiming semantic correctness."""
+    statuses = Counter(str(result.get("policy_status", "missing")) for result in results)
+    proposals_seen = 0
+    proposals_withheld = 0
+    structurally_safe_abstentions = True
+
+    for result in results:
+        checks = result.get("proposal_checks", [])
+        verified = result.get("verified_proposals", [])
+        proposals_seen += len(checks)
+        proposals_withheld += sum(
+            check.get("status") != "supported" or check.get("verification_result") != "passed"
+            for check in checks
+        )
+        if result.get("policy_status") == "no_approved_policy":
+            structurally_safe_abstentions = structurally_safe_abstentions and (
+                result.get("next_action") == "manual_review"
+                and not verified
+                and not result.get("policy_references")
+            )
+
+    return {
+        "method": "structural_policy_gate_counts",
+        "sample_size": len(results),
+        "policy_status_counts": dict(sorted(statuses.items())),
+        "no_approved_policy_cases": statuses.get("no_approved_policy", 0),
+        "manual_review_routes": sum(
+            result.get("next_action") == "manual_review" for result in results
+        ),
+        "proposals_seen": proposals_seen,
+        "proposals_withheld": proposals_withheld,
+        "verified_proposals": sum(len(result.get("verified_proposals", [])) for result in results),
+        "no_policy_abstentions_satisfy_structural_invariants": structurally_safe_abstentions,
+    }
 
 
 def _evaluation_mode(results: list[dict[str, Any]]) -> tuple[str, list[str]]:
@@ -196,7 +234,8 @@ def _summary(metrics: dict[str, Any]) -> str:
     def percent(value: float) -> str:
         return f"{value * 100:.1f}%"
 
-    workflow = metrics["grounding_workflow"]
+    workflow = metrics["runtime_workflow"]
+    policy = metrics["policy_review"]
     failures = metrics["failed_examples"]
     failed_examples = (
         "\n".join(
@@ -230,8 +269,9 @@ Embeddings: `{embedding_provider}` / `{embedding_model}`
 | MRR | {metrics["retrieval_mrr"]:.3f} |
 | nDCG@{metrics["top_k"]} | {metrics["retrieval_ndcg_at_k"]:.3f} |
 | Zero-result rate | {percent(metrics["retrieval_zero_result_rate"])} |
-| Mock grounding-verifier pass rate | {percent(metrics["groundedness_pass_rate"])} |
-| Unsupported-claim rate | {percent(metrics["unsupported_claim_rate"])} |
+| No-approved-policy cases | {policy["no_approved_policy_cases"]} / {policy["sample_size"]} |
+| Manual-review routes | {policy["manual_review_routes"]} / {policy["sample_size"]} |
+| Proposals withheld | {policy["proposals_withheld"]} / {policy["proposals_seen"]} |
 | Workflow success rate | {percent(metrics["workflow_success_rate"])} |
 | Fallback rate | {percent(metrics["provider_fallback_rate"])} |
 | Cache hit rate | {percent(metrics["cache_hit_rate"])} |
@@ -249,8 +289,11 @@ Embeddings: `{embedding_provider}` / `{embedding_model}`
 ## Method and limitations
 
 - Retrieval relevance is defined by the expected mapped intent label.
-- Generation and grounding use the deterministic mock provider plus graph evidence guards;
-  no external API is called.
+- The default demo has no approved policy source; generated proposals are withheld and routed for
+  human review.
+- Policy-gate evaluation checks only structural statuses, references, and routing. It does not
+  verify semantic entailment or policy correctness.
+- The deterministic mock is used; no external API is called.
 - The small fixture is intended for reproducibility and regression detection, not an SLA.
 """
 
@@ -263,8 +306,6 @@ def _recommendations(metrics: dict[str, Any]) -> list[str]:
         recommendations.append("Add reranking or metadata filters to improve precision@k.")
     if metrics["failed_examples"]:
         recommendations.append("Review failed classifications and add representative labels.")
-    if metrics["unsupported_claim_rate"]:
-        recommendations.append("Tighten grounding checks before enabling real-provider responses.")
     return recommendations
 
 

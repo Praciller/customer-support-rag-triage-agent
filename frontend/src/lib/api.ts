@@ -2,6 +2,13 @@ import type { Evaluation, SimilarCase, TriageResult } from "../types/api";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
 
+export class ApiResponseError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = "ApiResponseError";
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -9,17 +16,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error(detail || `Request failed: ${response.status}`);
+    throw new ApiResponseError(detail || `Request failed: ${response.status}`, response.status);
   }
   return response.json() as Promise<T>;
 }
 
 export const api = {
   health: () => request<Record<string, unknown>>("/health"),
-  triage: (message: string, topK: number) =>
+  triage: (message: string, topK: number, signal?: AbortSignal) =>
     request<TriageResult>("/triage", {
       method: "POST",
       body: JSON.stringify({ message, top_k: topK }),
+      signal,
     }),
   search: (message: string, topK: number, intent?: string) =>
     request<SimilarCase[]>("/search-similar", {

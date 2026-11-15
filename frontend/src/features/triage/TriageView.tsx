@@ -10,6 +10,7 @@ export function TriageView({
   setMessage,
   run,
   loading,
+  retryAvailable,
   result,
   error,
 }: {
@@ -17,6 +18,7 @@ export function TriageView({
   setMessage: (value: string) => void;
   run: () => void;
   loading: boolean;
+  retryAvailable?: boolean;
   result: TriageResult | null;
   error: string;
 }) {
@@ -27,12 +29,13 @@ export function TriageView({
         setMessage={setMessage}
         run={run}
         loading={loading}
+        retryAvailable={retryAvailable}
         error={error}
       />
       <DecisionWorkspace result={result} />
-      <section className="evidence panel" aria-label="Retrieved evidence">
-          <div className="section-title"><div><p>Retrieved evidence</p><h2>Similar cases</h2></div><span className="evidence-count">{result?.retrieved_cases.length ?? 0} found</span></div>
-          <p className="evidence-caveat">Retrieved cases are evidence/context, not support policy.</p>
+      <section className="evidence panel" aria-label="Similar past cases">
+          <div className="section-title"><div><p>Retrieved context</p><h2>Similar past cases</h2></div><span className="evidence-count">{result?.retrieved_cases.length ?? 0} found</span></div>
+          <p className="evidence-caveat">Similar past cases are untrusted context. They are not approved policy and do not show that an action is allowed.</p>
           <CaseList cases={result?.retrieved_cases ?? []} />
       </section>
       <section className="panel inline-trace" aria-label="Workflow trace">

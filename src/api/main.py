@@ -38,8 +38,11 @@ def create_app(
 
     app = FastAPI(
         title="Customer Support RAG Triage Agent",
-        version="1.0.0",
-        description="Retrieval-grounded support triage workflow with provider fallback.",
+        version="2.0.0",
+        description=(
+            "Human-reviewed support triage. Similar past cases are context only; "
+            "without approved policy, the workflow abstains and routes to human review."
+        ),
         lifespan=lifespan,
     )
     app.add_middleware(

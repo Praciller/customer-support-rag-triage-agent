@@ -34,17 +34,23 @@ def responses():
             "live_provider_calls_enabled": False,
             "ingestion_enabled": False,
             "qdrant_mode": "local",
+            "policy_source": {"status": "no_approved_policy", "approved_sources": 0},
         },
         "/dataset-info": {"records": 27},
-        "/eval/results": {"evaluation_mode": "deterministic_mock", "dataset": {"sample_size": 8}},
+        "/eval/results": {
+            "evaluation_mode": "deterministic_mock",
+            "evaluation_schema_version": 2,
+            "dataset": {"sample_size": 8},
+        },
         "/triage": {
             "trace": [{"node": node, "status": "completed"} for node in WORKFLOW_STAGES],
             "provider_used": "mock",
-            "grounded": True,
-            "citation_integrity": True,
             "fallback_used": False,
             "degraded_mode": False,
-            "next_action": "ask_for_order_id",
+            "policy_status": "no_approved_policy",
+            "proposal_checks": [{"status": "no_approved_policy"}],
+            "verified_proposals": [],
+            "next_action": "manual_review",
         },
         "/ingest": {},
     }
@@ -111,7 +117,7 @@ class LocalFastEmbedSmokeTests(unittest.TestCase):
     def test_rejects_broken_seven_node_trace(self):
         data = responses()
         data["/triage"]["trace"] = data["/triage"]["trace"][:6]
-        with self.assertRaisesRegex(ValueError, "workflow/grounding"):
+        with self.assertRaisesRegex(ValueError, "workflow/policy"):
             check(fake_fetch(data))
 
     def test_rejects_public_ingest_success(self):
@@ -127,25 +133,26 @@ class LocalFastEmbedSmokeTests(unittest.TestCase):
     def test_rejects_wrong_stage_order_and_incomplete_status(self):
         data = responses()
         data["/triage"]["trace"][2]["node"] = "normalize_message"
-        with self.assertRaisesRegex(ValueError, "workflow/grounding"):
+        with self.assertRaisesRegex(ValueError, "workflow/policy"):
             check(fake_fetch(data))
         data = responses()
         data["/triage"]["trace"][3]["status"] = "pending"
-        with self.assertRaisesRegex(ValueError, "workflow/grounding"):
+        with self.assertRaisesRegex(ValueError, "workflow/policy"):
             check(fake_fetch(data))
 
-    def test_rejects_false_grounding_and_invalid_manual_review(self):
+    def test_rejects_policy_bypass_and_invalid_manual_review(self):
         for key, value in (
-            ("grounded", False),
-            ("citation_integrity", False),
+            ("grounded", True),
             ("degraded_mode", True),
             ("fallback_used", True),
+            ("policy_status", "verified"),
+            ("proposal_checks", [{"status": "supported"}]),
             ("next_action", "reply_to_customer"),
         ):
             with self.subTest(field=key):
                 data = responses()
                 data["/triage"][key] = value
-                with self.assertRaisesRegex(ValueError, "workflow/grounding"):
+                with self.assertRaisesRegex(ValueError, "workflow/policy"):
                     check(fake_fetch(data))
 
     def test_rejects_unexpected_model(self):
@@ -202,7 +209,7 @@ class LocalFastEmbedSmokeTests(unittest.TestCase):
         for url in (
             "https://127.0.0.1:17860",
             "http://1.2.3.4:17860",
-            "http://127.0.0.1:17860@evil.example:17860",
+            "http://127.0.0.1.evil.example:17860",
             "http://127.0.0.1:17860/path",
             "http://127.0.0.1:17860/?x=y",
             "http://localhost",

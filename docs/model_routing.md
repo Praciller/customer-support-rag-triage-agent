@@ -2,81 +2,69 @@
 
 ## Default deterministic route
 
-Demo mode and mock mode use one deterministic local route for all four inference-backed tasks:
+Demo and mock modes use one local deterministic provider for intent classification, urgency
+detection, and proposal generation:
 
 | Task | Default route | Model label |
 | --- | --- | --- |
 | Intent classification | local | `deterministic-small` |
 | Urgency detection | local | `deterministic-small` |
-| Response generation | local | `deterministic-small` |
-| Grounding check | local | `deterministic-small` |
+| Proposal generation | local | `deterministic-small` |
 
-No external model account, API key, or network inference call is required for tests, CI, screenshots, regression fixtures, or the public demo.
+Policy review is a separate backend gate, not a model task. The public demo has no approved policy
+references and no verifier configured, so generated proposals are withheld. The provider cannot
+mark its own output as allowed, grounded, or policy-checked. Similar past cases are not passed to
+proposal generation as policy evidence.
+
+No external model account, API key, or network inference call is required for tests, CI,
+screenshots, regression fixtures, or the public demo.
 
 ## Generic external GenAI route
 
-The repository also preserves a vendor-neutral external GenAI adapter. It becomes active only when all three conditions are true:
+The repository preserves a vendor-neutral external GenAI adapter. It becomes active only when all
+three conditions are true:
 
 - `DEMO_MODE=false`
 - `MOCK_LLM_MODE=false`
 - `EXTERNAL_LLM_URL` is non-empty
 
-Optional server-side settings are `EXTERNAL_LLM_API_KEY` and `EXTERNAL_LLM_MODEL`. The endpoint credential is never returned to the browser or by `/provider-health`.
+Optional server-side settings are `EXTERNAL_LLM_API_KEY` and `EXTERNAL_LLM_MODEL`. The endpoint
+credential is never returned to the browser or by `/provider-health`.
 
-The configured endpoint receives an HTTP `POST` JSON body with this neutral contract:
+The configured endpoint receives a bounded HTTP `POST` JSON body. The current workflow sends the
+user ticket and instructions for classification, urgency, or candidate proposal generation. It
+does not attach retrieved similar cases to proposal-generation requests. The adapter supports a
+separate typed evidence field for other callers, but that does not make such data policy authority.
 
-```json
-{
-  "task": "generate_response",
-  "workflow_instructions": "bounded task instructions",
-  "user_ticket": "current customer ticket",
-  "candidate_response": "candidate response when grounding is checked",
-  "evidence": [
-    {
-      "reference_id": "case-123",
-      "content": "retrieved evidence",
-      "intent": "billing_issue",
-      "prior_response": "synthetic prior response",
-      "source": "public_dataset"
-    }
-  ],
-  "model": "general",
-  "temperature": 0.2,
-  "max_output_tokens": 512
-}
-```
+For proposal generation, the provider returns candidate text. Any provider-supplied `grounded`,
+confidence, citation, or policy-approval fields are ignored. A host-configured policy verifier and
+approved policy ID set are required before a proposal may be returned; each proposal needs a
+passing check and its policy reference. The verifier outcome is only as strong as its
+implementation. The current deterministic code checks control flow and reference membership; it
+does not establish semantic entailment or policy correctness.
 
-It must return a JSON object containing a non-empty `text` field and may return a `model` field:
-
-```json
-{
-  "text": "generated result",
-  "model": "remote-model-label"
-}
-```
-
-If `EXTERNAL_LLM_API_KEY` is set, the adapter sends it as a server-side bearer token. The public repository does not prescribe which inference service implements this endpoint.
+If `EXTERNAL_LLM_API_KEY` is set, the adapter sends it as a server-side bearer token. The public
+repository does not prescribe which inference service implements this endpoint.
 
 ## Cache, retry, and fallback behavior
 
-Route/model/task, workflow instructions, user ticket, candidate response, typed evidence, temperature, and token limit are hashed into the SQLite cache key. The existing retry and exponential-backoff settings apply to external calls. When external inference is active, the route order is `external` then deterministic `mock`; exhaustion can still return the safe manual-review response with `fallback_used=true` and `degraded_mode=true`.
+Route/model/task, workflow instructions, user ticket, candidate response, typed evidence,
+temperature, and token limit are hashed into the SQLite cache key. The existing retry and
+exponential-backoff settings apply to external calls. When external inference is active, the
+route order is `external` then deterministic `mock`; a fallback is marked degraded. Degraded
+proposal generation is withheld by the policy gate.
 
-The external adapter receives evidence as a dedicated data array. It does not receive a system/developer role assignment for retrieved content, and the workflow rejects provider evidence references that are not present in the retrieved array.
+When demo/mock mode is active, the route order is local-only, so configuration of an external
+endpoint cannot accidentally make the public demo perform a network inference call.
 
-When demo/mock mode is active, the route order is local-only, so configuration of an external endpoint cannot accidentally make the public demo perform a network inference call.
-
-`/provider-health` exposes whether external inference is configured and active, plus operational cache, embedding, vector-store, and ingestion metadata. It does not expose the endpoint URL or credential.
+`/provider-health` exposes whether external inference is configured and active, plus operational
+cache, embedding, vector-store, ingestion, and policy-source status. It does not expose the
+endpoint URL or credential.
 
 ## Evaluation boundary
 
-The checked-in metrics use the deterministic route. They demonstrate workflow and retrieval behavior on a small rules-aligned fixture; they are not evidence of production language-model quality or policy correctness. External GenAI behavior requires a separate controlled evaluation before any production claim.
-
-
-## Mock fallback trust boundary
-
-When an active external route fails and the router uses the deterministic `mock` provider,
-the resulting inference is marked `fallback_used=true` and `degraded_mode=true`, whether
-the mock response is freshly generated or served from the cache. The graph accumulates
-degradation across intent, urgency, response generation, and grounding tasks. A degraded
-workflow cannot return `grounded=true`; it requires human review. Mock-only demo mode
-is not degraded merely because it intentionally runs without an external provider.
+The checked-in evaluation uses the deterministic route. It measures workflow completion,
+classification labels, mapped-intent retrieval, and structural policy-gate counts on a small
+synthetic fixture. It does not measure semantic entailment, policy correctness, production
+language-model quality, or customer outcomes. External GenAI behavior requires a separate
+controlled evaluation before any production claim.

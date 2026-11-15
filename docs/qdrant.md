@@ -8,8 +8,9 @@ Development reset is controlled by `QDRANT_RECREATE_COLLECTION`.
 
 Demo bootstrap is idempotent: each fixture ticket maps to a stable UUID5 point ID, existing IDs are
 retrieved first, and only missing records are embedded and uploaded. Upserts preserve payload
-metadata and prevent duplicate fixture records across restarts. Empty collections return no evidence;
-the workflow then forces manual review rather than treating a draft as grounded.
+metadata and prevent duplicate fixture records across restarts. Retrieved records are labeled
+similar past cases and are never approved policy. Empty collections return no cases; policy review
+still abstains unless a separate approved policy source and verifier are configured.
 
 ```powershell
 docker compose up -d qdrant

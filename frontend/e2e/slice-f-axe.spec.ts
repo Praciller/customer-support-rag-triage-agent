@@ -36,9 +36,6 @@ for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
     const base = makeTriageResult();
     const degraded = makeTriageResult({
-      grounded: false,
-      grounding_score: 0,
-      citation_integrity: false,
       fallback_used: true,
       degraded_mode: true,
       next_action: "manual_review",

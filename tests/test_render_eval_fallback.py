@@ -32,6 +32,10 @@ def test_bundled_onnx_mock_report_fills_missing_host_output(tmp_path):
     assert report["dataset"]["sample_size"] == 8
     assert report["dataset"]["retrieval_corpus_size"] == 27
     assert report["dataset"]["fixture_revision"] == "demo-fixture-v1"
+    assert report["evaluation_schema_version"] == 2
+    assert report["policy_review"]["method"] == "structural_policy_gate_counts"
+    assert "groundedness_pass_rate" not in report
+    assert "unsupported_claim_rate" not in report
     assert report["limitations"]
 
 
@@ -91,7 +95,7 @@ def test_existing_incompatible_mock_report_falls_back_to_verified_onnx_snapshot(
     selected = service.evaluation_results()
     assert selected["execution"]["embedding_provider"] == "onnx"
     assert selected["dataset"]["sample_size"] == 8
-    assert selected["generated_at"].startswith("2026-10-24T16:59:56")
+    assert selected["generated_at"].startswith("2026-11-14T")
 
 
 def test_existing_matching_report_still_takes_precedence(tmp_path):

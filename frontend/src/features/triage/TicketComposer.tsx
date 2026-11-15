@@ -41,12 +41,14 @@ export function TicketComposer({
   setMessage,
   run,
   loading,
+  retryAvailable = false,
   error,
 }: {
   message: string;
   setMessage: (value: string) => void;
   run: () => void;
   loading: boolean;
+  retryAvailable?: boolean;
   error: string;
 }) {
   return (
@@ -75,7 +77,17 @@ export function TicketComposer({
             <Send size={16} />{loading ? "Running workflow..." : "Run triage"}
           </Button>
       </div>
-      {error && <ErrorNotice message={error} />}
+      {loading && (
+        <p className="workflow-wait" role="status" aria-live="polite">
+          The backend may be starting after an idle period. This request can take up to 60 seconds.
+        </p>
+      )}
+      {error && (
+        <div className="triage-error-actions">
+          <ErrorNotice message={error} />
+          {retryAvailable && <Button onClick={run}>Retry triage</Button>}
+        </div>
+      )}
     </section>
   );
 }

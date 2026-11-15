@@ -1,7 +1,7 @@
 """Pinned text-only BGE-small ONNX inference, independent of FastEmbed/Pillow.
 
 Keep the model repo and revision immutable. Any model, tokenizer, or pooling
-change requires explicit retrieval and grounding reevaluation before release.
+change requires explicit retrieval and policy-boundary reevaluation before release.
 """
 
 from __future__ import annotations

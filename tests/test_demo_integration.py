@@ -33,7 +33,42 @@ def test_key_free_demo_bootstraps_and_runs_full_workflow(tmp_path: Path) -> None
     assert payload["provider_used"] == "mock"
     assert payload["retrieved_cases"]
     assert len(payload["trace"]) == 7
-    assert payload["next_action"] == "ask_for_order_id"
+    assert payload["policy_status"] == "no_approved_policy"
+    assert payload["next_action"] == "manual_review"
+    assert payload["verified_proposals"] == []
+
+
+def test_card_not_arrived_without_approved_policy_abstains(tmp_path: Path) -> None:
+    settings = Settings(
+        _env_file=None,
+        demo_mode=True,
+        mock_llm_mode=True,
+        qdrant_mode="memory",
+        embedding_provider="hashing",
+        retrieval_min_score=0,
+        llm_cache_dir=tmp_path / "cache",
+    )
+    services = build_services(settings)
+
+    with TestClient(create_app(services=services, settings=settings)) as client:
+        response = client.post(
+            "/triage",
+            json={"message": "My card has not arrived and I travel tomorrow", "top_k": 5},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["intent"] == "delivery_issue"
+    assert payload["urgency"] in {"low", "medium", "high", "critical"}
+    assert payload["retrieved_cases"]
+    assert all(case["evidence_type"] == "similar_past_case" for case in payload["retrieved_cases"])
+    assert all(case["approved_policy"] is False for case in payload["retrieved_cases"])
+    assert payload["next_action"] == "manual_review"
+    assert payload["policy_status"] == "no_approved_policy"
+    assert "refund" not in payload["suggested_response"].lower()
+    assert "order id" not in payload["suggested_response"].lower()
+    assert {check["status"] for check in payload["proposal_checks"]} == {"no_approved_policy"}
+    assert payload["verified_proposals"] == []
 
 
 def test_demo_dataset_info_ignores_stale_full_dataset_metadata(

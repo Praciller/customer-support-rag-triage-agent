@@ -9,7 +9,7 @@ export const Roles: Story = {
     <div style={{ display: "grid", gap: 16, maxWidth: 720 }}>
       <div><div className="type-eyebrow">Page title</div><h1 className="type-page-title">ResolveOps workspace</h1></div>
       <div><div className="type-eyebrow">Section title</div><h2 className="type-section-title">Recommended action</h2></div>
-      <p className="type-primary-decision">Ask for the order ID before offering a refund.</p>
+      <p className="type-primary-decision">Acknowledge the request and route it for human policy review.</p>
       <p className="type-body">A readable body role keeps the customer request and the human decision easy to scan under pressure.</p>
       <button className="button button-primary type-control">Run triage</button>
       <p className="type-metadata">Mock provider · deterministic-small · cached result</p>

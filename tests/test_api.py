@@ -1,9 +1,13 @@
 import time
 
+import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from src.api.main import create_app
+from src.api.schemas import TriageResponse
 from src.config.settings import Settings
+from src.policy import SAFE_ABSTENTION_RESPONSE
 
 
 class FakeServices:
@@ -20,17 +24,17 @@ class FakeServices:
         return {
             "normalized_message": message,
             "intent": "refund_request",
-            "intent_confidence": 0.91,
             "urgency": "high",
             "escalate": True,
             "escalation_reason": "Refund request",
-            "suggested_response": "Please share the transaction ID.",
+            "suggested_response": SAFE_ABSTENTION_RESPONSE,
             "retrieved_cases": [],
-            "grounded": True,
-            "grounding_score": 0.9,
-            "unsupported_claims": [],
-            "confidence": 0.9,
-            "next_action": "request_more_info",
+            "similar_case_references": [],
+            "policy_status": "no_approved_policy",
+            "proposal_checks": [],
+            "verified_proposals": [],
+            "policy_references": [],
+            "next_action": "manual_review",
             "provider_used": "mock",
             "model_used": "deterministic-small",
             "cached": False,
@@ -58,18 +62,24 @@ def test_api_validates_triage_input_and_returns_metadata() -> None:
 
     assert invalid.status_code == 422
     assert valid.status_code == 200
-    assert valid.json()["provider_used"] == "mock"
-    assert valid.json()["evidence_references"] == []
-    assert valid.json()["citation_integrity"] is True
+    payload = valid.json()
+    assert payload["provider_used"] == "mock"
+    assert payload["policy_status"] == "no_approved_policy"
+    assert payload["proposal_checks"] == []
+    assert "grounded" not in payload
+    assert "grounding_score" not in payload
+    assert "confidence" not in payload
 
 
-def test_api_exposes_retrieved_reference_integrity() -> None:
+def test_api_labels_similar_cases_separately_from_approved_policy() -> None:
     class EvidenceServices(FakeServices):
         def triage(self, message: str, top_k: int) -> dict:
             result = super().triage(message, top_k)
             result["retrieved_cases"] = [
                 {
                     "ticket_id": "case-1",
+                    "evidence_type": "similar_past_case",
+                    "approved_policy": False,
                     "message": "Synthetic evidence.",
                     "intent": "refund_request",
                     "response": "Review the transaction reference.",
@@ -79,8 +89,7 @@ def test_api_exposes_retrieved_reference_integrity() -> None:
                     "metadata": {},
                 }
             ]
-            result["evidence_references"] = ["case-1"]
-            result["citation_integrity"] = True
+            result["similar_case_references"] = ["case-1"]
             return result
 
     response = TestClient(create_app(services=EvidenceServices())).post(
@@ -88,8 +97,46 @@ def test_api_exposes_retrieved_reference_integrity() -> None:
     )
 
     assert response.status_code == 200
-    assert response.json()["evidence_references"] == ["case-1"]
-    assert response.json()["citation_integrity"] is True
+    assert response.json()["similar_case_references"] == ["case-1"]
+    assert response.json()["retrieved_cases"][0]["approved_policy"] is False
+
+
+def test_api_requires_each_allowed_proposal_to_have_its_own_passing_policy_check() -> None:
+    payload = FakeServices().triage("refund please", top_k=5)
+    payload.update(
+        policy_status="verified",
+        next_action="escalate_to_human",
+        policy_references=["synthetic-test-policy"],
+        proposal_checks=[
+            {
+                "proposal_id": "proposal-1",
+                "status": "supported",
+                "policy_references": ["synthetic-test-policy"],
+                "verification_result": "passed",
+                "verification_method": "synthetic_test_verifier",
+            }
+        ],
+        verified_proposals=[
+            {
+                "proposal_id": "proposal-1",
+                "text": "Synthetic test action.",
+                "policy_references": ["synthetic-test-policy"],
+                "verification_result": "passed",
+                "verification_method": "synthetic_test_verifier",
+            }
+        ],
+        suggested_response="Synthetic test action.",
+    )
+    assert TriageResponse.model_validate(payload).policy_status == "verified"
+
+    payload["verified_proposals"].append(payload["verified_proposals"][0].copy())
+    with pytest.raises(ValidationError, match="exactly one verified proposal"):
+        TriageResponse.model_validate(payload)
+    payload["verified_proposals"].pop()
+
+    payload["proposal_checks"][0]["verification_result"] = "uncertain"
+    with pytest.raises(ValidationError, match="passing approved policy check"):
+        TriageResponse.model_validate(payload)
 
 
 def test_api_exposes_required_read_endpoints() -> None:
@@ -109,7 +156,7 @@ def test_api_exposes_portfolio_brief_compatibility_endpoints() -> None:
     metrics = client.get("/metrics/sample")
 
     assert answer.status_code == 200
-    assert answer.json()["suggested_response"] == "Please share the transaction ID."
+    assert answer.json()["suggested_response"] == SAFE_ABSTENTION_RESPONSE
     assert evaluation.json()["intent_accuracy"] == 0.9
     assert metrics.json()["intent_accuracy"] == 0.9
 

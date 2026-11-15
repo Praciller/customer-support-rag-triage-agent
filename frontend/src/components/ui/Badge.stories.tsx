@@ -12,6 +12,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Neutral: Story = { args: { children: "Fresh" } };
-export const Success: Story = { args: { children: "86% grounded", tone: "success" } };
+export const Success: Story = { args: { children: "Policy checks passed", tone: "success" } };
 export const Warning: Story = { args: { children: "Provider fallback", tone: "warning" } };
-export const Danger: Story = { args: { children: "Not grounded", tone: "danger" } };
+export const Danger: Story = { args: { children: "No approved policy", tone: "danger" } };

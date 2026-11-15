@@ -18,91 +18,65 @@ Artifacts:
 - `reports/evaluation/summary.md`
 - `reports/evaluation/confusion_matrix.json`
 
-The separate deterministic adversarial evidence-boundary evaluation uses the committed eight-record
-synthetic fixture in `tests/fixtures/adversarial_retrieval.json`:
+The checked-in report is a local deterministic fixture result. It is not evidence about the
+deployed public demo, production latency, customer outcomes, or policy correctness.
 
-```powershell
-.venv\Scripts\python.exe -m src.evaluation.evaluate_adversarial_retrieval --report-path reports/evaluation/adversarial_retrieval.md
-```
+## What the triage evaluation measures
 
-It tests structural authority isolation, provider-role separation, evidence provenance, citation
-integrity, grounding guards, unsupported-claim handling, and human-review/escalation routing. It
-does not establish semantic LLM prompt-injection immunity.
+The run uses 8 labeled synthetic tickets, 27 bounded Banking77-derived demo cases, local
+`BAAI/bge-small-en-v1.5` embeddings, and deterministic mock inference. The retrieved cases
+provide similar-case context only. The default workflow has **no approved policy source**.
 
-## Independent Thai policy retrieval slice
-
-`data/eval/thai_policy_slice.json` contains synthetic Thai policy records and questions with explicit
-scope and permission labels. `src.evaluation.evaluate_thai_policy` filters by both labels before
-scoring character-bigram overlap, and abstains when no authorized record passes the lexical threshold.
-The evaluation reports positive, negative/abstention, and prompt-injection counts alongside the
-denominator. It is offline and does not use the production RAG graph, Banking77 fixtures, external
-models, or embeddings. Permission labels demonstrate filter behavior only; they are not an identity
-system or production authorization control. See the [generated report](../reports/evaluation/thai_policy_slice.md).
-
-## Fixture and definitions
-
-The evaluation uses 8 labeled tickets from `data/eval/eval_set.csv`, 27 indexed demo records,
-local `BAAI/bge-small-en-v1.5` embeddings, and the deterministic mock provider.
-
-- Intent/urgency accuracy: exact label match.
+- Intent and urgency accuracy: exact label match.
 - Macro F1: unweighted F1 across observed labels.
-- Precision@K: relevant mapped-intent results divided by K.
-- Recall@K: retrieved mapped-intent relevant records divided by the known relevant fixture records
-  for that intent. The balanced demo fixture has three relevant records per intent.
-- MRR: reciprocal rank of the first relevant result.
-- nDCG@K: discounted binary mapped-intent gain divided by an ideal ranking built from the known
-  relevant fixture count, capped at K.
-- Workflow success: all seven nodes completed.
-- Mock grounding-verifier pass rate: the deterministic verifier passed and the graph confirmed that
-  retrieval was non-empty and generation was not degraded.
+- Precision@K and recall@K: relevance is defined by mapped intent labels in this fixture.
+- MRR and nDCG@K: ranking of mapped-intent relevant cases.
+- Workflow success: whether all seven graph nodes completed.
+- Policy review: counts of policy statuses, manual-review routes, proposals seen/withheld, and verified proposals. `method` is `structural_policy_gate_counts`.
 
-## Measured synthetic result: October 24, 2026 (ONNX; local environment)
+The policy-review fields measure routing and response-shape invariants. With no approved policy
+source, proposals must be withheld, the acknowledgement must remain policy-neutral, and the
+ticket must route to human review. The evaluation does **not** score semantic entailment, policy
+correctness, or whether a real organization permits any action. There is no grounding percentage,
+calibrated confidence, or unsupported-claim rate in the current contract.
 
-| Metric | Result |
-| --- | ---: |
-| Intent accuracy / macro F1 | 100.0% / 100.0% |
-| Urgency accuracy / macro F1 | 100.0% / 100.0% |
-| Precision@5 / Recall@5 | 37.5% / 62.5% |
-| MRR / nDCG@5 | 0.771 / 0.611 |
-| Zero-result rate | 0.0% |
-| Grounded / unsupported claim | 100.0% / 0.0% |
-| Degraded / fallback / cache hit | 0.0% / 0.0% / 0.0% |
-| Workflow success | 100.0% |
-| Average / P50 / P95 local latency | 9.4 / 8.4 / 13.7 ms |
+Separate unit and integration tests use explicitly synthetic policy IDs and verifier outputs to
+exercise supported, unsupported, conflicting, uncertain, invalid-reference, and verifier-error
+branches. Those fixtures test fail-closed control flow only; they are not policy content and do
+not establish that a verifier can judge real policy text.
 
-## Limitations
+The adversarial structural evaluation uses `tests/fixtures/adversarial_retrieval.json`, an
+explicitly synthetic fixture. It checks that similar cases and provider-supplied grounding or
+citation claims cannot authorize proposals. It does not establish semantic prompt-injection
+immunity.
 
-The fixture has one example per intent and rules intentionally aligned to those examples. Retrieval
-relevance uses mapped intent rather than human policy judgment. Latency is a local snapshot. Mock
-grounding checks evidence presence and deterministic workflow guards, not semantic entailment or
-policy correctness. Mock results measure regression stability, not real-provider answer quality.
-Optional real-provider evaluation must be run manually and never runs in normal CI.
+## Separate synthetic Thai policy retrieval slice
 
-The current public Render demo serves the reviewed ONNX synthetic artifact (generated October 24, 2026) through `/eval/results` and `/metrics/sample`, independently verified after deployment. The legacy Hugging Face Space is synchronized separately and remains on an older build. Deployment smoke evidence must be reported separately from this local regression artifact and from any production-performance claim.
+`data/eval/thai_policy_slice.json` contains synthetic Thai policy records and questions with
+explicit scope and permission labels. `src.evaluation.evaluate_thai_policy` filters by both
+labels before scoring character-bigram overlap, and abstains when no authorized record passes the
+lexical threshold. The evaluation reports positive, negative/abstention, and prompt-injection
+counts alongside the denominator. It is offline and does not use the production RAG graph,
+Banking77 fixtures, external models, or embeddings. Permission labels demonstrate filter
+behavior only; they are not an identity system or production authorization control. See the
+[generated report](../reports/evaluation/thai_policy_slice.md).
 
+## Provider attribution and limitations
 
-## Evidence integrity and provider attribution
+Evaluation mode is assigned from providers actually recorded in inference-node traces, not
+providers merely configured in the application:
 
-Both triage and retrieval evaluation reject empty fixtures, missing/blank required values,
-and duplicated ticket messages (ignoring case and surrounding whitespace) before computing
-scores. This prevents silent denominator errors and accidental duplicate inflation;
-it does **not** detect train/evaluation leakage or establish semantic policy relevance.
-
-The evaluation mode is assigned from providers actually recorded in the inference-node
-traces, not providers merely configured in the application:
-
-- `deterministic_mock`: every observed inference node used the mock route with no fallback
-  or degradation.
-- `real_provider`: every observed inference node used the external route without fallback
-  or degradation. This label does not establish the real model's quality.
+- `deterministic_mock`: all observed inference nodes used the mock route with no fallback or
+  degradation.
+- `real_provider`: all observed inference nodes used the external route without fallback or
+  degradation. This label does not establish model quality.
 - `mixed_or_degraded`: fallback, degraded, or mixed provider execution.
 
-The report also records `execution.observed_inference_providers`. The checked-in
-eight-ticket results are the October 24, 2026 pinned-ONNX mock baseline; CI regenerates
-new artifacts separately rather than updating the published fixture metrics implicitly.
+The fixture has one example per intent and rules intentionally aligned to those examples.
+Retrieval relevance uses mapped intent, not human policy judgment. Latency is a local snapshot.
+Mock results measure repeatable workflow behavior, not real-provider answer quality. The public
+demo has no policy source or semantic verifier configured.
 
-## Separate human-review track
-
-Human judgments are not inferred from the deterministic test set. Use the offline rubric
-and private CSV scorer in [human_review.md](human_review.md). Its results are not included in
-mock accuracy metrics or automatically published by CI.
+For independent human judgments, use the offline rubric and private CSV scorer in
+[human_review.md](human_review.md). Human judgments are not inferred from the deterministic test
+set or published automatically by CI.

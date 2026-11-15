@@ -19,13 +19,24 @@ tickets or secrets into the public evaluation fixture or CI evidence artifacts.
 
 ## Retrieved-content and prompt boundaries
 
-Retrieved messages are untrusted text, not instructions or policy. The graph converts each result to a typed `RetrievedEvidence` record and passes it through a dedicated `evidence` field. Workflow instructions, the current user ticket, candidate response, and retrieved evidence are separate request fields; retrieved text is never assigned a system/developer role. Original evidence text remains available for traceability.
+Retrieved messages are untrusted text, not instructions or policy. The graph returns each result as a
+typed `similar_past_case` with `approved_policy=false`. Provider generation receives the current
+ticket, intent, and urgency; retrieved cases are not passed as policy evidence. Search and case
+views show similar cases as context, not authorization to take an action.
 
-The generation contract accepts structured `evidence_references` only when every reference ID belongs to the retrieved evidence block. Unknown or fabricated IDs are rejected, removed from the public reference list, and force an ungrounded result. Empty evidence, rejected citations, or degraded generation deterministically forces `grounded=false` and `manual_review`. Trace metadata carries reference IDs and counts without copying evidence text or prompts.
+Provider-supplied `grounded`, confidence, and citation claims are ignored. The public demo has no
+approved policy references or policy verifier. Its policy gate withholds all generated proposals,
+returns a fixed acknowledgement, and routes to `manual_review`. In deployments that configure a
+policy verifier, each proposal must name an approved policy ID and return a passing result; missing,
+invalid, unsupported, conflicting, uncertain, failed, or degraded-generation checks withhold the
+proposal. This structural gate does not prove that a policy semantically entails a proposal.
 
-Structural authority isolation and a deterministic eight-record adversarial fixture are tested in [`reports/evaluation/adversarial_retrieval.md`](../reports/evaluation/adversarial_retrieval.md). These tests do not establish semantic LLM prompt-injection immunity or universal protection against malicious retrieved text.
-
-These controls do not prove semantic entailment and do not prevent every prompt-injection pattern. Before using private help-center content or customer data, add source authorization, tenant isolation, content classification, stronger citation/entailment checks, and an approved policy corpus.
+The deterministic synthetic adversarial fixture tests authority separation and fail-closed routing
+in [`reports/evaluation/adversarial_retrieval.md`](../reports/evaluation/adversarial_retrieval.md).
+It does not establish semantic LLM prompt-injection immunity or universal protection against
+malicious retrieved text. Before using private help-center content or customer data, add source
+authorization, tenant isolation, content classification, a real approved policy corpus, and a
+validated semantic review process.
 
 ## Secret and local-state handling
 
@@ -46,25 +57,25 @@ authentication, multi-tenant authorization, and distributed rate limiting.
 
 The limiter is intentionally in-memory and per process; it is not a distributed abuse-control system. Embedded storage is single-instance. Add a trusted proxy, shared limiter, authentication, and persistent managed storage before multi-instance or sensitive-data use.
 
-The application drafts responses for human review. Banking77 is not company policy, and grounding against demo examples does not establish policy correctness.
+The application prepares responses for human review. Banking77 is not company policy, and similar-case matches do not establish that an organization permits an action.
 
 
-## Decision-correctness hardening
+## Decision-correctness boundary
 
-High/critical urgency and explicit escalation take precedence over requesting missing identifiers when
-the draft is grounded. Ungrounded drafts still require `manual_review`. A classified-intent search
-with zero matches retries once without an intent filter; it does not claim to solve wrong-intent
-retrieval when filtered results are nonempty.
+High/critical urgency and explicit escalation remain visible for human prioritization. Without a
+verified proposal, the next action is `manual_review`. Similar-case search may retry once without
+an intent filter when the filtered lookup returns no cases; case similarity does not confer policy
+authority.
 
-The graph never fabricates evidence citations when a provider omits reference IDs; missing IDs
-with retrieved evidence force an ungrounded result. Only literal JSON `true` permits the grounding
-verifier to approve a draft. Nonfinite scores and malformed unsupported-claim lists fail closed.
-If an active external provider falls back to the deterministic mock provider, the route is marked
-degraded (including cached mock fallbacks), and final grounding is denied. Degradation from
-classification or urgency detection propagates through the full graph.
+The API version 2 response reports `policy_status` and one `proposal_checks` entry per candidate.
+Each returned `verified_proposals` item has an associated passing check and approved policy ID.
+Invalid policy references, uncertain or failed checks, verifier errors, and degraded generation
+fail closed. The default demo has no approved policy source and cannot return a verified proposal.
 
-These safeguards enforce workflow invariants, not claim-level semantic entailment or policy
-correctness. Neither model self-report nor presence of retrieved text proves a response is supported.
+The policy-gate implementation validates status and reference structure; it does not perform or
+claim semantic entailment or policy correctness. Provider self-report, citation presence, and
+similar-case matches are not proof of support. Retrieved content remains untrusted, and a human
+must review the result before taking action.
 
 ## Python production dependency advisories — unresolved
 

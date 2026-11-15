@@ -96,7 +96,9 @@ test("native Chromium 200% zoom preserves Triage and Evaluation reflow", async (
       await page.getByRole("button", { name: "Card not arrived", exact: true }).click();
       await page.getByRole("button", { name: "Run triage", exact: true }).click();
       await expect(page.getByRole("region", { name: "Recommended action" }))
-        .toContainText("ask for order id");
+        .toContainText("no approved policy");
+      await expect(page.getByRole("region", { name: "Recommended action" }))
+        .toContainText("manual review");
       await expect(page.getByRole("region", { name: "Workflow trace" }).getByRole("listitem"))
         .toHaveCount(7);
       const triageWidth = await page.evaluate(() => ({

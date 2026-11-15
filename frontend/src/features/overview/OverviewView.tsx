@@ -8,11 +8,12 @@ export function OverviewView({ setView }: { setView: (view: View) => void }) {
   return (
     <div className="overview-grid">
       <section className="panel overview-hero">
-        <p className="eyebrow-dark">Retrieval-grounded operations</p>
+        <p className="eyebrow-dark">Policy-gated operations</p>
         <h2>Move from incoming message to a reviewable support decision.</h2>
         <p>
-          Classify intent, assess urgency, retrieve similar Banking77 cases, draft a response,
-          verify grounding, and inspect all seven LangGraph steps.
+          Classify intent and urgency, review similar past cases as untrusted context, and inspect
+          the policy gate. No approved policy source is configured, so the demo abstains and routes
+          every case to human review.
         </p>
         <Button onClick={() => setView("triage")}>
           Open triage workspace <ChevronRight size={16} />

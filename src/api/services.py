@@ -134,7 +134,7 @@ class ApplicationServices:
                 if external_active
                 else "deterministic-small",
             }
-            for task in ("intent", "urgency", "response", "grounding")
+            for task in ("intent", "urgency", "proposal_generation")
         }
         fallback_order = [active_provider]
         if external_active:
@@ -144,6 +144,7 @@ class ApplicationServices:
             "primary_provider": active_provider,
             "fallback_order": fallback_order,
             "routes": routes,
+            "policy_source": {"status": "no_approved_policy", "approved_sources": 0},
             "cache_enabled": self.settings.llm_cache_enabled,
             "demo_mode": self.settings.demo_mode,
             "mock_mode": not external_active,
@@ -223,6 +224,7 @@ class ApplicationServices:
             execution = report.get("execution") or {}
             dataset = report.get("dataset") or {}
             checks = {
+                "schema": report.get("evaluation_schema_version") == 2,
                 "mode": report.get("evaluation_mode") == "deterministic_mock",
                 "provider": execution.get("embedding_provider") == self.settings.embedding_provider,
                 "model": execution.get("embedding_model") == self.settings.embedding_model,
@@ -259,7 +261,8 @@ class ApplicationServices:
         execution = report.get("execution") or {}
         dataset = report.get("dataset") or {}
         return (
-            execution.get("embedding_provider") == self.settings.embedding_provider
+            report.get("evaluation_schema_version") == 2
+            and execution.get("embedding_provider") == self.settings.embedding_provider
             and execution.get("embedding_model") == self.settings.embedding_model
             and dataset.get("fixture_revision") == "demo-fixture-v1"
             and dataset.get("sample_size") == 8
@@ -313,7 +316,6 @@ def build_services(settings: Settings | None = None) -> ApplicationServices:
         "classify_intent": (active_provider, active_model),
         "detect_urgency": (active_provider, active_model),
         "generate_response": (active_provider, active_model),
-        "grounding_check": (active_provider, active_model),
     }
     workflow = TriageWorkflow(
         router,
@@ -322,6 +324,8 @@ def build_services(settings: Settings | None = None) -> ApplicationServices:
         temperature=settings.llm_temperature,
         max_output_tokens=settings.llm_max_output_tokens,
         max_context_chars=settings.retrieval_max_context_chars,
+        approved_policy_references=(),
+        policy_verifier=None,
     )
     return ApplicationServices(settings, retriever, workflow, list(providers))
 

@@ -2,38 +2,50 @@ import json
 
 import pytest
 
+from src.api.schemas import TriageResponse
 from src.graph.workflow import TriageWorkflow
 from src.llm.base import LLMRequest, ProviderResponse
+from src.policy import SAFE_ABSTENTION_RESPONSE, ProposalVerification
 from src.retrieval.retriever import SearchResult
+
+SYNTHETIC_POLICY_REFERENCE = "synthetic-test-policy-delivery-01"
 
 
 class FakeRouter:
+    def __init__(self) -> None:
+        self.requests: list[LLMRequest] = []
+
     def generate(
         self,
         request: LLMRequest,
         preferred_provider: str | None = None,
     ) -> ProviderResponse:
-        responses = {
-            "classify_intent": '{"intent":"delivery_issue","confidence":0.96}',
-            "detect_urgency": (
-                '{"urgency":"high","escalate":true,'
-                '"escalation_reason":"Unresolved delivery and refund request"}'
-            ),
-            "generate_response": json.dumps(
-                {
-                    "suggested_response": (
-                        "Please share your order ID so we can review delivery status "
-                        "and refund options."
-                    ),
-                    "evidence_references": [item.reference_id for item in request.evidence],
-                }
-            ),
-            "grounding_check": (
-                '{"grounded":true,"grounding_score":0.88,"unsupported_claims":[],"confidence":0.9}'
-            ),
-        }
+        self.requests.append(request)
+        if request.task == "classify_intent":
+            payload = {"intent": "delivery_issue", "confidence": 0.96}
+        elif request.task == "detect_urgency":
+            payload = {
+                "urgency": "high" if "urgent" in request.user_ticket.lower() else "medium",
+                "escalate": "urgent" in request.user_ticket.lower(),
+                "escalation_reason": "Customer says urgent"
+                if "urgent" in request.user_ticket.lower()
+                else "",
+            }
+        elif request.task == "generate_response":
+            payload = {
+                "proposals": [
+                    "Ask for the order ID to review delivery status.",
+                    "Offer available refund options.",
+                ],
+                # These provider claims are deliberately untrusted and ignored.
+                "grounded": True,
+                "grounding_score": 0.86,
+                "evidence_references": ["case-1"],
+            }
+        else:
+            pytest.fail(f"unexpected inference task: {request.task}")
         return ProviderResponse(
-            text=responses[request.task],
+            text=json.dumps(payload),
             provider="mock",
             model="mock-small",
         )
@@ -70,38 +82,62 @@ class EmptyRetriever:
         return []
 
 
-def test_workflow_runs_required_nodes_in_order() -> None:
-    workflow = TriageWorkflow(router=FakeRouter(), retriever=FakeRetriever())
+def test_similar_cases_and_provider_citations_do_not_count_as_policy() -> None:
+    router = FakeRouter()
+    result = TriageWorkflow(router=router, retriever=FakeRetriever()).run(
+        "My card has not arrived and I travel tomorrow.", top_k=5
+    )
 
-    result = workflow.run(
-        "  My order has not arrived and I want a refund now.  ",
-        top_k=5,
+    generation_request = next(
+        request for request in router.requests if request.task == "generate_response"
+    )
+    assert result["retrieved_cases"]
+    assert result["similar_case_references"] == ["case-1"]
+    assert generation_request.evidence == ()
+    assert result["policy_status"] == "no_approved_policy"
+    assert result["proposal_checks"] == [
+        {
+            "proposal_id": "proposal-1",
+            "status": "no_approved_policy",
+            "policy_references": [],
+            "verification_result": "not_run",
+            "verification_method": "not_run",
+        },
+        {
+            "proposal_id": "proposal-2",
+            "status": "no_approved_policy",
+            "policy_references": [],
+            "verification_result": "not_run",
+            "verification_method": "not_run",
+        },
+    ]
+    assert result["verified_proposals"] == []
+    assert result["policy_references"] == []
+    assert result["next_action"] == "manual_review"
+    assert "refund" not in result["suggested_response"].lower()
+    assert "order id" not in result["suggested_response"].lower()
+    assert "grounded" not in result
+    assert "grounding_score" not in result
+
+
+def test_workflow_runs_seven_nodes_and_traces_policy_and_case_references() -> None:
+    result = TriageWorkflow(router=FakeRouter(), retriever=FakeRetriever()).run(
+        "My card has not arrived.", top_k=3
     )
 
     assert result["intent"] == "delivery_issue"
-    assert result["urgency"] == "high"
-    assert result["escalate"] is True
-    assert result["next_action"] == "escalate_to_human"
-    assert result["grounded"] is True
+    assert result["urgency"] == "medium"
+    assert result["policy_status"] == "no_approved_policy"
+    assert result["total_latency_ms"] >= 0
     assert [step["node"] for step in result["trace"]] == [
         "normalize_message",
         "classify_intent",
         "detect_urgency",
         "retrieve_similar_cases",
         "generate_support_response",
-        "grounding_check",
+        "policy_gate",
         "suggest_next_action",
     ]
-
-
-def test_workflow_trace_exposes_safe_node_metadata() -> None:
-    workflow = TriageWorkflow(router=FakeRouter(), retriever=FakeRetriever())
-
-    result = workflow.run("  My card has not arrived.  ", top_k=3)
-
-    assert result["normalized_message"] == "My card has not arrived."
-    assert result["total_latency_ms"] >= 0
-    assert result["intent_confidence"] == 0.96
     assert all(
         {
             "node",
@@ -113,128 +149,134 @@ def test_workflow_trace_exposes_safe_node_metadata() -> None:
             "cache_hit",
             "fallback",
             "degraded_mode",
+            "policy_status",
+            "similar_case_references",
+            "policy_references",
         }.issubset(step)
         for step in result["trace"]
     )
-    retrieval = result["trace"][3]
-    assert retrieval["retrieved_document_count"] == 1
-    assert retrieval["component"] == "qdrant"
+    assert result["trace"][3]["similar_case_references"] == ["case-1"]
+    assert result["trace"][5]["policy_status"] == "no_approved_policy"
 
 
-def test_workflow_cannot_mark_response_grounded_without_retrieved_evidence() -> None:
-    workflow = TriageWorkflow(router=FakeRouter(), retriever=EmptyRetriever())
+def test_empty_retrieval_still_abstains_and_preserves_full_workflow() -> None:
+    result = TriageWorkflow(router=FakeRouter(), retriever=EmptyRetriever()).run(
+        "My card has not arrived.", top_k=3
+    )
+
+    assert result["retrieved_cases"] == []
+    assert result["policy_status"] == "no_approved_policy"
+    assert result["next_action"] == "manual_review"
+    assert result["verified_proposals"] == []
+    assert len(result["trace"]) == 7
+
+
+def test_supported_synthetic_policy_check_is_returned_per_proposal() -> None:
+    router = FakeRouter()
+    workflow = TriageWorkflow(
+        router=router,
+        retriever=FakeRetriever(),
+        approved_policy_references={SYNTHETIC_POLICY_REFERENCE},
+        policy_verifier=lambda _: ProposalVerification(
+            status="supported",
+            policy_references=(SYNTHETIC_POLICY_REFERENCE,),
+            verification_result="passed",
+            verification_method="synthetic_test_verifier",
+        ),
+    )
 
     result = workflow.run("My card has not arrived.", top_k=3)
 
-    assert result["grounded"] is False
-    assert result["grounding_score"] <= 0.25
-    assert result["confidence"] <= 0.4
-    assert result["unsupported_claims"] == ["No retrieved cases were available."]
+    assert result["policy_status"] == "verified"
+    assert len(result["proposal_checks"]) == 2
+    assert all(check["status"] == "supported" for check in result["proposal_checks"])
+    assert len(result["verified_proposals"]) == 2
+    assert all(
+        proposal["policy_references"] == [SYNTHETIC_POLICY_REFERENCE]
+        and proposal["verification_result"] == "passed"
+        and proposal["verification_method"] == "synthetic_test_verifier"
+        for proposal in result["verified_proposals"]
+    )
+    assert result["next_action"] == "reply_to_customer"
+
+
+@pytest.mark.parametrize(
+    ("failed_status", "verification_result"),
+    [
+        ("unsupported", "failed"),
+        ("conflicting", "failed"),
+        ("uncertain", "uncertain"),
+    ],
+)
+def test_mixed_proposal_results_abstain_and_validate_as_api_response(
+    failed_status: str,
+    verification_result: str,
+) -> None:
+    calls = 0
+
+    def mixed_verifier(_: str) -> ProposalVerification:
+        nonlocal calls
+        calls += 1
+        return ProposalVerification(
+            status="supported" if calls == 1 else failed_status,  # type: ignore[arg-type]
+            policy_references=(SYNTHETIC_POLICY_REFERENCE,),
+            verification_result=("passed" if calls == 1 else verification_result),  # type: ignore[arg-type]
+            verification_method="synthetic_test_verifier",
+        )
+
+    result = TriageWorkflow(
+        router=FakeRouter(),
+        retriever=FakeRetriever(),
+        approved_policy_references={SYNTHETIC_POLICY_REFERENCE},
+        policy_verifier=mixed_verifier,
+    ).run("My card has not arrived.", top_k=3)
+
+    assert result["policy_status"] == failed_status
+    assert result["verified_proposals"] == []
     assert result["next_action"] == "manual_review"
-    assert result["trace"][5]["grounding_result"] is False
+    assert result["suggested_response"] == SAFE_ABSTENTION_RESPONSE
+    assert result["policy_references"] == []
+    TriageResponse.model_validate(result)
 
 
-def test_critical_delivery_escalates_before_requesting_order_id() -> None:
-    class CriticalRouter(FakeRouter):
-        def generate(
-            self, request: LLMRequest, preferred_provider: str | None = None
-        ) -> ProviderResponse:
-            if request.task == "detect_urgency":
-                return ProviderResponse(
-                    text=json.dumps(
-                        {
-                            "urgency": "critical",
-                            "escalate": "false",
-                            "escalation_reason": "Urgent security risk",
-                        }
-                    ),
-                    provider="mock",
-                    model="mock-small",
-                )
-            return super().generate(request, preferred_provider)
+def test_invalid_policy_reference_abstains() -> None:
+    result = TriageWorkflow(
+        router=FakeRouter(),
+        retriever=FakeRetriever(),
+        approved_policy_references={SYNTHETIC_POLICY_REFERENCE},
+        policy_verifier=lambda _: ProposalVerification(
+            status="supported",
+            policy_references=("fabricated-policy-reference",),
+            verification_result="passed",
+            verification_method="synthetic_test_verifier",
+        ),
+    ).run("My card has not arrived.", top_k=3)
 
-    result = TriageWorkflow(router=CriticalRouter(), retriever=FakeRetriever()).run(
-        "My order has not arrived and I suspect fraud", top_k=5
-    )
-
-    assert result["urgency"] == "critical"
-    assert result["escalate"] is True
-    assert result["next_action"] == "escalate_to_human"
-
-
-def test_filtered_search_miss_retries_without_intent_filter() -> None:
-    class FilterMissRetriever(FakeRetriever):
-        def __init__(self) -> None:
-            self.intents: list[str | None] = []
-
-        def search(self, query: str, top_k: int, intent: str | None = None) -> list[SearchResult]:
-            self.intents.append(intent)
-            return [] if intent is not None else super().search(query, top_k, intent)
-
-    retriever = FilterMissRetriever()
-    result = TriageWorkflow(router=FakeRouter(), retriever=retriever).run(
-        "My order has not arrived", top_k=5
-    )
-
-    assert retriever.intents == ["delivery_issue", None]
-    assert result["retrieved_cases"]
-    assert "unfiltered_fallback=true" in result["trace"][3]["output_summary"]
-
-
-def test_missing_citations_do_not_automatically_cite_every_retrieved_case() -> None:
-    class MissingCitationRouter(FakeRouter):
-        def generate(
-            self, request: LLMRequest, preferred_provider: str | None = None
-        ) -> ProviderResponse:
-            if request.task == "generate_response":
-                return ProviderResponse(
-                    text='{"suggested_response":"Please share your order ID."}',
-                    provider="mock",
-                    model="mock-small",
-                )
-            return super().generate(request, preferred_provider)
-
-    result = TriageWorkflow(router=MissingCitationRouter(), retriever=FakeRetriever()).run(
-        "My order has not arrived", top_k=5
-    )
-
-    assert result["evidence_references"] == []
-    assert result["citation_integrity"] is False
-    assert result["grounded"] is False
+    assert result["policy_status"] == "verification_failed"
+    assert all(check["status"] == "verification_failed" for check in result["proposal_checks"])
+    assert result["verified_proposals"] == []
+    assert result["policy_references"] == []
     assert result["next_action"] == "manual_review"
 
 
-def test_invalid_grounding_payload_does_not_mark_response_grounded() -> None:
-    class InvalidGroundingRouter(FakeRouter):
-        def generate(
-            self, request: LLMRequest, preferred_provider: str | None = None
-        ) -> ProviderResponse:
-            if request.task == "grounding_check":
-                return ProviderResponse(
-                    text=json.dumps(
-                        {
-                            "grounded": "false",
-                            "grounding_score": "NaN",
-                            "unsupported_claims": ["A claim has no support."],
-                            "confidence": 0.9,
-                        }
-                    ),
-                    provider="mock",
-                    model="mock-small",
-                )
-            return super().generate(request, preferred_provider)
+def test_verifier_exception_abstains() -> None:
+    def failing_verifier(_: str) -> ProposalVerification:
+        raise RuntimeError("synthetic verifier failure")
 
-    result = TriageWorkflow(router=InvalidGroundingRouter(), retriever=FakeRetriever()).run(
-        "My order has not arrived", top_k=5
-    )
+    result = TriageWorkflow(
+        router=FakeRouter(),
+        retriever=FakeRetriever(),
+        approved_policy_references={SYNTHETIC_POLICY_REFERENCE},
+        policy_verifier=failing_verifier,
+    ).run("My card has not arrived.", top_k=3)
 
-    assert result["grounded"] is False
-    assert result["grounding_score"] == 0
+    assert result["policy_status"] == "verification_failed"
+    assert all(check["verification_result"] == "failed" for check in result["proposal_checks"])
     assert result["next_action"] == "manual_review"
-    assert result["unsupported_claims"] == ["A claim has no support."]
+    assert "order id" not in result["suggested_response"].lower()
 
 
-def test_classifier_fallback_remains_degraded_through_final_decision() -> None:
+def test_degraded_classification_remains_degraded_and_routes_to_review() -> None:
     class DegradedClassificationRouter(FakeRouter):
         def generate(
             self, request: LLMRequest, preferred_provider: str | None = None
@@ -251,70 +293,39 @@ def test_classifier_fallback_remains_degraded_through_final_decision() -> None:
             return response
 
     result = TriageWorkflow(router=DegradedClassificationRouter(), retriever=FakeRetriever()).run(
-        "My order has not arrived", top_k=3
+        "My card has not arrived.", top_k=3
     )
 
-    assert result["retrieved_cases"]
     assert result["degraded_mode"] is True
     assert result["fallback_used"] is True
-    assert result["grounded"] is False
+    assert result["policy_status"] == "no_approved_policy"
     assert result["next_action"] == "manual_review"
     assert result["trace"][1]["degraded_mode"] is True
-    assert "Generation used a degraded provider fallback." in result["unsupported_claims"]
-
-
-def test_non_boolean_escalation_is_not_trusted_for_low_urgency() -> None:
-    class InvalidEscalationRouter(FakeRouter):
-        def generate(
-            self, request: LLMRequest, preferred_provider: str | None = None
-        ) -> ProviderResponse:
-            if request.task == "detect_urgency":
-                return ProviderResponse(
-                    text='{"urgency":"low","escalate":"false","escalation_reason":""}',
-                    provider="mock",
-                    model="mock-small",
-                )
-            return super().generate(request, preferred_provider)
-
-    result = TriageWorkflow(router=InvalidEscalationRouter(), retriever=FakeRetriever()).run(
-        "My order has not arrived", top_k=3
-    )
-
-    assert result["urgency"] == "low"
-    assert result["escalate"] is False
-    assert result["next_action"] == "ask_for_order_id"
 
 
 @pytest.mark.parametrize(
-    ("intent", "urgency", "escalate", "grounded", "message", "expected"),
+    ("policy_status", "urgency", "verified_proposals", "expected"),
     [
-        ("delivery_issue", "critical", True, True, "My order has not arrived", "escalate_to_human"),
-        ("delivery_issue", "high", True, True, "My order has not arrived", "escalate_to_human"),
-        ("delivery_issue", "medium", False, True, "My order has not arrived", "ask_for_order_id"),
-        ("delivery_issue", "medium", False, True, "Here is my order id 12", "reply_to_customer"),
-        ("refund_request", "high", False, True, "I need a refund", "escalate_to_human"),
-        ("complaint", "medium", True, True, "I have a complaint", "escalate_to_human"),
-        ("technical_issue", "low", False, True, "The app crashes", "request_more_info"),
-        ("billing_issue", "low", False, True, "What is this fee?", "reply_to_customer"),
-        ("billing_issue", "critical", True, False, "This is fraud", "manual_review"),
-        ("delivery_issue", "critical", True, False, "Card stolen", "manual_review"),
+        ("no_approved_policy", "medium", [], "manual_review"),
+        ("uncertain", "medium", [], "manual_review"),
+        ("verified", "critical", [{"proposal_id": "p1"}], "escalate_to_human"),
+        ("verified", "medium", [{"proposal_id": "p1"}], "reply_to_customer"),
     ],
 )
-def test_decision_rule_priority_matrix(
-    intent: str,
+def test_policy_gate_precedes_next_action_rules(
+    policy_status: str,
     urgency: str,
-    escalate: bool,
-    grounded: bool,
-    message: str,
+    verified_proposals: list[dict[str, str]],
     expected: str,
 ) -> None:
     workflow = TriageWorkflow(router=FakeRouter(), retriever=FakeRetriever())
     state = {
-        "normalized_message": message,
-        "intent": intent,
+        "normalized_message": "My order has not arrived",
+        "intent": "delivery_issue",
         "urgency": urgency,
-        "escalate": escalate,
-        "grounded": grounded,
+        "escalate": urgency in {"high", "critical"},
+        "policy_status": policy_status,
+        "verified_proposals": verified_proposals,
         "trace": [],
     }
 

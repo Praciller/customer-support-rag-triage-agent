@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from src.config.settings import get_settings
+from src.policy import SAFE_ABSTENTION_RESPONSE
 
 
 class TriageRequest(BaseModel):
@@ -54,13 +55,16 @@ class TraceStepResponse(BaseModel):
     fallback: bool
     degraded_mode: bool
     retrieved_document_count: int = Field(ge=0)
-    grounding_result: bool | None = None
-    evidence_references: list[str] = Field(default_factory=list)
+    policy_status: str | None = None
+    similar_case_references: list[str] = Field(default_factory=list)
+    policy_references: list[str] = Field(default_factory=list)
     error_category: str | None = None
 
 
 class SimilarCaseResponse(BaseModel):
     ticket_id: str
+    evidence_type: Literal["similar_past_case"] = "similar_past_case"
+    approved_policy: Literal[False] = False
     message: str
     intent: str
     response: str
@@ -70,21 +74,50 @@ class SimilarCaseResponse(BaseModel):
     metadata: dict[str, Any]
 
 
+class ProposalCheckResponse(BaseModel):
+    proposal_id: str
+    status: Literal[
+        "supported",
+        "unsupported",
+        "conflicting",
+        "uncertain",
+        "no_approved_policy",
+        "verification_failed",
+    ]
+    policy_references: list[str] = Field(default_factory=list)
+    verification_result: Literal["passed", "failed", "uncertain", "not_run"]
+    verification_method: str
+
+
+class VerifiedProposalResponse(BaseModel):
+    proposal_id: str
+    text: str
+    policy_references: list[str] = Field(min_length=1)
+    verification_result: Literal["passed"]
+    verification_method: str
+
+
 class TriageResponse(BaseModel):
     normalized_message: str
     intent: str
-    intent_confidence: float = Field(ge=0, le=1)
     urgency: str
     escalate: bool
     escalation_reason: str
     suggested_response: str
     retrieved_cases: list[SimilarCaseResponse]
-    evidence_references: list[str] = Field(default_factory=list)
-    citation_integrity: bool = True
-    grounded: bool
-    grounding_score: float = Field(ge=0, le=1)
-    unsupported_claims: list[str] = Field(default_factory=list)
-    confidence: float = Field(ge=0, le=1)
+    similar_case_references: list[str] = Field(default_factory=list)
+    policy_status: Literal[
+        "verified",
+        "unsupported",
+        "conflicting",
+        "uncertain",
+        "no_approved_policy",
+        "verification_failed",
+        "no_proposals",
+    ]
+    proposal_checks: list[ProposalCheckResponse] = Field(default_factory=list)
+    verified_proposals: list[VerifiedProposalResponse] = Field(default_factory=list)
+    policy_references: list[str] = Field(default_factory=list)
     next_action: str
     provider_used: str
     model_used: str
@@ -93,3 +126,51 @@ class TriageResponse(BaseModel):
     degraded_mode: bool
     total_latency_ms: float = Field(ge=0)
     trace: list[TraceStepResponse]
+
+    @model_validator(mode="after")
+    def validate_policy_gate(self) -> "TriageResponse":
+        if self.policy_status != "verified":
+            if self.verified_proposals:
+                raise ValueError("unverified proposals cannot be returned")
+            if self.policy_references:
+                raise ValueError("policy references require verified proposals")
+            if self.next_action != "manual_review":
+                raise ValueError("unverified output must route to manual review")
+            if self.suggested_response != SAFE_ABSTENTION_RESPONSE:
+                raise ValueError("unverified output must use the safe abstention response")
+            return self
+
+        if not self.verified_proposals:
+            raise ValueError("verified policy status requires a verified proposal")
+        checks = {check.proposal_id: check for check in self.proposal_checks}
+        proposal_ids = [proposal.proposal_id for proposal in self.verified_proposals]
+        if (
+            len(checks) != len(self.proposal_checks)
+            or len(set(proposal_ids)) != len(proposal_ids)
+            or set(checks) != set(proposal_ids)
+        ):
+            raise ValueError("every proposal check must match exactly one verified proposal")
+        for proposal in self.verified_proposals:
+            check = checks.get(proposal.proposal_id)
+            if (
+                check is None
+                or check.status != "supported"
+                or check.verification_result != "passed"
+                or not check.policy_references
+                or not proposal.policy_references
+                or not set(proposal.policy_references).issubset(self.policy_references)
+                or set(proposal.policy_references) != set(check.policy_references)
+                or proposal.verification_method != check.verification_method
+            ):
+                raise ValueError("each verified proposal requires a passing approved policy check")
+        if set(self.policy_references) != {
+            reference
+            for proposal in self.verified_proposals
+            for reference in proposal.policy_references
+        }:
+            raise ValueError("policy references must match the verified proposals")
+        if self.suggested_response != "\n".join(
+            proposal.text for proposal in self.verified_proposals
+        ):
+            raise ValueError("response text must match the verified proposals")
+        return self

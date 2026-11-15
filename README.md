@@ -1,26 +1,24 @@
 # Customer Support RAG Triage Agent
 
-A typed, inspectable RAG triage workflow that retrieves support evidence, drafts a response, checks grounding, and recommends a human action.
+A typed, inspectable support-triage workflow that classifies intent and urgency, retrieves similar past cases for context, and requires an approved policy check before exposing a proposed action.
 
 ## Recruiter snapshot
 
-**Signal:** Evidence-grounded AI workflow with inspectable traces and explicit human-action routing.
+**Signal:** Policy-aware triage boundaries with inspectable traces and explicit human review.
 
-[Repository](https://github.com/Praciller/customer-support-rag-triage-agent) · [Live demo](https://customer-support-rag-triage-agent.onrender.com/) · [Dream Logs case study](https://dreamlogsdata.com/en/projects/customer-support-rag-triage-agent)
+[Repository](https://github.com/Praciller/customer-support-rag-triage-agent) · [Existing live demo (pre-v2)](https://customer-support-rag-triage-agent.onrender.com/) · [Dream Logs case study](https://dreamlogsdata.com/en/projects/customer-support-rag-triage-agent)
 
-**What this demonstrates:** typed RAG orchestration · grounding and retrieval evidence · deterministic evaluation with a human-review boundary.
+**What this demonstrates:** typed workflow orchestration · similar-case retrieval kept separate from policy · deterministic checks with a human-review boundary.
 
-**Boundary:** the public Render demo uses 27 synthetic records, pinned ONNX embeddings, and deterministic mock generation. It is for portfolio review—not real customer support or production-quality inference. The older Hugging Face Space is a separate, unreleased legacy build.
+**Boundary:** the existing Render deployment has not been updated to this change. This local source uses 27 synthetic records, pinned ONNX embeddings, deterministic mock generation, and no approved policy source. It is for portfolio review—not real customer support or production-quality inference. The older Hugging Face Space is a separate legacy build.
 
-**[Open the live zero-key demo](https://customer-support-rag-triage-agent.onrender.com/)**
-
-![Ticket triage result](docs/screenshots/triage-result.png)
+The live link is the previous deployment and does not show the current API v2 behavior. This local source has not been deployed.
 
 ## Evidence-backed outcomes
 
 - Runs a fixed seven-node LangGraph workflow with typed state and an inspectable per-node trace.
-- Retrieves bounded Banking77-derived evidence from in-memory Qdrant with pinned ONNX BGE-small embeddings and stable, idempotent fixture IDs.
-- Exposes inference mode, cache, fallback, degraded-mode, retrieval, grounding, and human-action metadata.
+- Retrieves bounded Banking77-derived similar cases from in-memory Qdrant with pinned ONNX BGE-small embeddings and stable, idempotent fixture IDs.
+- Exposes inference mode, cache, fallback, degraded-mode, retrieval, policy review, and human-action metadata.
 - Ships a zero-key deterministic review path plus a checked-in 8-ticket regression artifact. The fixture demonstrates reproducibility, not real-world model quality.
 - Preserves an optional generic external GenAI route without coupling the public repository to a specific inference vendor.
 
@@ -30,10 +28,16 @@ A typed, inspectable RAG triage workflow that retrieves support evidence, drafts
 
 ## Reviewer path
 
-1. Open the live demo and run **Card not arrived**.
-2. Read the decision, retrieved cases, grounding state, and recommended human action.
+1. Start the local API and console using the quickstart below.
+2. Run **Card not arrived** and inspect intent, urgency, no-approved-policy status, and human-review route.
 3. Inspect the complete 7/7 trace and the deterministic evaluation fixture.
 4. Review the architecture, evaluation methodology, and security boundaries.
+
+The screenshot shows the current API v2 UI rendered with deterministic Playwright fixture data.
+Similar past cases are context only; the interface shows that they are not approved policy. This
+is not a live API response or a capture of the older deployment.
+
+![Local API v2 triage with no approved policy and human review](docs/screenshots/triage-result.png)
 
 This is a reviewable support decision workflow with an explicit human-review boundary.
 
@@ -51,7 +55,7 @@ flowchart LR
   R -. explicit opt-in .-> X[Generic external GenAI endpoint]
 ```
 
-The public demo bootstraps 27 bounded Banking77-derived records into Qdrant without duplicating stable IDs. Demo and mock modes are deterministic and require no external model account or credential. A generic server-side external GenAI endpoint remains available as an explicit non-demo route.
+The local source bootstraps 27 bounded Banking77-derived records into Qdrant without duplicating stable IDs. They are labeled similar past cases and are never policy authority or evidence that an action is allowed. No approved policy source is configured, so generated proposals are withheld and the workflow returns a short acknowledgement with human review. Demo and mock modes require no external model account or credential.
 
 ## Workflow stages
 
@@ -60,16 +64,14 @@ The public demo bootstraps 27 bounded Banking77-derived records into Qdrant with
 3. `detect_urgency`
 4. `retrieve_similar_cases`
 5. `generate_support_response`
-6. `grounding_check`
+6. `policy_gate`
 7. `suggest_next_action`
 
-Each successful node records duration, bounded input/output summaries, component, inference metadata, cache/fallback/degraded flags, retrieval count, evidence references, and grounding result. Retrieved records are carried as typed data-only evidence, separate from workflow instructions and the current user ticket. Empty retrieval, rejected citations, or degraded generation cannot produce a grounded final result.
-
-![Seven-node workflow trace](docs/screenshots/workflow-trace.png)
+Each successful node records duration, bounded input/output summaries, component, inference metadata, cache/fallback/degraded flags, similar-case references, and policy review status. Similar past cases remain separate from workflow policy authority. Providers cannot mark their own output as policy-checked or cite a retrieved case to authorize an action. The default demo has no approved policy source; every generated proposal is withheld.
 
 ## Deterministic evaluation
 
-The checked-in evaluation was regenerated on October 24, 2026 with pinned ONNX `BAAI/bge-small-en-v1.5`, deterministic mock generation, 27 indexed synthetic records, and 8 labeled synthetic evaluation tickets. The Render demo serves that exact dated artifact; the measured local latency below is **not** a Render-hosted latency benchmark.
+The checked-in evaluation artifact was regenerated on November 14, 2026 with pinned ONNX `BAAI/bge-small-en-v1.5`, deterministic mock generation, 27 indexed demo cases, and 8 labeled synthetic evaluation tickets. It describes this source tree; it has not been deployed. Measured local latency is **not** a Render-hosted latency benchmark.
 
 | Metric | Result |
 | --- | ---: |
@@ -78,12 +80,15 @@ The checked-in evaluation was regenerated on October 24, 2026 with pinned ONNX `
 | Precision@5 / Recall@5 | 37.5% / 62.5% |
 | MRR / nDCG@5 | 0.771 / 0.611 |
 | Zero-result rate | 0.0% |
-| Grounding-verifier pass rate | 100.0% |
-| Unsupported-claim flag rate | 0.0% |
+| No-approved-policy cases | 8 / 8 |
+| Manual-review routes | 8 / 8 |
+| Proposals withheld | 10 / 10 |
 | Workflow success rate | 100.0% |
-| P50 / P95 local latency | 8.4 ms / 13.7 ms |
+| P50 / P95 local latency | 6.1 ms / 10.5 ms |
 
-Recall and nDCG use the three known relevant fixture records per intent. These are deterministic regression results from a deliberately small, rules-aligned fixture. They are not production latency, policy correctness, semantic-entailment, or universal model-quality claims. See the [generated summary](reports/evaluation/summary.md) and [methodology](docs/evaluation.md).
+Recall and nDCG use the three known relevant fixture records per intent. Policy review results are structural counts only: they measure withheld proposals and manual-review routing. They do not prove semantic entailment or policy correctness. See the [generated summary](reports/evaluation/summary.md) and [methodology](docs/evaluation.md).
+
+The public response contract is version 2.0. It removes `grounded`, grounding/confidence scores, and evidence/citation integrity claims. It adds `policy_status`, per-proposal `proposal_checks`, `verified_proposals`, and separately typed similar-case references. Clients built for the previous response schema must be updated. This change has not been deployed.
 
 ## Local quickstart
 
@@ -195,13 +200,13 @@ curl.exe http://localhost:8000/eval/results
 
 ## Security and limitations
 
-- Requests forbid extra fields and bound message length, `top_k`, confidence values, and ingestion batch size.
+- Requests forbid extra fields and bound message length, `top_k`, and ingestion batch size.
 - Public ingestion is disabled; non-local ingestion requires `X-Admin-API-Key`.
 - External inference credentials stay server-side and are only used when demo/mock modes are explicitly disabled.
 - Controlled errors omit stack traces, environment values, credentials, external endpoint URLs, and local paths.
-- Retrieved records are untrusted precedent, not company policy. They remain in a typed evidence block and cannot become system/developer/workflow instructions; structured citations are accepted only when their IDs are present in retrieved records.
+- Retrieved records are untrusted similar-case context, not company policy. They are typed separately, never used as policy references, and cannot become system/developer/workflow instructions.
 - Structural authority isolation: **tested** with workflow, provider-contract, API, and trace regression checks.
-- Deterministic adversarial fixture: **tested** with eight synthetic records and a reproducible report; this catches the committed containment, citation, grounding, and review invariants.
+- Deterministic adversarial fixture: **tested** with eight synthetic records and a reproducible report; this checks structural authority isolation and fail-closed policy routing.
 - Semantic LLM prompt-injection immunity: **NOT established**. The deterministic tests do not prove that a real language model will semantically ignore every malicious retrieved string.
 - Draft responses require human review. Policy authority, tenant isolation, distributed rate limiting, and sensitive-data retention require controls beyond this demo.
 - The in-memory limiter and local Qdrant/SQLite state are single-process constraints. Free CPU hosts may cold-start or exceed memory limits.
@@ -223,4 +228,4 @@ curl.exe http://localhost:8000/eval/results
 
 ## Resume bullet
 
-Built a retrieval-grounded support triage workflow with typed LangGraph orchestration, Qdrant and local BGE embeddings, deterministic evaluation, a vendor-neutral optional external GenAI adapter, cache/fallback controls, protected FastAPI endpoints, and a React evidence-and-trace console.
+Built a policy-gated support triage workflow with typed LangGraph orchestration, Qdrant similar-case retrieval, local BGE embeddings, structural evaluation, a vendor-neutral optional external GenAI adapter, cache/fallback controls, protected FastAPI endpoints, and a React policy-review console.

@@ -1,11 +1,16 @@
 # Portfolio review
 
+> **Historical note:** measured deployment evidence in this document records the earlier
+> grounding-based public contract. The current local source follows API 2.0 and ADR 0005;
+> this change has not been deployed. Use the current README and evaluation report for source-tree
+> behavior.
+
 ## Skills demonstrated
 
 - Typed seven-node LangGraph orchestration with inspectable node-level execution evidence.
 - Local semantic retrieval using BGE embeddings and Qdrant with idempotent fixture bootstrap.
-- Deterministic no-key generation, grounding, provider routing, cache, retry, fallback, and safe
-  degraded behavior.
+- Deterministic no-key generation, policy-gate abstention, provider routing, cache, retry, fallback,
+  and safe degraded behavior.
 - FastAPI trust-boundary validation, protected ingestion, configurable CORS/timeouts/rate limits,
   readiness, and secret-safe status output.
 - Responsive React operations console with triage, retrieval, trace, evaluation, data, and
@@ -15,10 +20,12 @@
 ## Reviewer path
 
 1. Read the first screen and measured-results table in `README.md`.
-2. Open the [public demo](https://pracill-customer-support-rag-triage-agent.hf.space/).
-3. Select **Card not arrived**, run triage, and inspect three retrieved cases plus seven trace nodes.
-4. Open **Evaluation** and compare the UI with `reports/evaluation/results.json`.
-5. Review `docs/security.md` and `docs/deployment.md` for production trade-offs.
+2. Run the local API and console, select **Card not arrived**, and inspect the no-approved-policy status, manual review, similar past cases, and seven-node trace.
+3. Compare **Evaluation** with `reports/evaluation/results.json` and `docs/evaluation.md`.
+4. Review `docs/security.md` and `docs/deployment.md` for production trade-offs.
+
+The linked live deployments still serve the historical pre-v2 contract. Do not use them to
+review or represent the current local source behavior.
 
 ## Strongest engineering evidence
 

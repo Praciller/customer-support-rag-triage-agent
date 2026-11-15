@@ -19,6 +19,8 @@ describe("SearchView", () => {
     vi.mocked(api.search).mockResolvedValue([
       {
         ticket_id: "demo-delivery",
+        evidence_type: "similar_past_case",
+        approved_policy: false,
         message: "Where is the card I ordered?",
         intent: "delivery_issue",
         response: "",

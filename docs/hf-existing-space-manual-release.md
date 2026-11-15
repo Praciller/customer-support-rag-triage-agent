@@ -46,8 +46,9 @@ The workflow checks exact Space identity/SHA, `RUNNING`, Docker,
 git-tracked source, the review Dockerfile, and a public provenance
 manifest into a **deterministic bundle**; builds the exact release image,
 audits installed package vulnerabilities, then runs the synthetic
-27-record / 8-evaluation / 7-node grounding and ingestion-denial
-smoke test. In `dry-run`, **no Hugging Face write or paid job occurs**.
+27-record / 8-evaluation / 7-node no-approved-policy abstention,
+manual-review, and ingestion-denial smoke test. In `dry-run`,
+**no Hugging Face write or paid job occurs**.
 
 A dry-run pass is not permission to deploy and does not prove existing
 Space rebuild entitlement or human accessibility sign-off.

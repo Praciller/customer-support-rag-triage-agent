@@ -1,6 +1,6 @@
 import pytest
 
-from src.evaluation.evaluate_triage import _evaluation_mode
+from src.evaluation.evaluate_triage import _evaluation_mode, _policy_review_metrics
 from src.evaluation.metrics import classification_metrics, retrieval_metrics
 from src.evaluation.validation import load_evaluation_frame
 
@@ -26,6 +26,40 @@ def test_evaluation_metrics_include_per_class_and_rank_quality() -> None:
     assert retrieval["recall_at_k"] == 2 / 3
     assert retrieval["mrr"] == 1.0
     assert 0 < retrieval["ndcg_at_k"] < 1
+
+
+def test_policy_review_evaluation_counts_only_structural_abstention_behavior() -> None:
+    metrics = _policy_review_metrics(
+        [
+            {
+                "policy_status": "no_approved_policy",
+                "proposal_checks": [
+                    {"status": "no_approved_policy", "verification_result": "not_run"},
+                    {"status": "no_approved_policy", "verification_result": "not_run"},
+                ],
+                "verified_proposals": [],
+                "policy_references": [],
+                "next_action": "manual_review",
+            },
+            {
+                "policy_status": "verification_failed",
+                "proposal_checks": [
+                    {"status": "verification_failed", "verification_result": "failed"}
+                ],
+                "verified_proposals": [],
+                "policy_references": [],
+                "next_action": "manual_review",
+            },
+        ]
+    )
+
+    assert metrics["method"] == "structural_policy_gate_counts"
+    assert metrics["no_approved_policy_cases"] == 1
+    assert metrics["manual_review_routes"] == 2
+    assert metrics["proposals_seen"] == 3
+    assert metrics["proposals_withheld"] == 3
+    assert metrics["verified_proposals"] == 0
+    assert metrics["no_policy_abstentions_satisfy_structural_invariants"] is True
 
 
 @pytest.mark.parametrize(

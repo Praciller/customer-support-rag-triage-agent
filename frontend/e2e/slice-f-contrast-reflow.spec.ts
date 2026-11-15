@@ -20,7 +20,8 @@ test("320px reflow keeps triage and evaluation usable", async ({ page }) => {
 
   await page.getByRole("button", { name: "Card not arrived", exact: true }).click();
   await page.getByRole("button", { name: "Run triage", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Recommended action" })).toContainText("ask for order id");
+  await expect(page.getByRole("region", { name: "Recommended action" })).toContainText("no approved policy");
+  await expect(page.getByRole("region", { name: "Recommended action" })).toContainText("manual review");
   await expect(page.getByRole("region", { name: "Workflow trace" }).getByRole("listitem")).toHaveCount(7);
   await assertNoDocumentOverflow(page);
 

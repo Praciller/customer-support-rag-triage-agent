@@ -19,6 +19,7 @@ SPACE_ID = "Pracill/customer-support-rag-triage-agent"
 ROOT = Path(__file__).resolve().parents[1]
 ALLOWED = ("src/", "frontend/", "prompts/", "data/demo/", "data/eval/", "reports/evaluation/")
 EXACT = {"requirements.production.txt"}
+OBSOLETE = {"prompts/grounding_check.md"}
 DOCKERFILE = ROOT / "deploy/huggingface/Dockerfile.bundle"
 README = """---
 title: Customer Support Rag Triage Agent
@@ -28,7 +29,7 @@ colorTo: purple
 sdk: docker
 app_port: 7860
 pinned: false
-short_description: Grounded RAG triage with auditable workflow traces.
+short_description: Human-reviewed policy-gated triage with auditable workflow traces.
 ---
 
 This public demo uses synthetic fixtures, mock responses, and a pinned ONNX embedding model.
@@ -53,6 +54,8 @@ def tracked_sources() -> list[Path]:
         if not raw:
             continue
         name = raw.decode("utf-8")
+        if name in OBSOLETE:
+            continue
         if name not in EXACT and not name.startswith(ALLOWED):
             continue
         path = ROOT / name
