@@ -2,6 +2,11 @@
 
 Audit date: July 19, 2026
 
+> **Historical snapshot:** This audit predates the API v2 policy-review contract in ADR 0005.
+> Its API and public-deployment results describe the earlier contract and are not current
+> verification of the v2 workflow. The existing hosted deployment has not been updated by this
+> repository change; see [deployment status](../docs/deployment.md) before relying on live behavior.
+
 | Area | Status | Evidence |
 | --- | --- | --- |
 | Key-free demo | Pass | Demo/mock defaults; no provider keys required |
