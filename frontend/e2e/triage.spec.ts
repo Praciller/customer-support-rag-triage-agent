@@ -19,6 +19,11 @@ test("startup reports a usable connected API", async ({ page }) => {
 
 test("shows a cold-start wait, times out, and retries only after a manual action", async ({ page }) => {
   let triageRequests = 0;
+  let releaseFirstResponse!: () => void;
+  const firstResponseHeld = new Promise<void>((resolve) => {
+    releaseFirstResponse = resolve;
+  });
+  await page.clock.install();
   await page.route("**/health", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
@@ -27,7 +32,7 @@ test("shows a cold-start wait, times out, and retries only after a manual action
   await page.route("**/triage", async (route) => {
     triageRequests += 1;
     if (triageRequests === 1) {
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await firstResponseHeld;
       await route.fulfill({
         status: 504,
         contentType: "application/json",
@@ -45,9 +50,10 @@ test("shows a cold-start wait, times out, and retries only after a manual action
   await page.goto("/");
   await page.getByRole("button", { name: "Run triage", exact: true }).click();
   await expect(page.getByText(/backend may be starting after an idle period/i)).toBeVisible();
+  releaseFirstResponse();
   await expect(page.getByRole("alert")).toContainText(/backend timed out while processing triage/i);
   await expect(page.getByRole("button", { name: "Retry triage", exact: true })).toBeVisible();
-  await page.waitForTimeout(300);
+  await page.clock.fastForward(65_000);
   expect(triageRequests).toBe(1);
 
   await page.getByRole("button", { name: "Retry triage", exact: true }).click();
@@ -69,6 +75,8 @@ test("Card not arrived without approved policy routes to human review", async ({
   await expect(decision.getByText("manual review", { exact: true })).toBeVisible();
   await expect(decision.getByLabel("Policy review status: No approved policy")).toBeVisible();
   await expect(decision).toContainText("Similar past cases are context only");
+  await expect(decision).toContainText("A support specialist needs to review this before we can advise on next steps.");
+  await expect(decision).not.toContainText(/refund options|order id/i);
   await expect(decision).toContainText("proposal 1: no approved policy");
 
   const evidence = page.getByRole("region", { name: "Similar past cases" });

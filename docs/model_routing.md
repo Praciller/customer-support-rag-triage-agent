@@ -54,6 +54,12 @@ exponential-backoff settings apply to external calls. When external inference is
 route order is `external` then deterministic `mock`; a fallback is marked degraded. Degraded
 proposal generation is withheld by the policy gate.
 
+The browser never retries a triage POST automatically. If its wait times out, the original backend
+request may still be running; choosing **Retry triage** sends a second request. The API has no
+idempotency key or in-flight deduplication, so manual retry can repeat model work or provider cost.
+The cache may reuse a completed provider response when enabled, but it does not prevent concurrent
+duplicate work. Provider-level retries default to zero and can be changed by the operator.
+
 When demo/mock mode is active, the route order is local-only, so configuration of an external
 endpoint cannot accidentally make the public demo perform a network inference call.
 

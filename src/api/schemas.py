@@ -129,6 +129,15 @@ class TriageResponse(BaseModel):
 
     @model_validator(mode="after")
     def validate_policy_gate(self) -> "TriageResponse":
+        similar_case_ids = set(self.similar_case_references) | {
+            case.ticket_id for case in self.retrieved_cases
+        }
+        checked_policy_references = set(self.policy_references) | {
+            reference for check in self.proposal_checks for reference in check.policy_references
+        }
+        if similar_case_ids & checked_policy_references:
+            raise ValueError("similar case references cannot be policy references")
+
         if self.policy_status != "verified":
             if self.verified_proposals:
                 raise ValueError("unverified proposals cannot be returned")

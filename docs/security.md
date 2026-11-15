@@ -3,9 +3,11 @@
 ## Public API controls
 
 - Pydantic forbids extra request fields and bounds message length, `top_k`, and ingest size.
-- `/triage`, `/search-similar`, and `/ingest` use configurable sliding-window limits keyed by client IP and route.
+- `/triage` and `/answer` share a configurable sliding-window limit; `/search-similar` and `/ingest` use separate limits keyed by client IP and route.
 - `/ingest` is disabled by default. Outside local development, access requires `X-Admin-API-Key`; comparison uses `secrets.compare_digest`.
 - Requests have a configurable timeout and unexpected exceptions return a controlled message.
+- `/triage` and `/answer` do not accept idempotency keys or deduplicate in-flight requests. A browser timeout does not prove backend work stopped; a user-triggered retry can repeat provider work or charges. The UI does not retry POST requests automatically.
+- The public `GET /eval/results`, `POST /evaluate`, and `GET /metrics/sample` routes serve the selected evaluation report, including its example messages. Use synthetic or explicitly approved, de-identified evaluation data for any report exposed through these routes; never publish real customer tickets or secrets there.
 - CORS origins are environment-configured.
 - `/provider-health` reports local inference and storage state without credentials or raw environment values.
 

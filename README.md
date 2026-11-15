@@ -88,7 +88,7 @@ The checked-in evaluation artifact was regenerated on November 14, 2026 with pin
 
 Recall and nDCG use the three known relevant fixture records per intent. Policy review results are structural counts only: they measure withheld proposals and manual-review routing. They do not prove semantic entailment or policy correctness. See the [generated summary](reports/evaluation/summary.md) and [methodology](docs/evaluation.md).
 
-The public response contract is version 2.0. It removes `grounded`, grounding/confidence scores, and evidence/citation integrity claims. It adds `policy_status`, per-proposal `proposal_checks`, `verified_proposals`, and separately typed similar-case references. Clients built for the previous response schema must be updated. This change has not been deployed.
+The public response contract is version 2.0 for both `POST /triage` and the compatibility-named `POST /answer`; `/answer` is not a version 1 response path. It removes `grounded`, grounding/confidence scores, and evidence/citation integrity claims. It adds `policy_status`, per-proposal `proposal_checks`, `verified_proposals`, and separately typed similar-case references. Clients built for the previous response schema must be updated. This change has not been deployed.
 
 ## Local quickstart
 

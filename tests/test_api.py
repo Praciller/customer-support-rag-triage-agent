@@ -139,6 +139,52 @@ def test_api_requires_each_allowed_proposal_to_have_its_own_passing_policy_check
         TriageResponse.model_validate(payload)
 
 
+def test_api_rejects_a_similar_case_reference_as_policy_authority() -> None:
+    payload = FakeServices().triage("refund please", top_k=5)
+    payload.update(
+        policy_status="verified",
+        next_action="reply_to_customer",
+        policy_references=["synthetic-test-policy"],
+        proposal_checks=[
+            {
+                "proposal_id": "proposal-1",
+                "status": "supported",
+                "policy_references": ["synthetic-test-policy"],
+                "verification_result": "passed",
+                "verification_method": "synthetic_test_verifier",
+            }
+        ],
+        verified_proposals=[
+            {
+                "proposal_id": "proposal-1",
+                "text": "Synthetic test action.",
+                "policy_references": ["synthetic-test-policy"],
+                "verification_result": "passed",
+                "verification_method": "synthetic_test_verifier",
+            }
+        ],
+        suggested_response="Synthetic test action.",
+        similar_case_references=["synthetic-test-policy"],
+        retrieved_cases=[
+            {
+                "ticket_id": "synthetic-test-policy",
+                "message": "Synthetic similar case.",
+                "intent": "refund_request",
+                "response": "Synthetic prior response.",
+                "source": "synthetic_test",
+                "score": 0.9,
+                "created_at": None,
+                "metadata": {},
+            }
+        ],
+    )
+
+    with pytest.raises(
+        ValidationError, match="similar case references cannot be policy references"
+    ):
+        TriageResponse.model_validate(payload)
+
+
 def test_api_exposes_required_read_endpoints() -> None:
     client = TestClient(create_app(services=FakeServices()))
 
@@ -156,7 +202,13 @@ def test_api_exposes_portfolio_brief_compatibility_endpoints() -> None:
     metrics = client.get("/metrics/sample")
 
     assert answer.status_code == 200
-    assert answer.json()["suggested_response"] == SAFE_ABSTENTION_RESPONSE
+    answer_payload = answer.json()
+    assert answer_payload["suggested_response"] == SAFE_ABSTENTION_RESPONSE
+    assert answer_payload["policy_status"] == "no_approved_policy"
+    assert answer_payload["next_action"] == "manual_review"
+    assert "grounded" not in answer_payload
+    assert "grounding_score" not in answer_payload
+    assert "confidence" not in answer_payload
     assert evaluation.json()["intent_accuracy"] == 0.9
     assert metrics.json()["intent_accuracy"] == 0.9
 
