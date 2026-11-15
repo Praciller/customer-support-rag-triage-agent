@@ -76,6 +76,7 @@ def review_proposals(
     proposals: Sequence[str],
     *,
     approved_policy_references: Collection[str] = (),
+    similar_case_references: Collection[str] = (),
     verifier: ProposalVerifier | None = None,
     proposal_parse_failed: bool = False,
     generation_degraded: bool = False,
@@ -85,7 +86,10 @@ def review_proposals(
     This is a structural gate. It does not perform or claim semantic entailment.
     """
 
-    approved_policy_references = _normalize_approved_references(approved_policy_references)
+    approved_policy_references, _ = normalize_reference_collection(approved_policy_references)
+    similar_case_references, valid_similar_case_references = normalize_reference_collection(
+        similar_case_references
+    )
     normalized = [proposal.strip() for proposal in proposals if proposal.strip()]
     if proposal_parse_failed and approved_policy_references:
         check = ProposalCheck(
@@ -114,6 +118,19 @@ def review_proposals(
             for index, _ in enumerate(normalized, start=1)
         )
         return PolicyReview("no_approved_policy", checks, ())
+
+    if not valid_similar_case_references:
+        checks = tuple(
+            ProposalCheck(
+                proposal_id=f"proposal-{index}",
+                status="verification_failed",
+                policy_references=(),
+                verification_result="failed",
+                verification_method="invalid_similar_case_references",
+            )
+            for index, _ in enumerate(normalized, start=1)
+        )
+        return PolicyReview("verification_failed", checks, ())
 
     if generation_degraded:
         checks = tuple(
@@ -182,15 +199,21 @@ def review_proposals(
         valid_references = bool(references) and all(
             reference in approved_policy_references for reference in references
         )
+        references_collide_with_case = bool(set(references) & similar_case_references)
         supported_and_verified = (
             result.status == "supported"
             and result.verification_result == "passed"
             and valid_references
+            and not references_collide_with_case
         )
         status = result.status
         verification_result = result.verification_result
         method = result.verification_method
-        if result.status == "supported" and not supported_and_verified:
+        if references_collide_with_case:
+            status = "verification_failed"
+            verification_result = "failed"
+            method = "similar_case_reference"
+        elif result.status == "supported" and not supported_and_verified:
             status = "verification_failed"
             verification_result = "failed"
             method = "invalid_policy_reference_or_result"
@@ -207,6 +230,7 @@ def review_proposals(
                 status=status,
                 policy_references=references
                 if all(reference in approved_policy_references for reference in references)
+                and not references_collide_with_case
                 else (),
                 verification_result=verification_result,
                 verification_method=method,
@@ -229,19 +253,23 @@ def review_proposals(
     return PolicyReview(status, tuple(checks), tuple(verified))
 
 
-def _normalize_approved_references(references: Collection[str]) -> frozenset[str]:
+def normalize_reference_collection(
+    references: Collection[str],
+) -> tuple[frozenset[str], bool]:
+    """Return a normalized reference set and whether the collection is valid."""
+
     if isinstance(references, (str, bytes)):
-        return frozenset()
+        return frozenset(), False
     try:
         values = tuple(references)
-    except TypeError:
-        return frozenset()
+    except Exception:
+        return frozenset(), False
     if any(
         not isinstance(reference, str) or not reference or reference != reference.strip()
         for reference in values
     ):
-        return frozenset()
-    return frozenset(values)
+        return frozenset(), False
+    return frozenset(values), True
 
 
 def _overall_status(checks: Sequence[ProposalCheck]) -> PolicyStatus:

@@ -17,15 +17,15 @@ function policyStatusLabel(status: TriageResult["policy_status"]): string {
 }
 
 export function DecisionWorkspace({ result }: { result: TriageResult | null }) {
-  const policyVerified = result?.policy_status === "verified";
-  const requiresReview = result !== null && !policyVerified;
+  const policyChecksPassed = result?.policy_status === "verified";
+  const requiresReview = result !== null && !policyChecksPassed;
   return (
     <section className="decision-workspace" aria-label="Recommended action">
       <div className="section-title">
         <div><p>Recommended action</p><h2>Triage summary</h2></div>
         {result && (
           <StatusIndicator
-            label={result.escalate ? "Escalate" : requiresReview ? "Manual review" : "Policy checked"}
+            label={result.escalate ? "Escalate" : requiresReview ? "Manual review" : "Policy checks passed"}
             tone={result.escalate || requiresReview ? "danger" : "success"}
           />
         )}
@@ -35,7 +35,7 @@ export function DecisionWorkspace({ result }: { result: TriageResult | null }) {
         <div className="decision-intent"><span>Intent</span><strong>{result.intent.replaceAll("_", " ")}</strong></div>
         <div className="decision-statuses">
           <span className="decision-status" aria-label={`Policy review status: ${policyStatusLabel(result.policy_status)}`}>
-            {policyVerified
+            {policyChecksPassed
               ? <CheckCircle2 size={16} aria-hidden="true" />
               : <ShieldAlert size={16} aria-hidden="true" />}
             {policyStatusLabel(result.policy_status)}
@@ -65,7 +65,7 @@ export function DecisionWorkspace({ result }: { result: TriageResult | null }) {
           </section>
         )}
         {result.verified_proposals.length > 0 && (
-          <section className="verified-proposals" aria-label="Policy-verified proposals">
+          <section className="verified-proposals" aria-label="Proposals with passing policy checks">
             <h3>Proposals with passing policy checks</h3>
             <ul>
               {result.verified_proposals.map((proposal) => (

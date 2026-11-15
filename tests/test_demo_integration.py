@@ -95,6 +95,26 @@ def test_demo_dataset_info_ignores_stale_full_dataset_metadata(
     assert services.dataset_info()["status"] == "demo_fixture"
 
 
+def test_non_demo_dataset_info_does_not_expose_local_paths(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    metadata = tmp_path / "data" / "raw" / "dataset_metadata.json"
+    metadata.parent.mkdir(parents=True)
+    metadata.write_text(
+        '{"name":"synthetic-dataset","records":8,"raw_path":"data/raw/support_dataset.csv",'
+        '"local_path":"C:/private/data.csv"}',
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    settings = Settings(_env_file=None, demo_mode=False)
+    services = ApplicationServices(settings, retriever=None, workflow=None, provider_names=[])
+
+    info = services.dataset_info()
+
+    assert info == {"name": "synthetic-dataset", "records": 8}
+
+
 def test_demo_provider_health_reports_active_mock_routes(tmp_path: Path) -> None:
     settings = Settings(
         _env_file=None,

@@ -10,6 +10,7 @@ from src.config.settings import get_settings
 from src.evaluation.evaluate_retrieval import evaluate_retrieval
 from src.evaluation.metrics import classification_metrics, percentile
 from src.evaluation.validation import load_evaluation_frame
+from src.policy import SAFE_ABSTENTION_RESPONSE
 
 
 def evaluate_triage(
@@ -160,15 +161,19 @@ def _policy_review_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
         checks = result.get("proposal_checks", [])
         verified = result.get("verified_proposals", [])
         proposals_seen += len(checks)
-        proposals_withheld += sum(
-            check.get("status") != "supported" or check.get("verification_result") != "passed"
-            for check in checks
-        )
+        proposals_withheld += max(0, len(checks) - len(verified))
         if result.get("policy_status") == "no_approved_policy":
             structurally_safe_abstentions = structurally_safe_abstentions and (
                 result.get("next_action") == "manual_review"
+                and result.get("suggested_response") == SAFE_ABSTENTION_RESPONSE
                 and not verified
                 and not result.get("policy_references")
+                and all(
+                    check.get("status") == "no_approved_policy"
+                    and check.get("verification_result") == "not_run"
+                    and not check.get("policy_references")
+                    for check in checks
+                )
             )
 
     return {

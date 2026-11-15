@@ -77,7 +77,7 @@ describe("App", () => {
     expect(screen.getByText(/7\. suggest next action/i)).toBeInTheDocument();
   });
 
-  it("explains cold start, times out, and waits for a manual retry", async () => {
+  it("times out without replaying the POST and waits for a manual retry", async () => {
     vi.useFakeTimers();
     try {
       vi.mocked(api.triage)
@@ -92,8 +92,8 @@ describe("App", () => {
         fireEvent.click(screen.getByRole("button", { name: "Run triage" }));
         await Promise.resolve();
       });
-      expect(screen.getByText(/backend may be starting after an idle period/i)).toBeInTheDocument();
       expect(api.triage).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(60_000);
@@ -122,6 +122,47 @@ describe("App", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it.each([
+    { status: 422, message: /rejected this message as invalid/i, retryAvailable: false },
+    { status: 429, message: /rate limiting triage requests/i, retryAvailable: true },
+    { status: 408, message: /backend timed out while processing triage/i, retryAvailable: true },
+    { status: 503, message: /temporarily unavailable \(HTTP 503\)/i, retryAvailable: true },
+    { status: 500, message: /backend returned an error \(HTTP 500\)/i, retryAvailable: true },
+  ])(
+    "describes HTTP $status without automatically retrying",
+    async ({ status, message, retryAvailable }) => {
+      vi.mocked(api.triage).mockRejectedValueOnce(new ApiResponseError("request failed", status));
+      render(<App />);
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Run triage" }));
+        await Promise.resolve();
+      });
+
+      expect(screen.getByRole("alert")).toHaveTextContent(message);
+      if (retryAvailable) {
+        expect(screen.getByRole("button", { name: "Retry triage" })).toBeInTheDocument();
+      } else {
+        expect(screen.queryByRole("button", { name: "Retry triage" })).not.toBeInTheDocument();
+      }
+      expect(api.triage).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("describes a network failure without claiming it is a cold start", async () => {
+    vi.mocked(api.triage).mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    render(<App />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Run triage" }));
+      await Promise.resolve();
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/could not reach the backend/i);
+    expect(screen.getByRole("alert")).not.toHaveTextContent(/starting after an idle period/i);
+    expect(api.triage).toHaveBeenCalledTimes(1);
   });
 
   it("renders measured evaluation methodology and per-class results", async () => {

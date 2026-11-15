@@ -11,7 +11,12 @@ from src.evidence import RetrievedEvidence
 from src.graph.state import TriageState
 from src.llm.base import LLMRequest
 from src.llm.router import ProviderRouter
-from src.policy import SAFE_ABSTENTION_RESPONSE, ProposalVerifier, review_proposals
+from src.policy import (
+    SAFE_ABSTENTION_RESPONSE,
+    ProposalVerifier,
+    normalize_reference_collection,
+    review_proposals,
+)
 from src.retrieval.retriever import QdrantRetriever
 
 INTENTS = {
@@ -49,7 +54,9 @@ class TriageWorkflow:
         self.max_output_tokens = max_output_tokens
         self.max_context_chars = max_context_chars
         self.clock = clock
-        self.approved_policy_references = frozenset(approved_policy_references)
+        self.approved_policy_references, _ = normalize_reference_collection(
+            approved_policy_references
+        )
         self.policy_verifier = policy_verifier
         self.graph = self._build_graph()
 
@@ -266,6 +273,7 @@ class TriageWorkflow:
         review = review_proposals(
             state.get("candidate_proposals", []),
             approved_policy_references=self.approved_policy_references,
+            similar_case_references=state.get("similar_case_references", []),
             verifier=self.policy_verifier,
             proposal_parse_failed=state.get("proposal_parse_failed", False),
             generation_degraded=state.get("degraded_mode", False)

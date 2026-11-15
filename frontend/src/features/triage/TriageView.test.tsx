@@ -121,6 +121,7 @@ describe("TriageView", () => {
     });
 
     expect(screen.getByRole("heading", { name: "Proposals with passing policy checks" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Proposals with passing policy checks" })).toBeInTheDocument();
     expect(screen.getByText(/synthetic-test-policy-card-17.*verification: passed/i)).toBeInTheDocument();
     expect(screen.getAllByText("Synthetic test proposal: check the delivery tracking page.")).toHaveLength(2);
     expect(screen.queryByText(/grounded|confidence/i)).not.toBeInTheDocument();

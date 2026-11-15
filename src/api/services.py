@@ -23,6 +23,24 @@ from src.retrieval.retriever import (
 )
 
 _evaluation_logger = logging.getLogger(__name__)
+_PUBLIC_DATASET_INFO_FIELDS = frozenset(
+    {
+        "name",
+        "provider",
+        "license",
+        "records",
+        "split",
+        "source_url",
+        "upstream_dataset",
+        "revision",
+        "normalization",
+        "intended_use",
+        "limitations",
+        "intents",
+        "status",
+        "index_ready",
+    }
+)
 
 
 class ApplicationServices:
@@ -96,7 +114,8 @@ class ApplicationServices:
             Path("data/raw/dataset_metadata.json"),
         ):
             if path.exists():
-                return json.loads(path.read_text(encoding="utf-8"))
+                metadata = json.loads(path.read_text(encoding="utf-8"))
+                return self._public_dataset_info(metadata)
         if self.settings.demo_fixture_path.exists():
             return self._demo_dataset_info()
         return {
@@ -114,12 +133,18 @@ class ApplicationServices:
             intent = str(record.get("intent", "other"))
             intents[intent] = intents.get(intent, 0) + 1
         return {
-            **fixture.get("dataset", {}),
+            **self._public_dataset_info(fixture.get("dataset", {})),
             "records": len(records),
             "intents": intents,
             "status": "demo_fixture",
             "index_ready": self.bootstrap_status.get("ready", False),
         }
+
+    @staticmethod
+    def _public_dataset_info(metadata: Any) -> dict[str, Any]:
+        if not isinstance(metadata, dict):
+            return {}
+        return {key: value for key, value in metadata.items() if key in _PUBLIC_DATASET_INFO_FIELDS}
 
     def provider_health(self) -> dict[str, Any]:
         external_configured = bool(self.settings.external_llm_url.strip())

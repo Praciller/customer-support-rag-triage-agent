@@ -55,13 +55,31 @@ export default function App() {
       ]);
       setResult(data);
     } catch (caught) {
-      const serverTimedOut = caught instanceof ApiResponseError && caught.status === 504;
-      setError(didTimeout
-        ? "Triage timed out after 60 seconds. The backend may still be starting or processing this request. It may finish after the timeout; wait before retrying, or choose Retry triage manually."
-        : serverTimedOut
-          ? "The backend timed out while processing triage. It may still be starting or finishing this request; wait before retrying, or choose Retry triage manually."
-          : "Triage could not be completed. The backend may be starting after an idle period. Check its status, then choose Retry triage manually.");
-      setRetryAvailable(true);
+      const serverTimedOut =
+        caught instanceof ApiResponseError && [408, 504].includes(caught.status);
+      let message = "Triage failed unexpectedly. Check the API status before retrying manually.";
+      let canRetry = true;
+      if (didTimeout) {
+        message = "Triage timed out after 60 seconds. The backend may still be starting or processing this request. It may finish after the timeout; wait before retrying, or choose Retry triage manually.";
+      } else if (serverTimedOut) {
+        message = "The backend timed out while processing triage. It may still be starting or finishing this request; wait before retrying, or choose Retry triage manually.";
+      } else if (caught instanceof ApiResponseError && caught.status === 422) {
+        message = "The backend rejected this message as invalid. Edit the message, then run triage again.";
+        canRetry = false;
+      } else if (caught instanceof ApiResponseError && caught.status === 429) {
+        message = "The backend is rate limiting triage requests. Wait before choosing Retry triage manually.";
+      } else if (caught instanceof ApiResponseError && [502, 503].includes(caught.status)) {
+        message = `The backend is temporarily unavailable (HTTP ${caught.status}). Check its status, wait briefly, then choose Retry triage manually.`;
+      } else if (caught instanceof ApiResponseError && caught.status >= 500) {
+        message = `The backend returned an error (HTTP ${caught.status}). Check its status, then retry manually if appropriate.`;
+      } else if (caught instanceof ApiResponseError) {
+        message = `The backend rejected the request (HTTP ${caught.status}). Check the message and service access before running triage again.`;
+        canRetry = false;
+      } else if (caught instanceof TypeError) {
+        message = "Could not reach the backend. Check your connection and API status, then choose Retry triage manually.";
+      }
+      setError(message);
+      setRetryAvailable(canRetry);
     } finally {
       if (timeoutId !== undefined) window.clearTimeout(timeoutId);
       setLoading(false);

@@ -41,6 +41,7 @@ class FakeRouter:
                 "grounded": True,
                 "grounding_score": 0.86,
                 "evidence_references": ["case-1"],
+                "policy_references": ["fabricated-provider-policy-reference"],
             }
         else:
             pytest.fail(f"unexpected inference task: {request.task}")
@@ -198,6 +199,54 @@ def test_supported_synthetic_policy_check_is_returned_per_proposal() -> None:
         for proposal in result["verified_proposals"]
     )
     assert result["next_action"] == "reply_to_customer"
+
+
+def test_provider_claimed_policy_reference_is_ignored_with_host_verifier() -> None:
+    approved_reference = "synthetic-approved-policy-delivery-01"
+    result = TriageWorkflow(
+        router=FakeRouter(),
+        retriever=FakeRetriever(),
+        approved_policy_references={approved_reference},
+        policy_verifier=lambda _: ProposalVerification(
+            status="supported",
+            policy_references=(approved_reference,),
+            verification_result="passed",
+            verification_method="synthetic_test_verifier",
+        ),
+    ).run("My card has not arrived.", top_k=3)
+
+    assert result["policy_status"] == "verified"
+    assert result["policy_references"] == [approved_reference]
+    assert "fabricated" not in str(result["policy_references"])
+    assert all(
+        check["policy_references"] == [approved_reference] for check in result["proposal_checks"]
+    )
+
+
+def test_string_policy_configuration_is_not_split_into_authority_ids() -> None:
+    verifier_called = False
+
+    def verifier(_: str) -> ProposalVerification:
+        nonlocal verifier_called
+        verifier_called = True
+        return ProposalVerification(
+            status="supported",
+            policy_references=("p",),
+            verification_result="passed",
+            verification_method="synthetic_test_verifier",
+        )
+
+    result = TriageWorkflow(
+        router=FakeRouter(),
+        retriever=FakeRetriever(),
+        approved_policy_references="policy-A",
+        policy_verifier=verifier,
+    ).run("My card has not arrived.", top_k=3)
+
+    assert result["policy_status"] == "no_approved_policy"
+    assert result["verified_proposals"] == []
+    assert result["suggested_response"] == SAFE_ABSTENTION_RESPONSE
+    assert verifier_called is False
 
 
 @pytest.mark.parametrize(

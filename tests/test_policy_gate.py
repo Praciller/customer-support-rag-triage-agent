@@ -100,6 +100,45 @@ def test_invalid_policy_reference_fails_closed(
     assert result.verified_proposals == ()
 
 
+def test_similar_case_reference_cannot_be_used_as_policy_authority() -> None:
+    case_reference = "case-17"
+    result = review_proposals(
+        ["Offer a refund."],
+        approved_policy_references={case_reference},
+        similar_case_references={case_reference},
+        verifier=lambda _: ProposalVerification(
+            status="supported",
+            policy_references=(case_reference,),
+            verification_result="passed",
+            verification_method="synthetic_test_verifier",
+        ),
+    )
+
+    assert result.status == "verification_failed"
+    assert result.checks[0].status == "verification_failed"
+    assert result.checks[0].policy_references == ()
+    assert result.checks[0].verification_method == "similar_case_reference"
+    assert result.verified_proposals == ()
+
+
+def test_malformed_similar_case_references_fail_closed() -> None:
+    result = review_proposals(
+        ["Offer a refund."],
+        approved_policy_references={"case-17"},
+        similar_case_references="case-17",
+        verifier=lambda _: ProposalVerification(
+            status="supported",
+            policy_references=("case-17",),
+            verification_result="passed",
+            verification_method="synthetic_test_verifier",
+        ),
+    )
+
+    assert result.status == "verification_failed"
+    assert result.checks[0].verification_method == "invalid_similar_case_references"
+    assert result.verified_proposals == ()
+
+
 def test_verifier_exception_fails_closed(
     synthetic_approved_policy_references: set[str],
 ) -> None:
