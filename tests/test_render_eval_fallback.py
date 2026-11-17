@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from src.api.services import ApplicationServices
 from src.config.settings import Settings
 
@@ -105,6 +107,37 @@ def test_existing_matching_report_still_takes_precedence(tmp_path):
     report_path.write_text(json.dumps(bundled), encoding="utf-8")
     service = make_services(tmp_path, eval_output_path=report_path)
     assert service.evaluation_results()["selected_test_marker"] == "explicit-compatible"
+
+
+@pytest.mark.parametrize(
+    "invalid",
+    ["missing", "inconsistent", "bad-shape", "invalid-json", "approved", "failed-invariant"],
+)
+def test_invalid_v2_policy_report_does_not_shadow_reviewed_snapshot(tmp_path, invalid):
+    report_path = tmp_path / "chosen.json"
+    report = make_services(tmp_path).evaluation_results()
+    expected = report["policy_review"].copy()
+    report["candidate_test_marker"] = True
+    if invalid == "missing":
+        del report["policy_review"]
+    elif invalid == "inconsistent":
+        report["policy_review"]["proposals_withheld"] -= 1
+    elif invalid == "bad-shape":
+        report["execution"] = ["onnx"]
+    elif invalid == "approved":
+        report["policy_review"].update(
+            manual_review_routes=0,
+            proposals_withheld=0,
+            verified_proposals=expected["proposals_seen"],
+        )
+    elif invalid == "failed-invariant":
+        report["policy_review"]["no_policy_abstentions_satisfy_structural_invariants"] = False
+    contents = "{" if invalid == "invalid-json" else json.dumps(report)
+    report_path.write_text(contents, encoding="utf-8")
+
+    selected = make_services(tmp_path, eval_output_path=report_path).evaluation_results()
+    assert selected.get("policy_review") == expected
+    assert "candidate_test_marker" not in selected
 
 
 def test_existing_non_demo_report_retains_existing_behavior(tmp_path):

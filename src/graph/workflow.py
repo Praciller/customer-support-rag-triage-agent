@@ -229,6 +229,10 @@ class TriageWorkflow:
         )
         payload = self._json(response.text)
         raw_proposals = payload.get("proposals")
+        if not isinstance(raw_proposals, list) and isinstance(
+            payload.get("suggested_response"), str
+        ):
+            raw_proposals = [payload["suggested_response"]]
         proposal_parse_failed = False
         if isinstance(raw_proposals, list):
             if len(raw_proposals) > 8 or any(
@@ -239,10 +243,6 @@ class TriageWorkflow:
                 proposal_parse_failed = True
             else:
                 proposals = [proposal.strip() for proposal in raw_proposals]
-        elif isinstance(payload.get("suggested_response"), str):
-            # Older providers return prose; keep it as one withheld candidate.
-            proposals = [payload["suggested_response"].strip()]
-            proposal_parse_failed = not proposals[0]
         else:
             proposals = []
             proposal_parse_failed = bool(response.text.strip())

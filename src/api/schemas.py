@@ -151,6 +151,15 @@ class TriageResponse(BaseModel):
 
         if not self.verified_proposals:
             raise ValueError("verified policy status requires a verified proposal")
+        if self.degraded_mode or self.fallback_used:
+            raise ValueError("degraded or fallback output cannot be verified")
+        expected_action = (
+            "escalate_to_human"
+            if self.urgency in {"high", "critical"} or self.escalate
+            else "reply_to_customer"
+        )
+        if self.next_action != expected_action:
+            raise ValueError("verified next action must match urgency and escalation")
         checks = {check.proposal_id: check for check in self.proposal_checks}
         proposal_ids = [proposal.proposal_id for proposal in self.verified_proposals]
         if (

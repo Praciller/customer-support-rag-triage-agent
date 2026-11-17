@@ -101,7 +101,7 @@ def test_api_labels_similar_cases_separately_from_approved_policy() -> None:
     assert response.json()["retrieved_cases"][0]["approved_policy"] is False
 
 
-def test_api_requires_each_allowed_proposal_to_have_its_own_passing_policy_check() -> None:
+def verified_policy_payload() -> dict:
     payload = FakeServices().triage("refund please", top_k=5)
     payload.update(
         policy_status="verified",
@@ -127,6 +127,11 @@ def test_api_requires_each_allowed_proposal_to_have_its_own_passing_policy_check
         ],
         suggested_response="Synthetic test action.",
     )
+    return payload
+
+
+def test_api_requires_each_allowed_proposal_to_have_its_own_passing_policy_check() -> None:
+    payload = verified_policy_payload()
     assert TriageResponse.model_validate(payload).policy_status == "verified"
 
     payload["verified_proposals"].append(payload["verified_proposals"][0].copy())
@@ -136,6 +141,21 @@ def test_api_requires_each_allowed_proposal_to_have_its_own_passing_policy_check
 
     payload["proposal_checks"][0]["verification_result"] = "uncertain"
     with pytest.raises(ValidationError, match="passing approved policy check"):
+        TriageResponse.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    ("changes", "error"),
+    [
+        ({"degraded_mode": True}, "cannot be verified"),
+        ({"fallback_used": True}, "cannot be verified"),
+        ({"next_action": "reply_to_customer"}, "next action"),
+    ],
+)
+def test_verified_api_payload_cannot_contradict_workflow_policy(changes, error) -> None:
+    payload = verified_policy_payload()
+    payload.update(changes)
+    with pytest.raises(ValidationError, match=error):
         TriageResponse.model_validate(payload)
 
 

@@ -83,6 +83,38 @@ class EmptyRetriever:
         return []
 
 
+@pytest.mark.parametrize("legacy", [False, True])
+@pytest.mark.parametrize("length", [500, 501])
+def test_legacy_and_current_proposals_share_the_same_character_limit(legacy, length) -> None:
+    class FixedProposalRouter(FakeRouter):
+        def generate(self, request, preferred_provider=None) -> ProviderResponse:
+            if request.task != "generate_response":
+                return super().generate(request, preferred_provider)
+            text = "x" * length
+            payload = {"suggested_response": text} if legacy else {"proposals": [text]}
+            return ProviderResponse(text=json.dumps(payload), provider="mock", model="mock-small")
+
+    result = TriageWorkflow(
+        router=FixedProposalRouter(),
+        retriever=EmptyRetriever(),
+        approved_policy_references={SYNTHETIC_POLICY_REFERENCE},
+        policy_verifier=lambda _: ProposalVerification(
+            status="supported",
+            policy_references=(SYNTHETIC_POLICY_REFERENCE,),
+            verification_result="passed",
+            verification_method="synthetic_test_verifier",
+        ),
+    ).run("Synthetic test ticket.", top_k=3)
+
+    if length == 500:
+        assert result["policy_status"] == "verified"
+        assert len(result["verified_proposals"]) == 1
+    else:
+        assert result["policy_status"] == "verification_failed"
+        assert result["verified_proposals"] == []
+        assert result["next_action"] == "manual_review"
+
+
 def test_similar_cases_and_provider_citations_do_not_count_as_policy() -> None:
     router = FakeRouter()
     result = TriageWorkflow(router=router, retriever=FakeRetriever()).run(

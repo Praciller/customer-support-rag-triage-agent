@@ -44,7 +44,7 @@ validated semantic review process.
 
 `.env`, local caches, embedded databases, and generated frontend output are ignored. The public inference route does not require an external inference credential. Never place credentials in frontend variables, screenshots, logs, fixtures, or checked-in evaluation artifacts.
 
-The SQLite inference cache hashes workflow request fields and typed retrieved evidence for keys but stores generated responses in plaintext. Keep it on trusted local storage, set retention appropriate to the data, and do not cache sensitive tickets without encryption and deletion controls. Application traces deliberately contain bounded summaries and evidence reference IDs rather than raw prompts, evidence text, or environment values.
+The SQLite inference cache hashes the key and stores provider output in plaintext before policy review. Expired rows are removed when their key is read again. Use trusted storage and disable caching for sensitive traffic until encryption, access controls, and scheduled deletion are in place. Application traces record bounded summaries and evidence identifiers.
 
 ## Local Compose and container boundary
 
@@ -79,56 +79,20 @@ claim semantic entailment or policy correctness. Provider self-report, citation 
 similar-case matches are not proof of support. Retrieved content remains untrusted, and a human
 must review the result before taking action.
 
-## Python production dependency advisories — unresolved
+## Dependency audit and release evidence
 
-A source-level [FastEmbed/Pillow reachability review](pillow-fastembed-reachability-20261024.md)
-separates the real text-only public API controls from transitive dependency
-uncertainty and explains why the hashing CI smoke does not validate the
-FastEmbed Hugging Face release image. Its source regression tests do not
-eliminate advisories or grant release approval.
+CI blocks on `pip-audit==2.10.1 --strict` for `requirements.production.txt`,
+a separate strict audit of the installed packages in the ONNX Docker release
+image, and frontend `npm audit --audit-level=low`. The ONNX image check verifies
+that FastEmbed and Pillow are absent. These results apply to the resolved
+packages and the image checked by the run. A previously deployed image needs
+its own package audit and smoke test before release claims are made.
+[CI workflow](../.github/workflows/ci.yml)
 
-As of October 23, 2026, the Python Packaging Authority's
-`pip-audit==2.10.1` is run on `requirements.production.txt` in
-GitHub Actions' `backend` job. Unlike the **blocking** frontend npm
-audit, this scan is currently **reporting-only** with
-`continue-on-error: true` because the verified supported package
-graph has unresolved advisories. A successful CI workflow **does not
-mean Python dependency vulnerabilities are absent**.
-
-Evidence: [Actions run 39843328801](https://github.com/Praciller/customer-support-rag-triage-agent/actions/runs/39843328801)
-detected **37 advisory records in three packages**: `datasets@4.8.5`
-(1; fixes at `5.0.1`), `fsspec@2026.2.0` (1; fixes at `2026.6.0`),
-and `Pillow@12.3.0` (35; fixes at `13.0.0`). These are advisory
-records, **not** 37 independently proven exploitable application
-paths. An attempted fix conflicted with the current supported
-`FastEmbed` line's `Pillow<13` constraint and failed Windows and
-Docker dependency installation. The incompatible attempted changes
-were **not** merged into `main`.
-
-Track the supported remediation and any explicitly time-bounded,
-owner-approved risk decision in
-[Issue #93](https://github.com/Praciller/customer-support-rag-triage-agent/issues/93).
-Do not bypass resolver constraints, suppress specific advisory IDs,
-or claim the public demo is production-ready. React/npm audit results
-are independent. The scan resolves current ranges at CI runtime,
-not the exact Hugging Face deployment artifact or external CPU
-PyTorch wheel.
-
-## Partial Python remediation: Datasets and fsspec
-
-An isolated update raises the `datasets` minimum to 5.0.1 and
-`fsspec` minimum to 2026.6.0 in both development and production
-requirements, without changing FastEmbed, Pillow or embedding behavior.
-A new offline, real-Datasets `Dataset.from_dict` test checks that the
-lazy Hugging Face loader continues to map ClassLabel records and respect
-sample limits after the Datasets major-version change. It deliberately
-does not download from the Hugging Face Hub.
-
-This addresses the two advisory records for the prior Datasets and
-fsspec versions **only after a passing exact-head pip-audit and full
-CI confirms it**. The 35 Pillow advisory records remain pending
-upstream FastEmbed support for Pillow 13. Track this in
-[Issue #93](https://github.com/Praciller/customer-support-rag-triage-agent/issues/93).
-The Python audit remains reporting-only; a passing CI workflow is
-not evidence of zero Python advisories or a deployed-image security
-attestation.
+[Issue #93](https://github.com/Praciller/customer-support-rag-triage-agent/issues/93)
+and the [historical FastEmbed/Pillow review](pillow-fastembed-reachability-20261024.md)
+document the October 23 audit of Datasets 4.8.5, fsspec 2026.2.0 and Pillow 12.3.0.
+The current Datasets and fsspec minimums include the published fixes for those
+advisories. FastEmbed 0.9.1 supports Pillow 13 on Python 3.12. Any optional
+FastEmbed package graph needs its own strict audit and runtime verification
+before release. [FastEmbed upstream change](https://github.com/qdrant/fastembed/pull/830)

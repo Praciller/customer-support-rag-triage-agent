@@ -241,13 +241,23 @@ class ApplicationServices:
             if not absolute.is_file():
                 diagnostic_codes.append(f"{label}:missing")
                 continue
-            report = json.loads(absolute.read_text(encoding="utf-8"))
+            try:
+                report = json.loads(absolute.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                diagnostic_codes.append(f"{label}:unreadable")
+                continue
+            if not isinstance(report, dict):
+                diagnostic_codes.append(f"{label}:invalid_shape")
+                continue
             if self._compatible_demo_report(report):
                 return report
 
             # Use codes only: do not log report bodies, file paths, or env values.
-            execution = report.get("execution") or {}
-            dataset = report.get("dataset") or {}
+            execution = report.get("execution")
+            dataset = report.get("dataset")
+            if not isinstance(execution, dict) or not isinstance(dataset, dict):
+                diagnostic_codes.append(f"{label}:invalid_shape")
+                continue
             checks = {
                 "schema": report.get("evaluation_schema_version") == 2,
                 "mode": report.get("evaluation_mode") == "deterministic_mock",
@@ -283,8 +293,21 @@ class ApplicationServices:
             return True
         if report.get("evaluation_mode") != "deterministic_mock":
             return False
-        execution = report.get("execution") or {}
-        dataset = report.get("dataset") or {}
+        execution = report.get("execution")
+        dataset = report.get("dataset")
+        policy = report.get("policy_review")
+        if not all(isinstance(section, dict) for section in (execution, dataset, policy)):
+            return False
+        counts = (
+            "sample_size",
+            "no_approved_policy_cases",
+            "manual_review_routes",
+            "proposals_seen",
+            "proposals_withheld",
+            "verified_proposals",
+        )
+        if any(type(policy.get(key)) is not int or policy[key] < 0 for key in counts):
+            return False
         return (
             report.get("evaluation_schema_version") == 2
             and execution.get("embedding_provider") == self.settings.embedding_provider
@@ -292,6 +315,13 @@ class ApplicationServices:
             and dataset.get("fixture_revision") == "demo-fixture-v1"
             and dataset.get("sample_size") == 8
             and dataset.get("retrieval_corpus_size") == 27
+            and policy.get("method") == "structural_policy_gate_counts"
+            and policy["sample_size"] == dataset["sample_size"]
+            and policy["no_approved_policy_cases"] == policy["sample_size"]
+            and policy["manual_review_routes"] == policy["sample_size"]
+            and policy["verified_proposals"] == 0
+            and policy["proposals_seen"] == policy["proposals_withheld"]
+            and policy.get("no_policy_abstentions_satisfy_structural_invariants") is True
         )
 
 
