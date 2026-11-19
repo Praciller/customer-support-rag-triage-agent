@@ -20,7 +20,9 @@ def public_client() -> TestClient:
         admin_api_key="",
     )
     # Invalid requests must be rejected before any service method is called.
-    return TestClient(create_app(services=object(), settings=settings))
+    return TestClient(
+        create_app(services=object(), settings=settings), headers={"X-ResolveOps-API-Version": "2"}
+    )
 
 
 @pytest.mark.parametrize("endpoint", ["/triage", "/answer", "/search-similar"])

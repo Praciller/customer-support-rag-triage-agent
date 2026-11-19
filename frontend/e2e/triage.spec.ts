@@ -11,6 +11,29 @@ const nodes = [
   "suggest next action",
 ];
 
+for (const backend of ["v1", "upgrade-required"]) {
+  test(`shows controlled version mismatch for ${backend} without rendering a decision`, async ({ page }) => {
+    let requests = 0;
+    await page.route("**/triage", (route) => {
+      requests += 1;
+      expect(route.request().headers()["x-resolveops-api-version"]).toBe("2");
+      return route.fulfill({
+        status: backend === "v1" ? 200 : 426,
+        contentType: "application/json",
+        body: JSON.stringify(backend === "v1"
+          ? { grounded: true, grounding_score: 0.86, suggested_response: "Legacy fixture" }
+          : { detail: "API v2 required" }),
+      });
+    });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Run triage", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("console and API versions do not match");
+    await expect(page.getByText("Legacy fixture")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Retry triage", exact: true })).toHaveCount(0);
+    expect(requests).toBe(1);
+  });
+}
+
 test("startup reports a usable connected API", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByText("API connected", { exact: true })).toBeVisible();

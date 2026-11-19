@@ -58,7 +58,7 @@ def validate_base_url(url: str) -> str:
 
 
 def fetch_json(url: str, body: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:
-    headers = {"Accept": "application/json"}
+    headers = {"Accept": "application/json", "X-ResolveOps-API-Version": "2"}
     if body is not None:
         headers["Content-Type"] = "application/json"
     req = request.Request(

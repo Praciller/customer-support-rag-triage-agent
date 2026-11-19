@@ -63,6 +63,9 @@ export default function App() {
         message = "Triage timed out after 60 seconds. The backend may still be starting or processing this request. It may finish after the timeout; wait before retrying, or choose Retry triage manually.";
       } else if (serverTimedOut) {
         message = "The backend timed out while processing triage. It may still be starting or finishing this request; wait before retrying, or choose Retry triage manually.";
+      } else if (caught instanceof ApiResponseError && caught.status === 426) {
+        message = "The console and API versions do not match. Reload after the coordinated release. No decision was displayed.";
+        canRetry = false;
       } else if (caught instanceof ApiResponseError && caught.status === 422) {
         message = "The backend rejected this message as invalid. Edit the message, then run triage again.";
         canRetry = false;

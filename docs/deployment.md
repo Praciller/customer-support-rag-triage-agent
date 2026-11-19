@@ -28,7 +28,7 @@ loads pinned ONNX BGE-small on CPU, starts Qdrant, waits for `/ready`, and then 
 ```powershell
 Invoke-RestMethod http://localhost:8000/ready
 Invoke-RestMethod http://localhost:8000/triage -Method Post `
-  -ContentType application/json `
+  -ContentType application/json -Headers @{"X-ResolveOps-API-Version"="2"} `
   -Body '{"message":"My card has not arrived","top_k":5}'
 ```
 

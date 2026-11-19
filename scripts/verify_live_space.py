@@ -45,7 +45,7 @@ SAFE_OPENER = request.build_opener(request.ProxyHandler({}), RejectRedirects())
 
 
 def fetch_json(url: str, payload: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:
-    headers = {"Accept": "application/json"}
+    headers = {"Accept": "application/json", "X-ResolveOps-API-Version": "2"}
     body = None
     if payload is not None:
         headers["Content-Type"] = "application/json"

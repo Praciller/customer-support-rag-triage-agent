@@ -19,7 +19,9 @@ def test_key_free_demo_bootstraps_and_runs_full_workflow(tmp_path: Path) -> None
     )
     services = build_services(settings)
 
-    with TestClient(create_app(services=services, settings=settings)) as client:
+    with TestClient(
+        create_app(services=services, settings=settings), headers={"X-ResolveOps-API-Version": "2"}
+    ) as client:
         ready = client.get("/ready")
         triage = client.post(
             "/triage",
@@ -50,7 +52,9 @@ def test_card_not_arrived_without_approved_policy_abstains(tmp_path: Path) -> No
     )
     services = build_services(settings)
 
-    with TestClient(create_app(services=services, settings=settings)) as client:
+    with TestClient(
+        create_app(services=services, settings=settings), headers={"X-ResolveOps-API-Version": "2"}
+    ) as client:
         response = client.post(
             "/triage",
             json={"message": "My card has not arrived and I travel tomorrow", "top_k": 5},

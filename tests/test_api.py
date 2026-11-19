@@ -54,8 +54,38 @@ class FakeServices:
         return {"intent_accuracy": 0.9}
 
 
+@pytest.mark.parametrize("endpoint", ["/triage", "/answer"])
+@pytest.mark.parametrize("version", [None, "1", "3", "2, 1"])
+def test_legacy_clients_receive_upgrade_error_before_running_workflow(endpoint, version):
+    # Any workflow call would fail because this object has no service methods.
+    client = TestClient(create_app(services=object()))
+    headers = {} if version is None else {"X-ResolveOps-API-Version": version}
+    response = client.post(endpoint, json={"message": "Synthetic test"}, headers=headers)
+    assert response.status_code == 426
+    assert "Reload" in response.json()["detail"]
+    assert "suggested_response" not in response.json()
+
+
+@pytest.mark.parametrize("endpoint", ["/triage", "/answer"])
+def test_v2_negotiation_supports_browser_cors_preflight(endpoint):
+    client = TestClient(create_app(services=object()))
+    response = client.options(
+        endpoint,
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type,x-resolveops-api-version",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+    assert "x-resolveops-api-version" in response.headers["access-control-allow-headers"]
+
+
 def test_api_validates_triage_input_and_returns_metadata() -> None:
-    client = TestClient(create_app(services=FakeServices()))
+    client = TestClient(
+        create_app(services=FakeServices()), headers={"X-ResolveOps-API-Version": "2"}
+    )
 
     invalid = client.post("/triage", json={"message": " ", "top_k": 5})
     valid = client.post("/triage", json={"message": "refund please", "top_k": 5})
@@ -92,9 +122,9 @@ def test_api_labels_similar_cases_separately_from_approved_policy() -> None:
             result["similar_case_references"] = ["case-1"]
             return result
 
-    response = TestClient(create_app(services=EvidenceServices())).post(
-        "/triage", json={"message": "refund please", "top_k": 5}
-    )
+    response = TestClient(
+        create_app(services=EvidenceServices()), headers={"X-ResolveOps-API-Version": "2"}
+    ).post("/triage", json={"message": "refund please", "top_k": 5})
 
     assert response.status_code == 200
     assert response.json()["similar_case_references"] == ["case-1"]
@@ -206,7 +236,9 @@ def test_api_rejects_a_similar_case_reference_as_policy_authority() -> None:
 
 
 def test_api_exposes_required_read_endpoints() -> None:
-    client = TestClient(create_app(services=FakeServices()))
+    client = TestClient(
+        create_app(services=FakeServices()), headers={"X-ResolveOps-API-Version": "2"}
+    )
 
     assert client.get("/health").status_code == 200
     assert client.get("/dataset-info").json()["name"] == "PolyAI/banking77"
@@ -215,7 +247,9 @@ def test_api_exposes_required_read_endpoints() -> None:
 
 
 def test_api_exposes_portfolio_brief_compatibility_endpoints() -> None:
-    client = TestClient(create_app(services=FakeServices()))
+    client = TestClient(
+        create_app(services=FakeServices()), headers={"X-ResolveOps-API-Version": "2"}
+    )
 
     answer = client.post("/answer", json={"message": "refund please", "top_k": 5})
     evaluation = client.post("/evaluate")
@@ -239,7 +273,10 @@ def test_production_ingest_requires_admin_key() -> None:
         app_env="production",
         admin_api_key="test-key",
     )
-    client = TestClient(create_app(services=FakeServices(), settings=settings))
+    client = TestClient(
+        create_app(services=FakeServices(), settings=settings),
+        headers={"X-ResolveOps-API-Version": "2"},
+    )
 
     denied = client.post("/ingest", json={"recreate": True, "sample_size": 10})
     allowed = client.post(
@@ -255,7 +292,10 @@ def test_production_ingest_requires_admin_key() -> None:
 
 def test_public_ingest_is_disabled_by_default() -> None:
     settings = Settings(_env_file=None, app_env="development", allow_public_ingest=False)
-    client = TestClient(create_app(services=FakeServices(), settings=settings))
+    client = TestClient(
+        create_app(services=FakeServices(), settings=settings),
+        headers={"X-ResolveOps-API-Version": "2"},
+    )
 
     response = client.post("/ingest", json={"sample_size": 10})
 
@@ -269,7 +309,10 @@ def test_triage_rate_limit_returns_retry_after() -> None:
         triage_rate_limit_requests=1,
         triage_rate_limit_window_seconds=60,
     )
-    client = TestClient(create_app(services=FakeServices(), settings=settings))
+    client = TestClient(
+        create_app(services=FakeServices(), settings=settings),
+        headers={"X-ResolveOps-API-Version": "2"},
+    )
 
     first = client.post("/triage", json={"message": "refund please", "top_k": 5})
     blocked = client.post("/triage", json={"message": "refund please", "top_k": 5})
@@ -289,6 +332,7 @@ def test_slow_triage_returns_controlled_timeout() -> None:
     client = TestClient(
         create_app(services=SlowServices(), settings=settings),
         raise_server_exceptions=False,
+        headers={"X-ResolveOps-API-Version": "2"},
     )
 
     response = client.post("/triage", json={"message": "refund please", "top_k": 5})
