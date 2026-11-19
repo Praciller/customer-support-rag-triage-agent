@@ -8,7 +8,7 @@ export function CaseList({ cases }: { cases: SimilarCase[] }) {
     return <EmptyState icon={<Database size={20} />} description="No matching indexed cases yet." />;
   }
   return (
-    <div className="case-list" role="list" aria-label="Retrieved evidence">
+    <div className="case-list" role="list" aria-label="Similar past cases">
       {cases.map((item) => (
         <article className="case" role="listitem" key={item.ticket_id}>
           <div className="case-head">
@@ -17,6 +17,7 @@ export function CaseList({ cases }: { cases: SimilarCase[] }) {
           </div>
           <p className="case-intent">{item.intent.replaceAll("_", " ")}</p>
           <p>{item.message}</p>
+          <small>Similar past case · Not approved policy</small>
           <small>Source: {item.source}</small>
         </article>
       ))}

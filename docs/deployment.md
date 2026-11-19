@@ -1,6 +1,11 @@
 # Deployment
 
-## Current public demo — Render (verified October 25, 2026 ICT)
+> **Historical deployment record:** the existing Render deployment predates the local API 2.0
+> policy-review change documented in ADR 0005. This repository change has not been deployed; the
+> live endpoint may still return the older grounding/citation contract. Verify the live contract
+> independently before relying on it.
+
+## Render snapshot — verified October 25, 2026 ICT
 
 - **Frontend:** https://customer-support-rag-triage-agent.onrender.com/
 - **API:** https://customer-support-rag-triage-api.onrender.com/ready
@@ -23,7 +28,7 @@ loads pinned ONNX BGE-small on CPU, starts Qdrant, waits for `/ready`, and then 
 ```powershell
 Invoke-RestMethod http://localhost:8000/ready
 Invoke-RestMethod http://localhost:8000/triage -Method Post `
-  -ContentType application/json `
+  -ContentType application/json -Headers @{"X-ResolveOps-API-Version"="2"} `
   -Body '{"message":"My card has not arrived","top_k":5}'
 ```
 
@@ -164,7 +169,7 @@ docker run --rm --name csrta-onnx-review -p 127.0.0.1:17860:7860 csrta-onnx-revi
 python scripts/verify_local_onnx.py
 ```
 
-The verifier sends only synthetic data, checks strict provider/trace/grounding
+The verifier sends only synthetic data, checks strict provider/trace/policy-review
 contracts, and checks unauthenticated ingestion returns 403. Do **not** use
 this as proof of the installed image dependency versions, human accessibility
 review, production Hugging Face provenance or rollback. No paid build or

@@ -34,12 +34,9 @@ test("mobile classification table exposes all column labels and values", async (
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
-test("degraded ungrounded triage retains explicit manual-review semantics and keyboard details", async ({ page }) => {
+test("degraded no-policy triage retains manual-review semantics and keyboard details", async ({ page }) => {
   const base = makeTriageResult();
   const result = makeTriageResult({
-    grounded: false,
-    grounding_score: 0,
-    citation_integrity: false,
     fallback_used: true,
     degraded_mode: true,
     next_action: "manual_review",
@@ -55,10 +52,9 @@ test("degraded ungrounded triage retains explicit manual-review semantics and ke
 
   const decision = page.getByRole("region", { name: "Recommended action" });
   await expect(decision).toContainText("manual review");
-  await expect(decision.getByLabel("Grounding status: not grounded")).toBeVisible();
-  await expect(decision).toContainText("Citation rejected");
+  await expect(decision.getByLabel("Policy review status: No approved policy")).toBeVisible();
   await expect(decision.getByRole("status").filter({ hasText: "A safe fallback was used." }))
-    .toContainText("Review retrieved evidence and respond manually.");
+    .toContainText("Review the triage and decide manually.");
 
   const trace = page.getByRole("region", { name: "Workflow trace" });
   await expect(trace.getByRole("listitem")).toHaveCount(7);
@@ -67,7 +63,7 @@ test("degraded ungrounded triage retains explicit manual-review semantics and ke
   await details.locator("summary").focus();
   await page.keyboard.press("Enter");
   await expect(details).toHaveAttribute("open", "");
-  await expect(details.getByText("Evidence references")).toBeVisible();
+  await expect(details.getByText("Similar case references")).toBeVisible();
 });
 
 test("evaluation failure is announced without a misleading zero-score success state", async ({ page }) => {

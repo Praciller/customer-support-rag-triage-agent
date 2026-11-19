@@ -23,7 +23,7 @@ WORKFLOW_STAGES = (
     "detect_urgency",
     "retrieve_similar_cases",
     "generate_support_response",
-    "grounding_check",
+    "policy_gate",
     "suggest_next_action",
 )
 Fetch = Callable[[str, dict[str, Any] | None], tuple[int, dict[str, Any]]]
@@ -58,7 +58,7 @@ def validate_base_url(url: str) -> str:
 
 
 def fetch_json(url: str, body: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:
-    headers = {"Accept": "application/json"}
+    headers = {"Accept": "application/json", "X-ResolveOps-API-Version": "2"}
     if body is not None:
         headers["Content-Type"] = "application/json"
     req = request.Request(
@@ -104,6 +104,7 @@ def check(fetch: Fetch, base: str = BASE_URL) -> dict[str, Any]:
         and provider.get("live_provider_calls_enabled") is False
         and provider.get("ingestion_enabled") is False
         and provider.get("qdrant_mode") == "local"
+        and provider.get("policy_source", {}).get("status") == "no_approved_policy"
     ):
         raise ValueError("Release-image ONNX demo/admin/provider boundary changed")
 
@@ -115,6 +116,7 @@ def check(fetch: Fetch, base: str = BASE_URL) -> dict[str, Any]:
     if not (
         status == 200
         and evaluation.get("evaluation_mode") == "deterministic_mock"
+        and evaluation.get("evaluation_schema_version") == 2
         and evaluation.get("dataset", {}).get("sample_size") == 8
     ):
         raise ValueError("Expected deterministic mock evaluation fixture is unavailable")
@@ -129,13 +131,19 @@ def check(fetch: Fetch, base: str = BASE_URL) -> dict[str, Any]:
         and tuple(step.get("node") for step in trace) == WORKFLOW_STAGES
         and all(step.get("status") == "completed" for step in trace)
         and triage.get("provider_used") == "mock"
-        and triage.get("grounded") is True
-        and triage.get("citation_integrity") is True
         and triage.get("degraded_mode") is False
         and triage.get("fallback_used") is False
-        and triage.get("next_action") == "ask_for_order_id"
+        and triage.get("policy_status") == "no_approved_policy"
+        and triage.get("next_action") == "manual_review"
+        and triage.get("verified_proposals") == []
+        and all(
+            check.get("status") == "no_approved_policy"
+            for check in triage.get("proposal_checks", [])
+        )
+        and "grounded" not in triage
+        and "grounding_score" not in triage
     ):
-        raise ValueError("Synthetic ONNX workflow/grounding contract failed")
+        raise ValueError("Synthetic ONNX workflow/policy contract failed")
 
     # The public-ingest flag MUST be false before any denial probe is made.
     status, _ = fetch(base + "/ingest", {"recreate": False, "sample_size": 1})
@@ -150,8 +158,7 @@ def check(fetch: Fetch, base: str = BASE_URL) -> dict[str, Any]:
         "embedding_model": provider.get("embedding_model"),
         "mock_mode": True,
         "seven_node_trace": len(triage["trace"]),
-        "grounded": triage.get("grounded"),
-        "citation_integrity": triage.get("citation_integrity"),
+        "policy_status": triage.get("policy_status"),
         "next_action": triage.get("next_action"),
         "evaluation_samples": 8,
         "public_ingestion_http_status": 403,

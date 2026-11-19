@@ -43,6 +43,14 @@ input, select { min-height: 40px; padding: 0 11px; }
 .decision-statuses { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .decision-status { display: inline-flex; align-items: center; gap: 6px; padding: 7px 9px; border: var(--border-width-thin) solid var(--color-border); border-radius: 6px; font-size: var(--text-xs); }
 .decision-status:first-child { border-color: color-mix(in srgb, var(--color-success) 40%, var(--color-border)); }
+.policy-caveat { margin: 12px 0 0; color: var(--color-foreground-muted); font-size: var(--text-xs); line-height: 1.5; }
+.proposal-checks, .verified-proposals { margin-top: 16px; padding: 14px 16px; border: var(--border-width-thin) solid var(--color-border); border-radius: 7px; background: color-mix(in srgb, var(--color-foreground) 3%, var(--color-surface)); }
+.proposal-checks h3, .verified-proposals h3 { margin: 0 0 10px; font-size: var(--text-xs); }
+.proposal-check-list, .verified-proposals ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.proposal-check-list li, .verified-proposals li { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; font-size: var(--text-xs); line-height: 1.5; }
+.proposal-check-list li + li, .verified-proposals li + li { padding-top: 10px; border-top: var(--border-width-thin) solid var(--color-border); }
+.proposal-check-list li > span, .verified-proposals small { color: var(--color-foreground-muted); }
+.verified-proposals p { margin: 0; line-height: 1.5; }
 .technical-details { margin-top: 16px; border-top: var(--border-width-thin) solid var(--color-border); }
 .technical-details summary { cursor: pointer; padding: 12px 0; color: var(--color-foreground-muted); font-size: var(--text-xs); font-weight: 750; }
 .technical-details-body { display: grid; gap: 8px; padding: 0 0 4px; }
@@ -59,7 +67,8 @@ input, select { min-height: 40px; padding: 0 11px; }
 .case .score { color: var(--color-foreground-muted); font: 500 var(--text-xs) var(--font-code); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .case-intent { margin: 4px 0; color: var(--color-primary); font-size: var(--text-xs); font-weight: 700; text-transform: capitalize; }
 .case p:not(.case-intent) { margin: 7px 0; line-height: 1.55; overflow-wrap: anywhere; }
-.case small { color: var(--color-foreground-muted); font-size: var(--text-xs); overflow-wrap: anywhere; }
+.case small { display: block; color: var(--color-foreground-muted); font-size: var(--text-xs); overflow-wrap: anywhere; }
+.case small + small { margin-top: 4px; }
 .decision, .evidence { padding: 22px; min-width: 0; }
 .facts { display: grid; grid-template-columns: repeat(2, 1fr); border: var(--border-width-thin) solid var(--color-border); border-radius: 7px; overflow: hidden; }
 .facts div { padding: 13px; border-bottom: var(--border-width-thin) solid var(--color-border); min-width: 0; }

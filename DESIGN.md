@@ -46,7 +46,8 @@ component_state_rules:
   status_semantics: "visible text plus icon or shape; color is supplementary"
   unavailable: "explain the missing capability and the safe next action"
   degraded: "show degraded state and preserve human review"
-  ungrounded: "never present as grounded; route to manual review"
+  no_approved_policy: "withhold proposals; show a safe acknowledgement and route to manual review"
+  policy_check_failed: "withhold proposals; show the check status and route to manual review"
 v3_foundation:
   status: "foundation and Slice C/D/E page migration implemented; Slice F release QA tracked separately"
   tailwind: "4.3.3 with first-party PostCSS plugin and source-owned semantic tokens"
@@ -83,8 +84,8 @@ The information hierarchy MUST be:
 
 1. customer message;
 2. recommended decision / human action;
-3. grounding and escalation state;
-4. retrieved evidence;
+3. policy review status and escalation state;
+4. similar past cases labeled as unapproved context;
 5. workflow trace and runtime metadata.
 
 The narrow-screen layout preserves this order: the decision comes before detailed evidence and trace.
@@ -114,11 +115,11 @@ Use the declared `motion` durations and easing for hover, selection, and result 
 - **Button:** has a clear primary/secondary hierarchy, an accessible name, keyboard operation, visible focus, disabled semantics, and a state that does not rely on color alone.
 - **Field/Input:** has a persistent visible label, bounded validation, an associated error description, and a full-border treatment with the declared radius.
 - **Panel:** groups one coherent decision, evidence set, or trace; it uses heading hierarchy and avoids fragmenting one workflow into decorative cards.
-- **Badge/StatusIndicator:** communicates `neutral`, `success`, `warning`, and `danger` with visible text and/or an icon/shape. Color is supplementary only. Urgency, grounding, escalation, cached, fallback, and degraded meanings must be stated.
+- **Badge/StatusIndicator:** communicates `neutral`, `success`, `warning`, and `danger` with visible text and/or an icon/shape. Color is supplementary only. Policy status, urgency, escalation, cached, fallback, and degraded meanings must be stated.
 - **EmptyState:** explains what is absent, why it matters, and the safe next action.
 - **ErrorNotice:** explains the controlled failure without stack traces or secrets and gives a recoverable next action where possible.
-- **TriageDecision:** presents the recommended decision and human action immediately after the customer message, followed by grounding and escalation state.
-- **CaseList/Evidence:** shows provenance, reference identity, and relevant content as evidence. Retrieved content is not workflow authority or policy.
+- **TriageDecision:** presents intent, urgency, policy status, acknowledgement, and human action immediately after the customer message.
+- **CaseList:** shows similar past case provenance and reference identity, labeled as context that is not approved policy.
 - **TraceList:** presents the seven workflow stages as an ordered, readable sequence with outcome and bounded runtime metadata.
 - **Table/Chart:** uses direct labels and restrained grid lines. Every chart has a textual summary conveying its key relationship or trend.
 
@@ -128,10 +129,10 @@ Every state must be understandable without color alone and must retain the human
 
 - **Loading:** communicate what is being prepared and preserve the page hierarchy without layout-breaking animation.
 - **Unavailable:** state which capability is unavailable and what remains safe to do.
-- **Degraded:** visibly say that generation or another dependency degraded; do not imply a normal grounded result.
+- **Degraded:** visibly say that generation or another dependency degraded and preserve human review.
 - **Fallback:** identify the fallback route or safe manual-review path without exposing internal secrets or paths.
 - **Cached:** label cached data and its freshness/limitations when relevant.
-- **Ungrounded:** explicitly state that the response is not grounded and route to `manual_review`.
+- **No approved policy:** explicitly say that no approved policy applies, show the safe acknowledgement, and route to `manual_review`.
 - **Escalated:** explicitly state the escalation and human action required; do not let a provider response suppress a high or critical urgency decision.
 
 ## Accessibility and responsive verification
@@ -140,4 +141,4 @@ Target WCAG 2.2 AA. All interactive controls must be keyboard operable with visi
 
 ## Anti-patterns
 
-Do not use gradients, glassmorphism, decorative glowing AI visuals, generic chatbot presentation, or decorative dashboard metric-card spam. Do not frame the product as autonomous support or hide evidence, grounding, degradation, escalation, or human review behind visual polish.
+Do not use gradients, glassmorphism, decorative glowing AI visuals, generic chatbot presentation, or decorative dashboard metric-card spam. Do not frame the product as autonomous support or hide policy status, degradation, escalation, or human review behind visual polish.

@@ -8,19 +8,19 @@ class TriageState(TypedDict, total=False):
     normalized_message: str
     top_k: int
     intent: str
-    intent_confidence: float
     urgency: str
     escalate: bool
     escalation_reason: str
     retrieved_cases: list[dict[str, Any]]
     retrieved_evidence: tuple[RetrievedEvidence, ...]
     suggested_response: str
-    evidence_references: list[str]
-    citation_integrity: bool
-    grounded: bool
-    grounding_score: float
-    unsupported_claims: list[str]
-    confidence: float
+    candidate_proposals: list[str]
+    proposal_parse_failed: bool
+    proposal_checks: list[dict[str, Any]]
+    verified_proposals: list[dict[str, Any]]
+    policy_status: str
+    similar_case_references: list[str]
+    policy_references: list[str]
     next_action: str
     provider_used: str
     model_used: str

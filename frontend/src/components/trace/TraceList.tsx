@@ -43,9 +43,10 @@ export function TraceList({ trace }: { trace: TraceStep[] }) {
                   <div><dt>Cache</dt><dd>{step.cache_hit ? "hit" : "miss"}</dd></div>
                   <div><dt>Fallback</dt><dd>{step.fallback ? "yes" : "no"}</dd></div>
                   <div><dt>Degraded</dt><dd>{step.degraded_mode ? "yes" : "no"}</dd></div>
-                  <div><dt>Retrieved cases</dt><dd>{step.retrieved_document_count}</dd></div>
-                  <div><dt>Grounding</dt><dd>{step.grounding_result === null ? "Not checked" : String(step.grounding_result)}</dd></div>
-                  <div><dt>Evidence references</dt><dd>{step.evidence_references.join(", ") || "None"}</dd></div>
+                  <div><dt>Similar cases retrieved</dt><dd>{step.retrieved_document_count}</dd></div>
+                  <div><dt>Policy status</dt><dd>{step.policy_status?.replaceAll("_", " ") ?? "Not checked"}</dd></div>
+                  <div><dt>Similar case references</dt><dd>{step.similar_case_references.join(", ") || "None"}</dd></div>
+                  <div><dt>Approved policy references</dt><dd>{step.policy_references.join(", ") || "None"}</dd></div>
                   {step.error_category && <div><dt>Error category</dt><dd>{step.error_category}</dd></div>}
                 </dl>
               </details>

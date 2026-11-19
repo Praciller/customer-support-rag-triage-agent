@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { makeTriageResult } from "../src/test/fixtures";
 
 const nodes = [
   "normalize message",
@@ -6,9 +7,32 @@ const nodes = [
   "detect urgency",
   "retrieve similar cases",
   "generate support response",
-  "grounding check",
+  "policy gate",
   "suggest next action",
 ];
+
+for (const backend of ["v1", "upgrade-required"]) {
+  test(`shows controlled version mismatch for ${backend} without rendering a decision`, async ({ page }) => {
+    let requests = 0;
+    await page.route("**/triage", (route) => {
+      requests += 1;
+      expect(route.request().headers()["x-resolveops-api-version"]).toBe("2");
+      return route.fulfill({
+        status: backend === "v1" ? 200 : 426,
+        contentType: "application/json",
+        body: JSON.stringify(backend === "v1"
+          ? { grounded: true, grounding_score: 0.86, suggested_response: "Legacy fixture" }
+          : { detail: "API v2 required" }),
+      });
+    });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Run triage", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("console and API versions do not match");
+    await expect(page.getByText("Legacy fixture")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Retry triage", exact: true })).toHaveCount(0);
+    expect(requests).toBe(1);
+  });
+}
 
 test("startup reports a usable connected API", async ({ page }) => {
   await page.goto("/");
@@ -16,7 +40,51 @@ test("startup reports a usable connected API", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Customer message" })).toBeVisible();
 });
 
-test("Card not arrived produces a grounded seven-node decision", async ({ page }) => {
+test("shows a cold-start wait, times out, and retries only after a manual action", async ({ page }) => {
+  let triageRequests = 0;
+  let releaseFirstResponse!: () => void;
+  const firstResponseHeld = new Promise<void>((resolve) => {
+    releaseFirstResponse = resolve;
+  });
+  await page.clock.install();
+  await page.route("**/health", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ status: "ok" }),
+  }));
+  await page.route("**/triage", async (route) => {
+    triageRequests += 1;
+    if (triageRequests === 1) {
+      await firstResponseHeld;
+      await route.fulfill({
+        status: 504,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: "Request timed out" }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(makeTriageResult()),
+    });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Run triage", exact: true }).click();
+  await expect(page.getByText(/backend may be starting after an idle period/i)).toBeVisible();
+  releaseFirstResponse();
+  await expect(page.getByRole("alert")).toContainText(/backend timed out while processing triage/i);
+  await expect(page.getByRole("button", { name: "Retry triage", exact: true })).toBeVisible();
+  await page.clock.fastForward(65_000);
+  expect(triageRequests).toBe(1);
+
+  await page.getByRole("button", { name: "Retry triage", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Seven-node execution trace" })).toBeVisible();
+  expect(triageRequests).toBe(2);
+});
+
+test("Card not arrived without approved policy routes to human review", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Card not arrived", exact: true }).click();
   await page.getByRole("button", { name: "Run triage", exact: true }).click();
@@ -27,15 +95,19 @@ test("Card not arrived produces a grounded seven-node decision", async ({ page }
   await expect(decision).toContainText("Urgency:");
   await expect(decision.getByText("medium", { exact: true })).toBeVisible();
   await expect(decision.getByText("Next action", { exact: true })).toBeVisible();
-  await expect(decision.getByText("ask for order id", { exact: true })).toBeVisible();
-  await expect(decision.getByText(/grounded/i)).toBeVisible();
-  await expect(decision.getByText(/citation/i)).toBeVisible();
+  await expect(decision.getByText("manual review", { exact: true })).toBeVisible();
+  await expect(decision.getByLabel("Policy review status: No approved policy")).toBeVisible();
+  await expect(decision).toContainText("Similar past cases are context only");
+  await expect(decision).toContainText("A support specialist needs to review this before we can advise on next steps.");
+  await expect(decision).not.toContainText(/refund options|order id/i);
+  await expect(decision).toContainText("proposal 1: no approved policy");
 
-  const evidence = page.getByRole("region", { name: "Retrieved evidence" });
+  const evidence = page.getByRole("region", { name: "Similar past cases" });
   await expect(evidence).toContainText("found");
   const firstCase = evidence.getByRole("listitem").first();
   await expect(firstCase).toBeVisible();
   await expect(firstCase).toContainText("similarity");
+  await expect(firstCase).toContainText("Not approved policy");
   await expect(firstCase).toContainText("mteb/banking77");
   await expect(firstCase).toContainText("demo-delivery-estimate");
 

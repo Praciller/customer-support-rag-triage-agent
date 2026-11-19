@@ -23,7 +23,7 @@ test("initial triage desktop baseline", async ({ page }) => {
 
 test("successful triage desktop baseline", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 }); await installVisualRoutes(page); await runSuccess(page);
-  await expect(page.getByRole("main")).toContainText(/delivery issue|medium|ask for order id|grounded|citations checked|Similar cases|Seven-node execution trace/i); await page.evaluate(() => document.fonts.ready);
+  await expect(page.getByRole("main")).toContainText(/delivery issue|medium|manual review|no approved policy|Similar cases|Seven-node execution trace/i); await page.evaluate(() => document.fonts.ready);
   await expect(page).toHaveScreenshot("triage-success-desktop.png", { fullPage: true, animations: "disabled", caret: "hide", scale: "css" });
 });
 
@@ -42,7 +42,7 @@ test("evaluation desktop baseline", async ({ page }) => {
 
 test("successful triage mobile baseline and hierarchy", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 }); await installVisualRoutes(page); await runSuccess(page);
-  const decision = page.getByRole("region", { name: "Recommended action" }); const evidence = page.getByRole("region", { name: "Retrieved evidence" }); const trace = page.getByRole("region", { name: "Workflow trace" });
+  const decision = page.getByRole("region", { name: "Recommended action" }); const evidence = page.getByRole("region", { name: "Similar past cases" }); const trace = page.getByRole("region", { name: "Workflow trace" });
   const boxes = await Promise.all([decision, evidence, trace].map((locator) => locator.boundingBox())); if (boxes.some((box) => box === null)) throw new Error("Expected mobile decision, evidence, and trace boxes");
   if (!(boxes[0]!.y < boxes[1]!.y && boxes[1]!.y < boxes[2]!.y)) throw new Error("Mobile hierarchy order is incorrect");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(() => document.documentElement.clientWidth)); await page.evaluate(() => document.fonts.ready);

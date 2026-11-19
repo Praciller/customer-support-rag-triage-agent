@@ -18,6 +18,8 @@ class RetrievedEvidence:
     def to_provider_payload(self) -> dict[str, Any]:
         return {
             "reference_id": self.reference_id,
+            "evidence_type": "similar_past_case",
+            "approved_policy": False,
             "content": self.message,
             "intent": self.intent,
             "prior_response": self.response,
@@ -30,6 +32,8 @@ class RetrievedEvidence:
     def to_public_dict(self) -> dict[str, Any]:
         return {
             "ticket_id": self.reference_id,
+            "evidence_type": "similar_past_case",
+            "approved_policy": False,
             "message": self.message,
             "intent": self.intent,
             "response": self.response,

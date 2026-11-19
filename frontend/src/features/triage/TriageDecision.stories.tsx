@@ -26,20 +26,18 @@ export const Escalated: Story = {
   },
 };
 
-export const Ungrounded: Story = {
+export const NoApprovedPolicy: Story = {
   args: {
     result: makeTriageResult({
-      grounded: false,
-      grounding_score: 0.2,
       next_action: "manual_review",
-      unsupported_claims: ["Evidence is insufficient."],
+      policy_status: "no_approved_policy",
     }),
   },
 };
 
 export const Degraded: Story = {
   args: {
-    result: makeTriageResult({ degraded_mode: true, grounded: false, next_action: "manual_review" }),
+    result: makeTriageResult({ degraded_mode: true, next_action: "manual_review" }),
   },
 };
 

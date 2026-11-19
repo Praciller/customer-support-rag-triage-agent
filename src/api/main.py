@@ -21,6 +21,14 @@ from src.api.services import ApplicationServices, build_services
 from src.config.settings import get_settings
 
 
+def require_v2(version: str | None) -> None:
+    if version != "2":
+        raise HTTPException(
+            status_code=426,
+            detail="API v2 required. Reload the console or send X-ResolveOps-API-Version: 2.",
+        )
+
+
 def create_app(
     services: ApplicationServices | Any | None = None,
     settings: Any | None = None,
@@ -38,8 +46,11 @@ def create_app(
 
     app = FastAPI(
         title="Customer Support RAG Triage Agent",
-        version="1.0.0",
-        description="Retrieval-grounded support triage workflow with provider fallback.",
+        version="2.0.0",
+        description=(
+            "Human-reviewed support triage. Similar past cases are context only; "
+            "without approved policy, the workflow abstains and routes to human review."
+        ),
         lifespan=lifespan,
     )
     app.add_middleware(
@@ -153,17 +164,27 @@ def create_app(
     @app.post(
         "/triage",
         response_model=TriageResponse,
+        responses={426: {"description": "API v2 client upgrade required"}},
         dependencies=[Depends(triage_limit)],
     )
-    def triage(request: TriageRequest) -> dict[str, Any]:
+    def triage(
+        request: TriageRequest,
+        x_resolveops_api_version: Annotated[str | None, Header()] = None,
+    ) -> dict[str, Any]:
+        require_v2(x_resolveops_api_version)
         return service.triage(request.message, request.top_k)
 
     @app.post(
         "/answer",
         response_model=TriageResponse,
+        responses={426: {"description": "API v2 client upgrade required"}},
         dependencies=[Depends(triage_limit)],
     )
-    def answer(request: TriageRequest) -> dict[str, Any]:
+    def answer(
+        request: TriageRequest,
+        x_resolveops_api_version: Annotated[str | None, Header()] = None,
+    ) -> dict[str, Any]:
+        require_v2(x_resolveops_api_version)
         return service.triage(request.message, request.top_k)
 
     @app.post(

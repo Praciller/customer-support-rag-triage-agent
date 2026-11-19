@@ -1,16 +1,19 @@
-"""Reviewable snapshot of the 2026-10-24 pinned ONNX mock evaluation.
+# The embedded JSON must remain byte-identical to its checked-in source report.
+# ruff: noqa: E501
+"""Reviewed ONNX snapshot of the 2026-11-14 structural policy-gate evaluation.
 The source report lives in reports/evaluation/results.json.
 This duplicate is required on hosts that omit the reports/ directory.
-The regression suite enforces byte-normalized SHA-256 equivalence.
+The regression suite enforces normalized SHA-256 equivalence.
 """
 
 import hashlib
 import json
 
-SOURCE_SHA256 = "6b268636b670179ec087fc1ebc6795a6f212925b98d80f3dd1ea8fb91d9c76b4"
+SOURCE_SHA256 = "4a68e426408a86d7e2c5af82bfefbb0513b92725979ce438d46abc7d8f5d50fc"
 
 _REPORT_JSON = r"""{
-  "generated_at": "2026-10-24T16:59:56.670459+00:00",
+  "evaluation_schema_version": 2,
+  "generated_at": "2026-11-14T12:50:27.402550+00:00",
   "command": "python -m src.evaluation.evaluate_triage",
   "evaluation_mode": "deterministic_mock",
   "dataset": {
@@ -249,7 +252,7 @@ _REPORT_JSON = r"""{
     "ndcg_at_k": 0.6106824851964359,
     "zero_result": 0.0,
     "average_score": 0.7343724846664359,
-    "latency_ms": 4.043487500894116,
+    "latency_ms": 3.115749997959938,
     "top_k": 5,
     "sample_size": 8,
     "examples": [
@@ -269,7 +272,7 @@ _REPORT_JSON = r"""{
         "ndcg_at_k": 1.0,
         "zero_result": 0.0,
         "average_score": 0.7481246695830743,
-        "latency_ms": 4.3126000091433525
+        "latency_ms": 3.353699983563274
       },
       {
         "message": "I want a refund for this payment",
@@ -287,7 +290,7 @@ _REPORT_JSON = r"""{
         "ndcg_at_k": 0.7039180890341347,
         "zero_result": 0.0,
         "average_score": 0.7802156388638991,
-        "latency_ms": 4.206600016914308
+        "latency_ms": 3.015000023879111
       },
       {
         "message": "Why was I charged an extra fee",
@@ -305,7 +308,7 @@ _REPORT_JSON = r"""{
         "ndcg_at_k": 0.2960819109658652,
         "zero_result": 0.0,
         "average_score": 0.7585768822803503,
-        "latency_ms": 3.502199979266152
+        "latency_ms": 2.9218000127002597
       },
       {
         "message": "The mobile payment feature is not working",
@@ -323,7 +326,7 @@ _REPORT_JSON = r"""{
         "ndcg_at_k": 0.23463936301137822,
         "zero_result": 0.0,
         "average_score": 0.6569871391107422,
-        "latency_ms": 3.480999992461875
+        "latency_ms": 2.8805999900214374
       },
       {
         "message": "I forgot my passcode and cannot sign in",
@@ -341,7 +344,7 @@ _REPORT_JSON = r"""{
         "ndcg_at_k": 0.7653606369886217,
         "zero_result": 0.0,
         "average_score": 0.6961826916747039,
-        "latency_ms": 4.4661000138148665
+        "latency_ms": 3.2891999871935695
       },
       {
         "message": "Which countries support this card",
@@ -359,7 +362,7 @@ _REPORT_JSON = r"""{
         "ndcg_at_k": 0.7653606369886217,
         "zero_result": 0.0,
         "average_score": 0.7137124844381623,
-        "latency_ms": 4.0788000042084605
+        "latency_ms": 3.2293999975081533
       },
       {
         "message": "This transaction is not mine and my card may be stolen",
@@ -377,7 +380,7 @@ _REPORT_JSON = r"""{
         "ndcg_at_k": 0.41618115554873086,
         "zero_result": 0.0,
         "average_score": 0.7533344737041447,
-        "latency_ms": 4.475800000363961
+        "latency_ms": 3.288499981863424
       },
       {
         "message": "Please cancel my transfer immediately",
@@ -395,21 +398,31 @@ _REPORT_JSON = r"""{
         "ndcg_at_k": 0.7039180890341347,
         "zero_result": 0.0,
         "average_score": 0.7678458976764108,
-        "latency_ms": 3.8247999909799546
+        "latency_ms": 2.947800006950274
       }
     ]
   },
-  "grounding_workflow": {
-    "grounded_response_rate": 1.0,
-    "grounding_failure_rate": 0.0,
-    "unsupported_claim_rate": 0.0,
+  "policy_review": {
+    "method": "structural_policy_gate_counts",
+    "sample_size": 8,
+    "policy_status_counts": {
+      "no_approved_policy": 8
+    },
+    "no_approved_policy_cases": 8,
+    "manual_review_routes": 8,
+    "proposals_seen": 10,
+    "proposals_withheld": 10,
+    "verified_proposals": 0,
+    "no_policy_abstentions_satisfy_structural_invariants": true
+  },
+  "runtime_workflow": {
     "degraded_mode_rate": 0.0,
     "fallback_rate": 0.0,
     "cache_hit_rate": 0.0,
     "workflow_success_rate": 1.0,
-    "average_latency_ms": 9.37375,
-    "p50_latency_ms": 8.445,
-    "p95_latency_ms": 13.704499999999996,
+    "average_latency_ms": 7.17875,
+    "p50_latency_ms": 6.0649999999999995,
+    "p95_latency_ms": 10.522499999999999,
     "provider_usage": {
       "mock": 8
     }
@@ -417,6 +430,8 @@ _REPORT_JSON = r"""{
   "limitations": [
     "The fixture is small and deterministic; results are not a production SLA.",
     "Relevance uses mapped intent labels, not human-graded policy relevance.",
+    "The default workflow has no approved policy source and structurally withholds all generated proposals.",
+    "Policy-gate counts measure routing and result-shape invariants only; they do not establish semantic entailment or policy correctness.",
     "Mock generation measures workflow determinism, not real-model answer quality."
   ],
   "failed_examples": [],
@@ -426,18 +441,16 @@ _REPORT_JSON = r"""{
   "retrieval_ndcg_at_k": 0.6106824851964359,
   "retrieval_zero_result_rate": 0.0,
   "retrieval_average_score": 0.7343724846664359,
-  "retrieval_latency_ms": 4.043487500894116,
+  "retrieval_latency_ms": 3.115749997959938,
   "top_k": 5,
   "intent_accuracy": 1.0,
   "intent_macro_f1": 1.0,
   "urgency_accuracy": 1.0,
   "urgency_macro_f1": 1.0,
-  "groundedness_pass_rate": 1.0,
-  "unsupported_claim_rate": 0.0,
   "degraded_mode_rate": 0.0,
-  "average_latency_ms": 9.37375,
-  "p50_latency_ms": 8.445,
-  "p95_latency_ms": 13.704499999999996,
+  "average_latency_ms": 7.17875,
+  "p50_latency_ms": 6.0649999999999995,
+  "p95_latency_ms": 10.522499999999999,
   "cache_hit_rate": 0.0,
   "provider_fallback_rate": 0.0,
   "workflow_success_rate": 1.0,

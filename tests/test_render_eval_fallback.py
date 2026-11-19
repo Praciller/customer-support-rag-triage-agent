@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from src.api.services import ApplicationServices
 from src.config.settings import Settings
 
@@ -32,6 +34,10 @@ def test_bundled_onnx_mock_report_fills_missing_host_output(tmp_path):
     assert report["dataset"]["sample_size"] == 8
     assert report["dataset"]["retrieval_corpus_size"] == 27
     assert report["dataset"]["fixture_revision"] == "demo-fixture-v1"
+    assert report["evaluation_schema_version"] == 2
+    assert report["policy_review"]["method"] == "structural_policy_gate_counts"
+    assert "groundedness_pass_rate" not in report
+    assert "unsupported_claim_rate" not in report
     assert report["limitations"]
 
 
@@ -91,7 +97,7 @@ def test_existing_incompatible_mock_report_falls_back_to_verified_onnx_snapshot(
     selected = service.evaluation_results()
     assert selected["execution"]["embedding_provider"] == "onnx"
     assert selected["dataset"]["sample_size"] == 8
-    assert selected["generated_at"].startswith("2026-10-24T16:59:56")
+    assert selected["generated_at"].startswith("2026-11-14T")
 
 
 def test_existing_matching_report_still_takes_precedence(tmp_path):
@@ -101,6 +107,37 @@ def test_existing_matching_report_still_takes_precedence(tmp_path):
     report_path.write_text(json.dumps(bundled), encoding="utf-8")
     service = make_services(tmp_path, eval_output_path=report_path)
     assert service.evaluation_results()["selected_test_marker"] == "explicit-compatible"
+
+
+@pytest.mark.parametrize(
+    "invalid",
+    ["missing", "inconsistent", "bad-shape", "invalid-json", "approved", "failed-invariant"],
+)
+def test_invalid_v2_policy_report_does_not_shadow_reviewed_snapshot(tmp_path, invalid):
+    report_path = tmp_path / "chosen.json"
+    report = make_services(tmp_path).evaluation_results()
+    expected = report["policy_review"].copy()
+    report["candidate_test_marker"] = True
+    if invalid == "missing":
+        del report["policy_review"]
+    elif invalid == "inconsistent":
+        report["policy_review"]["proposals_withheld"] -= 1
+    elif invalid == "bad-shape":
+        report["execution"] = ["onnx"]
+    elif invalid == "approved":
+        report["policy_review"].update(
+            manual_review_routes=0,
+            proposals_withheld=0,
+            verified_proposals=expected["proposals_seen"],
+        )
+    elif invalid == "failed-invariant":
+        report["policy_review"]["no_policy_abstentions_satisfy_structural_invariants"] = False
+    contents = "{" if invalid == "invalid-json" else json.dumps(report)
+    report_path.write_text(contents, encoding="utf-8")
+
+    selected = make_services(tmp_path, eval_output_path=report_path).evaluation_results()
+    assert selected.get("policy_review") == expected
+    assert "candidate_test_marker" not in selected
 
 
 def test_existing_non_demo_report_retains_existing_behavior(tmp_path):

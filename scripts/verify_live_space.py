@@ -26,7 +26,7 @@ WORKFLOW_STAGES = (
     "detect_urgency",
     "retrieve_similar_cases",
     "generate_support_response",
-    "grounding_check",
+    "policy_gate",
     "suggest_next_action",
 )
 Fetcher = Callable[[str, dict[str, Any] | None], tuple[int, dict[str, Any]]]
@@ -45,7 +45,7 @@ SAFE_OPENER = request.build_opener(request.ProxyHandler({}), RejectRedirects())
 
 
 def fetch_json(url: str, payload: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:
-    headers = {"Accept": "application/json"}
+    headers = {"Accept": "application/json", "X-ResolveOps-API-Version": "2"}
     body = None
     if payload is not None:
         headers["Content-Type"] = "application/json"
@@ -126,11 +126,19 @@ def run_check(
         provider.get("ingestion_enabled") is False,
         "Public ingestion is enabled; preflight fails closed",
     )
+    require(
+        provider.get("policy_source", {}).get("status") == "no_approved_policy",
+        "Default demo policy source status changed",
+    )
 
     status, evaluation = fetch(BASE_URL + "/eval/results", None)
     require(
         status == 200 and evaluation.get("evaluation_mode") == "deterministic_mock",
         "Evaluation is missing or not deterministic",
+    )
+    require(
+        evaluation.get("evaluation_schema_version") == 2,
+        "Evaluation report is not the version 2 policy-review contract",
     )
     sample_size = evaluation.get("dataset", {}).get("sample_size")
     require(sample_size == 8, "Evaluation fixture size has changed")
@@ -151,12 +159,18 @@ def run_check(
             and tuple(step.get("node") for step in trace) == WORKFLOW_STAGES
             and all(step.get("status") == "completed" for step in trace)
             and decision.get("provider_used") == "mock"
-            and decision.get("grounded") is True
-            and decision.get("citation_integrity") is True
             and decision.get("fallback_used") is False
             and decision.get("degraded_mode") is False
-            and decision.get("next_action") == "ask_for_order_id",
-            "Synthetic triage workflow/grounding contract changed",
+            and decision.get("policy_status") == "no_approved_policy"
+            and decision.get("next_action") == "manual_review"
+            and decision.get("verified_proposals") == []
+            and all(
+                check.get("status") == "no_approved_policy"
+                for check in decision.get("proposal_checks", [])
+            )
+            and "grounded" not in decision
+            and "grounding_score" not in decision,
+            "Synthetic triage workflow/policy contract changed",
         )
         next_action = decision["next_action"]
 
@@ -178,6 +192,7 @@ def run_check(
         "precision_at_5": precision_at_k,
         "synthetic_triage_executed": triage,
         "trace_nodes": trace_nodes,
+        "policy_status": decision.get("policy_status") if triage else None,
         "next_action": next_action,
         "public_ingestion_enabled": False,
         "unauthorized_ingest_denial": "not_tested_no_mutation_attempt",

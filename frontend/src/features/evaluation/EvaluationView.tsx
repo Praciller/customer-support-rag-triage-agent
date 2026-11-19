@@ -92,9 +92,10 @@ export function EvaluationView() {
             <MetricValue label="Intent macro F1" value={percent(metrics.intent_macro_f1)} />
             <MetricValue label="Urgency accuracy" value={percent(metrics.urgency_accuracy)} />
             <MetricValue label="Urgency macro F1" value={percent(metrics.urgency_macro_f1)} />
-            <MetricValue label="Mock grounding verifier" value={percent(metrics.groundedness_pass_rate)} detail="Evidence-present workflow check; not semantic entailment" />
+            <MetricValue label="No-approved-policy cases" value={metrics.policy_review ? String(metrics.policy_review.no_approved_policy_cases) : "--"} detail={metrics.policy_review ? `of ${metrics.policy_review.sample_size} synthetic tickets` : undefined} />
+            <MetricValue label="Manual-review routes" value={metrics.policy_review ? String(metrics.policy_review.manual_review_routes) : "--"} />
+            <MetricValue label="Proposals withheld" value={metrics.policy_review ? String(metrics.policy_review.proposals_withheld) : "--"} />
             <MetricValue label="Workflow success" value={percent(metrics.workflow_success_rate)} detail="Seven nodes completed" />
-            <MetricValue label="Unsupported-claim rate" value={percent(metrics.unsupported_claim_rate)} />
             <MetricValue label="Degraded-mode rate" value={percent(metrics.degraded_mode_rate)} />
           </dl>
         </section>
@@ -149,8 +150,9 @@ export function EvaluationView() {
           <div><p>05 / Interpretation</p><h2 id="methodology-heading">Methodology and limitations</h2></div>
         </div>
         <p className="evaluation-limitation-intro">
-          Retrieval relevance uses mapped intent, not human policy judgment. Mock grounding is not
-          semantic entailment or real-provider answer-quality evidence.
+          Retrieval relevance uses mapped intent, not human policy judgment. Policy-gate counts
+          describe structural abstention behavior; they do not measure semantic entailment or
+          policy correctness.
         </p>
         <ul>{(metrics.limitations ?? []).map((item) => <li key={item}>{item}</li>)}</ul>
       </section>

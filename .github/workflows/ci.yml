@@ -126,6 +126,8 @@ jobs:
             test -w /app/.cache/llm
             test -w "$HOME/.cache"
           '
+      - name: Strict native ONNX installation and installed-runtime audit
+        run: docker run --rm --entrypoint sh resolveops-api:smoke scripts/install-render-deps.sh
       - name: Smoke test isolated API with read-only fixture mounts
         run: |
           docker run --detach --name resolveops-api-smoke \
@@ -160,7 +162,7 @@ jobs:
               data=json.dumps(
                   {"message": "My card has not arrived", "top_k": 5}
               ).encode(),
-              headers={"Content-Type": "application/json"},
+              headers={"Content-Type": "application/json", "X-ResolveOps-API-Version": "2"},
               method="POST",
           )
           with urllib.request.urlopen(request, timeout=20) as response:

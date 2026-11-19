@@ -1,8 +1,7 @@
 import json
-import math
 import re
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +11,12 @@ from src.evidence import RetrievedEvidence
 from src.graph.state import TriageState
 from src.llm.base import LLMRequest
 from src.llm.router import ProviderRouter
+from src.policy import (
+    SAFE_ABSTENTION_RESPONSE,
+    ProposalVerifier,
+    normalize_reference_collection,
+    review_proposals,
+)
 from src.retrieval.retriever import QdrantRetriever
 
 INTENTS = {
@@ -39,6 +44,8 @@ class TriageWorkflow:
         max_output_tokens: int = 512,
         max_context_chars: int = 4000,
         clock: Callable[[], float] = time.perf_counter,
+        approved_policy_references: Collection[str] = (),
+        policy_verifier: ProposalVerifier | None = None,
     ) -> None:
         self.router = router
         self.retriever = retriever
@@ -47,6 +54,10 @@ class TriageWorkflow:
         self.max_output_tokens = max_output_tokens
         self.max_context_chars = max_context_chars
         self.clock = clock
+        self.approved_policy_references, _ = normalize_reference_collection(
+            approved_policy_references
+        )
+        self.policy_verifier = policy_verifier
         self.graph = self._build_graph()
 
     def run(self, message: str, top_k: int) -> dict[str, Any]:
@@ -57,7 +68,10 @@ class TriageWorkflow:
             "trace": [],
             "retrieved_cases": [],
             "retrieved_evidence": (),
-            "unsupported_claims": [],
+            "candidate_proposals": [],
+            "proposal_checks": [],
+            "verified_proposals": [],
+            "policy_status": "no_approved_policy",
             "cached": False,
             "fallback_used": False,
             "degraded_mode": False,
@@ -74,7 +88,7 @@ class TriageWorkflow:
             ("detect_urgency", self._detect_urgency),
             ("retrieve_similar_cases", self._retrieve_similar_cases),
             ("generate_support_response", self._generate_support_response),
-            ("grounding_check", self._grounding_check),
+            ("policy_gate", self._policy_gate),
             ("suggest_next_action", self._suggest_next_action),
         ]
         for name, node in nodes:
@@ -111,10 +125,8 @@ class TriageWorkflow:
         intent = payload.get("intent", "other")
         if not isinstance(intent, str) or intent not in INTENTS:
             intent = "other"
-        confidence = self._unit_interval(payload.get("confidence", 0))
         return {
             "intent": intent,
-            "intent_confidence": confidence,
             "degraded_mode": state.get("degraded_mode", False) or response.degraded_mode,
             "fallback_used": state.get("fallback_used", False) or response.fallback_used,
             "trace": self._trace(
@@ -122,7 +134,7 @@ class TriageWorkflow:
                 "classify_intent",
                 started,
                 input_summary=f"normalized_length={len(state['normalized_message'])}",
-                output_summary=f"intent={intent}; confidence={confidence:.2f}",
+                output_summary=f"intent={intent}",
                 component="llm_router",
                 response=response,
             ),
@@ -188,6 +200,7 @@ class TriageWorkflow:
         return {
             "retrieved_evidence": evidence,
             "retrieved_cases": [item.to_public_dict() for item in evidence],
+            "similar_case_references": [item.reference_id for item in evidence],
             "trace": self._trace(
                 state,
                 "retrieve_similar_cases",
@@ -199,13 +212,12 @@ class TriageWorkflow:
                 ),
                 component="qdrant",
                 retrieved_document_count=len(evidence),
-                evidence_references=[item.reference_id for item in evidence],
+                similar_case_references=[item.reference_id for item in evidence],
             ),
         }
 
     def _generate_support_response(self, state: TriageState) -> dict[str, Any]:
         started = self.clock()
-        evidence = tuple(state.get("retrieved_evidence", ()))
         response = self._call(
             "generate_response",
             workflow_instructions=self._prompt(
@@ -214,19 +226,32 @@ class TriageWorkflow:
                 urgency=state["urgency"],
             ),
             user_ticket=state["normalized_message"],
-            evidence=evidence,
         )
         payload = self._json(response.text)
-        suggested = str(payload.get("suggested_response", response.text)).strip()
-        references, citation_integrity = self._validate_evidence_references(
-            payload.get("evidence_references"), evidence
-        )
-        if citation_integrity and references:
-            suggested = f"{suggested}\n\nInternal evidence: {', '.join(references)}"
+        raw_proposals = payload.get("proposals")
+        if not isinstance(raw_proposals, list) and isinstance(
+            payload.get("suggested_response"), str
+        ):
+            raw_proposals = [payload["suggested_response"]]
+        proposal_parse_failed = False
+        if isinstance(raw_proposals, list):
+            if len(raw_proposals) > 8 or any(
+                not isinstance(proposal, str) or not proposal.strip() or len(proposal) > 500
+                for proposal in raw_proposals
+            ):
+                proposals: list[str] = []
+                proposal_parse_failed = True
+            else:
+                proposals = [proposal.strip() for proposal in raw_proposals]
+        else:
+            proposals = []
+            proposal_parse_failed = bool(response.text.strip())
+
+        suggested = SAFE_ABSTENTION_RESPONSE
         return {
             "suggested_response": suggested,
-            "evidence_references": references,
-            "citation_integrity": citation_integrity,
+            "candidate_proposals": proposals,
+            "proposal_parse_failed": proposal_parse_failed,
             "provider_used": response.provider,
             "model_used": response.model,
             "cached": response.cached,
@@ -236,87 +261,77 @@ class TriageWorkflow:
                 state,
                 "generate_support_response",
                 started,
-                input_summary=f"intent={state['intent']}; evidence_count={len(evidence)}",
-                output_summary=f"draft_length={len(suggested)}",
+                input_summary=f"intent={state['intent']}; no_policy_evidence=true",
+                output_summary=f"candidate_proposal_count={len(proposals)}",
                 component="llm_router",
                 response=response,
-                evidence_references=references,
             ),
         }
 
-    def _grounding_check(self, state: TriageState) -> dict[str, Any]:
+    def _policy_gate(self, state: TriageState) -> dict[str, Any]:
         started = self.clock()
-        evidence = tuple(state.get("retrieved_evidence", ()))
-        response = self._call(
-            "grounding_check",
-            workflow_instructions=self._prompt("grounding_check"),
-            user_ticket=state["normalized_message"],
-            candidate_response=state["suggested_response"],
-            evidence=evidence,
+        review = review_proposals(
+            state.get("candidate_proposals", []),
+            approved_policy_references=self.approved_policy_references,
+            similar_case_references=state.get("similar_case_references", []),
+            verifier=self.policy_verifier,
+            proposal_parse_failed=state.get("proposal_parse_failed", False),
+            generation_degraded=state.get("degraded_mode", False)
+            or state.get("fallback_used", False),
         )
-        payload = self._json(response.text)
-        score = self._unit_interval(payload.get("grounding_score", 0))
-        confidence = self._unit_interval(payload.get("confidence", score))
-        has_evidence = bool(evidence)
-        citation_integrity = bool(state.get("citation_integrity", True))
-        degraded = state.get("degraded_mode", False) or response.degraded_mode
-        raw_unsupported_claims = payload.get("unsupported_claims", [])
-        if isinstance(raw_unsupported_claims, list) and all(
-            isinstance(claim, str) for claim in raw_unsupported_claims
-        ):
-            unsupported_claims = [
-                claim.strip() for claim in raw_unsupported_claims if claim.strip()
-            ]
+        checks = [
+            {
+                "proposal_id": check.proposal_id,
+                "status": check.status,
+                "policy_references": list(check.policy_references),
+                "verification_result": check.verification_result,
+                "verification_method": check.verification_method,
+            }
+            for check in review.checks
+        ]
+        verified_proposals = [
+            {
+                "proposal_id": proposal.proposal_id,
+                "text": proposal.text,
+                "policy_references": list(proposal.policy_references),
+                "verification_result": proposal.verification_result,
+                "verification_method": proposal.verification_method,
+            }
+            for proposal in review.verified_proposals
+        ]
+        if review.status != "verified" or not verified_proposals:
+            suggested = SAFE_ABSTENTION_RESPONSE
         else:
-            unsupported_claims = ["Grounding verifier returned malformed unsupported_claims."]
-        grounded = (
-            payload.get("grounded") is True
-            and has_evidence
-            and citation_integrity
-            and bool(state.get("evidence_references"))
-            and not degraded
-            and not unsupported_claims
+            suggested = "\n".join(proposal["text"] for proposal in verified_proposals)
+        policy_references = (
+            sorted({reference for check in checks for reference in check["policy_references"]})
+            if review.status == "verified"
+            else []
         )
-        if not has_evidence and "No retrieved cases were available." not in unsupported_claims:
-            unsupported_claims.append("No retrieved cases were available.")
-        if degraded and "Generation used a degraded provider fallback." not in unsupported_claims:
-            unsupported_claims.append("Generation used a degraded provider fallback.")
-        if not citation_integrity:
-            unsupported_claims.append("Unknown retrieved evidence references were rejected.")
-        if not grounded:
-            score = min(score, 0.25)
-            confidence = min(confidence, 0.4)
         return {
-            "grounded": grounded,
-            "grounding_score": score,
-            "unsupported_claims": unsupported_claims,
-            "confidence": confidence,
-            "degraded_mode": degraded,
-            "fallback_used": state.get("fallback_used", False) or response.fallback_used,
+            "suggested_response": suggested,
+            "policy_status": review.status,
+            "proposal_checks": checks,
+            "verified_proposals": verified_proposals,
+            "policy_references": policy_references,
             "trace": self._trace(
                 state,
-                "grounding_check",
+                "policy_gate",
                 started,
-                input_summary=f"draft_length={len(state['suggested_response'])}",
-                output_summary=(f"grounded={grounded}; score={score:.2f}"),
-                component="llm_router",
-                response=response,
-                grounding_result=grounded,
-                evidence_references=list(state.get("evidence_references", [])),
+                input_summary=f"proposal_count={len(state.get('candidate_proposals', []))}",
+                output_summary=f"policy_status={review.status}; checks={len(checks)}",
+                component="policy_gate",
+                policy_status=review.status,
+                policy_references=policy_references,
             ),
         }
 
     def _suggest_next_action(self, state: TriageState) -> dict[str, Any]:
         started = self.clock()
-        message = state["normalized_message"].lower()
-        if not state.get("grounded", False):
+        if state.get("policy_status") != "verified" or not state.get("verified_proposals"):
             action = "manual_review"
         elif state["urgency"] in {"high", "critical"} or state.get("escalate", False):
             action = "escalate_to_human"
-        elif state["intent"] == "delivery_issue" and "order id" not in message:
-            action = "ask_for_order_id"
-        elif state["intent"] in {"technical_issue", "account_access", "other"}:
-            action = "request_more_info"
         else:
             action = "reply_to_customer"
         return {
@@ -327,7 +342,7 @@ class TriageWorkflow:
                 started,
                 input_summary=(
                     f"intent={state['intent']}; urgency={state['urgency']}; "
-                    f"grounded={state.get('grounded', False)}"
+                    f"policy_status={state.get('policy_status', 'no_approved_policy')}"
                 ),
                 output_summary=f"next_action={action}",
                 component="rules",
@@ -369,39 +384,9 @@ class TriageWorkflow:
         return parsed if isinstance(parsed, dict) else {}
 
     @staticmethod
-    def _unit_interval(value: Any, default: float = 0.0) -> float:
-        try:
-            numeric = float(value)
-        except (TypeError, ValueError):
-            numeric = default
-        if not math.isfinite(numeric):
-            numeric = default
-        return min(1.0, max(0.0, numeric))
-
-    @staticmethod
     def _prompt(name: str, **values: str) -> str:
         template = (PROMPT_DIR / f"{name}.md").read_text(encoding="utf-8")
         return template.format(**values)
-
-    @staticmethod
-    def _validate_evidence_references(
-        raw_references: Any,
-        evidence: tuple[RetrievedEvidence, ...],
-    ) -> tuple[list[str], bool]:
-        allowed = {item.reference_id for item in evidence}
-        if raw_references is None:
-            return [], not bool(evidence)
-        elif isinstance(raw_references, list) and all(
-            isinstance(reference, str) and reference.strip() for reference in raw_references
-        ):
-            references = list(dict.fromkeys(reference.strip() for reference in raw_references))
-        else:
-            return [], False
-        if any(reference not in allowed for reference in references):
-            return [], False
-        if evidence and not references:
-            return [], False
-        return references, True
 
     def _trace(
         self,
@@ -413,8 +398,9 @@ class TriageWorkflow:
         component: str,
         response: Any | None = None,
         retrieved_document_count: int = 0,
-        grounding_result: bool | None = None,
-        evidence_references: list[str] | None = None,
+        policy_status: str | None = None,
+        similar_case_references: list[str] | None = None,
+        policy_references: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         provider = getattr(response, "provider", None)
         model = getattr(response, "model", None)
@@ -437,8 +423,9 @@ class TriageWorkflow:
                 "fallback": fallback,
                 "degraded_mode": degraded,
                 "retrieved_document_count": retrieved_document_count,
-                "grounding_result": grounding_result,
-                "evidence_references": evidence_references or [],
+                "policy_status": policy_status,
+                "similar_case_references": similar_case_references or [],
+                "policy_references": policy_references or [],
                 "error_category": None,
             },
         ]

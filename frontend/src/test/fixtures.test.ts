@@ -4,9 +4,9 @@ import { makeEvaluation, makeTriageResult } from "./fixtures";
 
 describe("deterministic Storybook fixtures", () => {
   it("accepts shallow typed triage overrides", () => {
-    const result = makeTriageResult({ grounded: false, next_action: "manual_review" });
+    const result = makeTriageResult({ policy_status: "no_approved_policy", next_action: "manual_review" });
 
-    expect(result.grounded).toBe(false);
+    expect(result.policy_status).toBe("no_approved_policy");
     expect(result.next_action).toBe("manual_review");
     expect(result.trace).toHaveLength(7);
   });

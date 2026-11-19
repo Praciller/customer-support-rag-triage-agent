@@ -19,7 +19,9 @@ def test_key_free_demo_bootstraps_and_runs_full_workflow(tmp_path: Path) -> None
     )
     services = build_services(settings)
 
-    with TestClient(create_app(services=services, settings=settings)) as client:
+    with TestClient(
+        create_app(services=services, settings=settings), headers={"X-ResolveOps-API-Version": "2"}
+    ) as client:
         ready = client.get("/ready")
         triage = client.post(
             "/triage",
@@ -33,7 +35,44 @@ def test_key_free_demo_bootstraps_and_runs_full_workflow(tmp_path: Path) -> None
     assert payload["provider_used"] == "mock"
     assert payload["retrieved_cases"]
     assert len(payload["trace"]) == 7
-    assert payload["next_action"] == "ask_for_order_id"
+    assert payload["policy_status"] == "no_approved_policy"
+    assert payload["next_action"] == "manual_review"
+    assert payload["verified_proposals"] == []
+
+
+def test_card_not_arrived_without_approved_policy_abstains(tmp_path: Path) -> None:
+    settings = Settings(
+        _env_file=None,
+        demo_mode=True,
+        mock_llm_mode=True,
+        qdrant_mode="memory",
+        embedding_provider="hashing",
+        retrieval_min_score=0,
+        llm_cache_dir=tmp_path / "cache",
+    )
+    services = build_services(settings)
+
+    with TestClient(
+        create_app(services=services, settings=settings), headers={"X-ResolveOps-API-Version": "2"}
+    ) as client:
+        response = client.post(
+            "/triage",
+            json={"message": "My card has not arrived and I travel tomorrow", "top_k": 5},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["intent"] == "delivery_issue"
+    assert payload["urgency"] in {"low", "medium", "high", "critical"}
+    assert payload["retrieved_cases"]
+    assert all(case["evidence_type"] == "similar_past_case" for case in payload["retrieved_cases"])
+    assert all(case["approved_policy"] is False for case in payload["retrieved_cases"])
+    assert payload["next_action"] == "manual_review"
+    assert payload["policy_status"] == "no_approved_policy"
+    assert "refund" not in payload["suggested_response"].lower()
+    assert "order id" not in payload["suggested_response"].lower()
+    assert {check["status"] for check in payload["proposal_checks"]} == {"no_approved_policy"}
+    assert payload["verified_proposals"] == []
 
 
 def test_demo_dataset_info_ignores_stale_full_dataset_metadata(
@@ -58,6 +97,26 @@ def test_demo_dataset_info_ignores_stale_full_dataset_metadata(
 
     assert services.dataset_info()["records"] == 27
     assert services.dataset_info()["status"] == "demo_fixture"
+
+
+def test_non_demo_dataset_info_does_not_expose_local_paths(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    metadata = tmp_path / "data" / "raw" / "dataset_metadata.json"
+    metadata.parent.mkdir(parents=True)
+    metadata.write_text(
+        '{"name":"synthetic-dataset","records":8,"raw_path":"data/raw/support_dataset.csv",'
+        '"local_path":"C:/private/data.csv"}',
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    settings = Settings(_env_file=None, demo_mode=False)
+    services = ApplicationServices(settings, retriever=None, workflow=None, provider_names=[])
+
+    info = services.dataset_info()
+
+    assert info == {"name": "synthetic-dataset", "records": 8}
 
 
 def test_demo_provider_health_reports_active_mock_routes(tmp_path: Path) -> None:

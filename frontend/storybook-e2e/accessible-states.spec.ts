@@ -10,8 +10,8 @@ const stories = [
   { id: "resolveops-trace-tracelist--incomplete", visibleText: "normalize message" },
   { id: "resolveops-trace-tracelist--empty", visibleText: "Run triage to inspect the workflow." },
   { id: "resolveops-evaluation-evaluationchart--deterministic-baseline", visibleText: "Offline baseline metrics" },
-  { id: "resolveops-triage-triagedecision--ungrounded", visibleText: "manual review" },
-  { id: "resolveops-triage-decisionworkspace--ungrounded-manual-review", visibleText: "Human review remains required" },
+  { id: "resolveops-triage-triagedecision--no-approved-policy", visibleText: "no approved policy" },
+  { id: "resolveops-triage-decisionworkspace--no-policy-manual-review", visibleText: "Human review remains required" },
 ] as const;
 
 const wcagTags = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];

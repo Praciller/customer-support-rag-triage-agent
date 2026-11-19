@@ -12,7 +12,6 @@ class MockProvider:
             "classify_intent": self._classify_intent,
             "detect_urgency": self._detect_urgency,
             "generate_response": self._generate_response,
-            "grounding_check": self._grounding_check,
         }
         payload = handlers[request.task](request)
         return ProviderResponse(
@@ -67,7 +66,7 @@ class MockProvider:
             (label for label, keywords in rules if any(keyword in text for keyword in keywords)),
             "other",
         )
-        return {"intent": intent, "confidence": 0.91}
+        return {"intent": intent}
 
     @staticmethod
     def _detect_urgency(request: LLMRequest) -> dict:
@@ -99,62 +98,27 @@ class MockProvider:
     def _generate_response(request: LLMRequest) -> dict:
         prompt = request.workflow_instructions.lower()
         if "delivery_issue" in prompt:
-            response = (
-                "I'm sorry your order has not arrived. Please share your order ID so the "
-                "delivery status and available refund options can be reviewed."
-            )
+            proposals = [
+                "Ask the customer for an order ID to review delivery status.",
+                "Offer available refund options for the delayed item.",
+            ]
         elif "account_access" in prompt:
-            response = (
-                "I'm sorry you cannot access your account. Please confirm the sign-in method "
-                "and any error message so the next recovery step can be identified."
-            )
+            proposals = ["Ask the customer to confirm the sign-in method and error message."]
         elif "complaint" in prompt:
-            response = (
-                "I'm sorry this activity is concerning. Please share the transaction reference "
-                "and avoid posting account credentials so a support specialist can review it."
-            )
+            proposals = [
+                "Ask for the transaction reference.",
+                "Tell the customer not to post account credentials.",
+            ]
         elif "refund_request" in prompt:
-            response = (
-                "I'm sorry the payment needs review. Please share the transaction reference and "
-                "date so the support team can check the available next steps."
-            )
+            proposals = ["Ask for the transaction reference and date to review the payment."]
         elif "billing_issue" in prompt:
-            response = (
-                "I'm sorry this transaction is unresolved. Please share its reference, date, and "
-                "current status so the support team can investigate."
-            )
+            proposals = ["Ask for the transaction reference, date, and current status."]
         elif "technical_issue" in prompt:
-            response = (
-                "I'm sorry the feature is not working. Please share the exact error and the last "
-                "step completed so the issue can be investigated."
-            )
+            proposals = ["Ask for the exact error and the last step completed."]
         elif "cancellation" in prompt:
-            response = (
-                "I understand you want to stop this request. Please share the transfer or account "
-                "reference so a support specialist can review what actions remain available."
-            )
+            proposals = ["Ask for the transfer or account reference."]
         elif "product_question" in prompt:
-            response = (
-                "Thanks for the question. Please confirm the country and feature you are asking "
-                "about so the relevant public guidance can be checked."
-            )
+            proposals = ["Ask which country and feature the customer means."]
         else:
-            response = (
-                "I'm sorry you encountered this issue. Please share the relevant reference "
-                "number and any missing details so the support team can review it."
-            )
-        return {
-            "suggested_response": response,
-            "evidence_references": [item.reference_id for item in request.evidence],
-        }
-
-    @staticmethod
-    def _grounding_check(request: LLMRequest) -> dict:
-        has_context = bool(request.evidence)
-        unsupported = [] if has_context else ["No retrieved cases were available."]
-        return {
-            "grounded": has_context,
-            "grounding_score": 0.86 if has_context else 0.25,
-            "unsupported_claims": unsupported,
-            "confidence": 0.88 if has_context else 0.4,
-        }
+            proposals = ["Ask what issue the customer needs help with."]
+        return {"proposals": proposals}

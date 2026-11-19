@@ -39,20 +39,23 @@ def fixtures():
             "embedding_model": "BAAI/bge-small-en-v1.5",
             "qdrant_mode": "local",
             "live_provider_calls_enabled": False,
+            "policy_source": {"status": "no_approved_policy", "approved_sources": 0},
         },
         BASE_URL + "/eval/results": {
             "evaluation_mode": "deterministic_mock",
+            "evaluation_schema_version": 2,
             "dataset": {"sample_size": 8},
             "retrieval": {"precision_at_k": 0.375},
         },
         BASE_URL + "/triage": {
             "trace": [{"node": node, "status": "completed"} for node in WORKFLOW_STAGES],
             "provider_used": "mock",
-            "grounded": True,
-            "citation_integrity": True,
             "fallback_used": False,
             "degraded_mode": False,
-            "next_action": "ask_for_order_id",
+            "policy_status": "no_approved_policy",
+            "proposal_checks": [{"status": "no_approved_policy"}],
+            "verified_proposals": [],
+            "next_action": "manual_review",
         },
     }
 
@@ -85,7 +88,7 @@ def test_get_only_default_passes_without_claiming_release_sync():
 def test_opt_in_synthetic_triage_requires_seven_nodes():
     report = run_check(fetcher(fixtures()), triage=True)
     assert report["trace_nodes"] == 7
-    assert report["next_action"] == "ask_for_order_id"
+    assert report["next_action"] == "manual_review"
     assert report["expected_sha_matched"] is False
 
 
@@ -140,22 +143,23 @@ def test_opt_in_triage_rejects_wrong_order_status_and_count():
     ):
         data = fixtures()
         mutate(data[BASE_URL + "/triage"]["trace"])
-        with pytest.raises(ValueError, match="workflow/grounding"):
+        with pytest.raises(ValueError, match="workflow/policy"):
             run_check(fetcher(data), triage=True)
 
 
-def test_opt_in_triage_rejects_ungrounded_or_degraded_response():
+def test_opt_in_triage_rejects_policy_bypass_or_degraded_response():
     for key, value in (
-        ("grounded", False),
-        ("citation_integrity", False),
+        ("grounded", True),
         ("provider_used", "external"),
         ("fallback_used", True),
         ("degraded_mode", True),
+        ("policy_status", "verified"),
+        ("proposal_checks", [{"status": "supported"}]),
         ("next_action", "reply_to_customer"),
     ):
         data = fixtures()
         data[BASE_URL + "/triage"][key] = value
-        with pytest.raises(ValueError, match="workflow/grounding"):
+        with pytest.raises(ValueError, match="workflow/policy"):
             run_check(fetcher(data), triage=True)
 
 

@@ -27,9 +27,10 @@ describe("TriageView", () => {
     expect(screen.getByText("My card has not arrived.")).toBeInTheDocument();
     expect(screen.getByText("delivery issue", { selector: "strong" })).toBeInTheDocument();
     expect(screen.getByText(/medium/i)).toBeInTheDocument();
-    expect(screen.getByText(/ask for order id/i)).toBeInTheDocument();
-    expect(screen.getByText(/86% grounded/i)).toBeInTheDocument();
-    expect(screen.getByText(/citations checked/i)).toBeInTheDocument();
+    expect(screen.getByText("manual review", { selector: "strong" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Policy review status: No approved policy")).toBeInTheDocument();
+    expect(screen.getByText(/proposal 1: no approved policy/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/not approved policy/i).length).toBeGreaterThan(0);
     expect(screen.getByText("Where is the card I ordered?")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /seven-node execution trace/i })).toBeInTheDocument();
     expect(screen.getByText(/7\. suggest next action/i)).toBeInTheDocument();
@@ -39,9 +40,9 @@ describe("TriageView", () => {
     const { container } = renderTriage();
 
     const decision = screen.getByRole("region", { name: /recommended action/i });
-    expect(decision).toHaveTextContent(/ask for order id/i);
-    expect(decision).toHaveTextContent(/suggested response/i);
-    expect(decision).toHaveTextContent(/86% grounded/i);
+    expect(decision).toHaveTextContent(/manual review/i);
+    expect(decision).toHaveTextContent(/customer response · human review required/i);
+    expect(decision).toHaveTextContent(/no approved policy/i);
     expect(decision).toHaveTextContent(/medium/i);
     expect(screen.getByRole("group", { name: /technical details/i })).toBeInTheDocument();
     expect(container.querySelector(".technical-details")).toBeInTheDocument();
@@ -51,7 +52,7 @@ describe("TriageView", () => {
   it("keeps the empty state purposeful without inventing a decision", () => {
     renderTriage(null);
 
-    expect(screen.getByText(/run triage to generate a recommended action and evidence/i)).toBeInTheDocument();
+    expect(screen.getByText(/run triage to classify the message and find similar past cases/i)).toBeInTheDocument();
     expect(screen.queryByText(/ask for order id/i)).not.toBeInTheDocument();
   });
 
@@ -81,20 +82,49 @@ describe("TriageView", () => {
     expect(screen.getByText("The customer reports a potentially compromised card.")).toBeInTheDocument();
   });
 
-  it("makes an ungrounded result and manual review action explicit", () => {
+  it("makes missing policy and manual review explicit", () => {
     renderTriage({
       ...makeTriageResult(),
-      grounded: false,
-      grounding_score: 0.2,
       next_action: "manual_review",
+      policy_status: "no_approved_policy",
     });
 
-    expect(screen.getByText(/not grounded/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("Policy review status: No approved policy")).toBeInTheDocument();
     expect(screen.getByText("manual review", { selector: "strong" })).toBeInTheDocument();
-    const groundingStatus = screen.getByLabelText("Grounding status: not grounded");
-    expect(groundingStatus).toBeInTheDocument();
-    expect(groundingStatus.querySelector("svg")?.getAttribute("data-lucide")).not.toBe("circle-check");
+    const policyStatus = screen.getByLabelText("Policy review status: No approved policy");
+    expect(policyStatus).toBeInTheDocument();
+    expect(policyStatus.querySelector("svg")?.getAttribute("data-lucide")).not.toBe("circle-check");
     expect(screen.getByText("Manual review")).toBeInTheDocument();
+  });
+
+  it("shows the policy and check result for each allowed proposal", () => {
+    renderTriage({
+      ...makeTriageResult(),
+      policy_status: "verified",
+      next_action: "reply_to_customer",
+      policy_references: ["synthetic-test-policy-card-17"],
+      proposal_checks: [{
+        proposal_id: "proposal-1",
+        status: "supported",
+        policy_references: ["synthetic-test-policy-card-17"],
+        verification_result: "passed",
+        verification_method: "synthetic_test_verifier",
+      }],
+      verified_proposals: [{
+        proposal_id: "proposal-1",
+        text: "Synthetic test proposal: check the delivery tracking page.",
+        policy_references: ["synthetic-test-policy-card-17"],
+        verification_result: "passed",
+        verification_method: "synthetic_test_verifier",
+      }],
+      suggested_response: "Synthetic test proposal: check the delivery tracking page.",
+    });
+
+    expect(screen.getByRole("heading", { name: "Proposals with passing policy checks" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Proposals with passing policy checks" })).toBeInTheDocument();
+    expect(screen.getByText(/synthetic-test-policy-card-17.*verification: passed/i)).toBeInTheDocument();
+    expect(screen.getAllByText("Synthetic test proposal: check the delivery tracking page.")).toHaveLength(2);
+    expect(screen.queryByText(/grounded|confidence/i)).not.toBeInTheDocument();
   });
 
   it("shows each technical detail once and only conditional runtime flags", () => {
@@ -114,11 +144,10 @@ describe("TriageView", () => {
     renderTriage({
       ...makeTriageResult(),
       degraded_mode: true,
-      grounded: false,
       next_action: "manual_review",
     });
 
     expect(screen.getByText("degraded", { selector: ".badge" })).toBeInTheDocument();
-    expect(screen.getByText(/review retrieved evidence and respond manually/i)).toBeInTheDocument();
+    expect(screen.getByText(/review the triage and decide manually/i)).toBeInTheDocument();
   });
 });

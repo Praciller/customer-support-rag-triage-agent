@@ -23,6 +23,24 @@ from src.retrieval.retriever import (
 )
 
 _evaluation_logger = logging.getLogger(__name__)
+_PUBLIC_DATASET_INFO_FIELDS = frozenset(
+    {
+        "name",
+        "provider",
+        "license",
+        "records",
+        "split",
+        "source_url",
+        "upstream_dataset",
+        "revision",
+        "normalization",
+        "intended_use",
+        "limitations",
+        "intents",
+        "status",
+        "index_ready",
+    }
+)
 
 
 class ApplicationServices:
@@ -96,7 +114,8 @@ class ApplicationServices:
             Path("data/raw/dataset_metadata.json"),
         ):
             if path.exists():
-                return json.loads(path.read_text(encoding="utf-8"))
+                metadata = json.loads(path.read_text(encoding="utf-8"))
+                return self._public_dataset_info(metadata)
         if self.settings.demo_fixture_path.exists():
             return self._demo_dataset_info()
         return {
@@ -114,12 +133,18 @@ class ApplicationServices:
             intent = str(record.get("intent", "other"))
             intents[intent] = intents.get(intent, 0) + 1
         return {
-            **fixture.get("dataset", {}),
+            **self._public_dataset_info(fixture.get("dataset", {})),
             "records": len(records),
             "intents": intents,
             "status": "demo_fixture",
             "index_ready": self.bootstrap_status.get("ready", False),
         }
+
+    @staticmethod
+    def _public_dataset_info(metadata: Any) -> dict[str, Any]:
+        if not isinstance(metadata, dict):
+            return {}
+        return {key: value for key, value in metadata.items() if key in _PUBLIC_DATASET_INFO_FIELDS}
 
     def provider_health(self) -> dict[str, Any]:
         external_configured = bool(self.settings.external_llm_url.strip())
@@ -134,7 +159,7 @@ class ApplicationServices:
                 if external_active
                 else "deterministic-small",
             }
-            for task in ("intent", "urgency", "response", "grounding")
+            for task in ("intent", "urgency", "proposal_generation")
         }
         fallback_order = [active_provider]
         if external_active:
@@ -144,6 +169,7 @@ class ApplicationServices:
             "primary_provider": active_provider,
             "fallback_order": fallback_order,
             "routes": routes,
+            "policy_source": {"status": "no_approved_policy", "approved_sources": 0},
             "cache_enabled": self.settings.llm_cache_enabled,
             "demo_mode": self.settings.demo_mode,
             "mock_mode": not external_active,
@@ -215,14 +241,25 @@ class ApplicationServices:
             if not absolute.is_file():
                 diagnostic_codes.append(f"{label}:missing")
                 continue
-            report = json.loads(absolute.read_text(encoding="utf-8"))
+            try:
+                report = json.loads(absolute.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                diagnostic_codes.append(f"{label}:unreadable")
+                continue
+            if not isinstance(report, dict):
+                diagnostic_codes.append(f"{label}:invalid_shape")
+                continue
             if self._compatible_demo_report(report):
                 return report
 
             # Use codes only: do not log report bodies, file paths, or env values.
-            execution = report.get("execution") or {}
-            dataset = report.get("dataset") or {}
+            execution = report.get("execution")
+            dataset = report.get("dataset")
+            if not isinstance(execution, dict) or not isinstance(dataset, dict):
+                diagnostic_codes.append(f"{label}:invalid_shape")
+                continue
             checks = {
+                "schema": report.get("evaluation_schema_version") == 2,
                 "mode": report.get("evaluation_mode") == "deterministic_mock",
                 "provider": execution.get("embedding_provider") == self.settings.embedding_provider,
                 "model": execution.get("embedding_model") == self.settings.embedding_model,
@@ -256,14 +293,35 @@ class ApplicationServices:
             return True
         if report.get("evaluation_mode") != "deterministic_mock":
             return False
-        execution = report.get("execution") or {}
-        dataset = report.get("dataset") or {}
+        execution = report.get("execution")
+        dataset = report.get("dataset")
+        policy = report.get("policy_review")
+        if not all(isinstance(section, dict) for section in (execution, dataset, policy)):
+            return False
+        counts = (
+            "sample_size",
+            "no_approved_policy_cases",
+            "manual_review_routes",
+            "proposals_seen",
+            "proposals_withheld",
+            "verified_proposals",
+        )
+        if any(type(policy.get(key)) is not int or policy[key] < 0 for key in counts):
+            return False
         return (
-            execution.get("embedding_provider") == self.settings.embedding_provider
+            report.get("evaluation_schema_version") == 2
+            and execution.get("embedding_provider") == self.settings.embedding_provider
             and execution.get("embedding_model") == self.settings.embedding_model
             and dataset.get("fixture_revision") == "demo-fixture-v1"
             and dataset.get("sample_size") == 8
             and dataset.get("retrieval_corpus_size") == 27
+            and policy.get("method") == "structural_policy_gate_counts"
+            and policy["sample_size"] == dataset["sample_size"]
+            and policy["no_approved_policy_cases"] == policy["sample_size"]
+            and policy["manual_review_routes"] == policy["sample_size"]
+            and policy["verified_proposals"] == 0
+            and policy["proposals_seen"] == policy["proposals_withheld"]
+            and policy.get("no_policy_abstentions_satisfy_structural_invariants") is True
         )
 
 
@@ -313,7 +371,6 @@ def build_services(settings: Settings | None = None) -> ApplicationServices:
         "classify_intent": (active_provider, active_model),
         "detect_urgency": (active_provider, active_model),
         "generate_response": (active_provider, active_model),
-        "grounding_check": (active_provider, active_model),
     }
     workflow = TriageWorkflow(
         router,
@@ -322,6 +379,8 @@ def build_services(settings: Settings | None = None) -> ApplicationServices:
         temperature=settings.llm_temperature,
         max_output_tokens=settings.llm_max_output_tokens,
         max_context_chars=settings.retrieval_max_context_chars,
+        approved_policy_references=(),
+        policy_verifier=None,
     )
     return ApplicationServices(settings, retriever, workflow, list(providers))
 

@@ -38,7 +38,7 @@ describe("TraceList", () => {
     expect(first.querySelectorAll(".badge")).toHaveLength(0);
     fireEvent.click(within(first).getByText(/technical details for normalize message/i));
     expect(within(first).getByText("Input summary")).toBeInTheDocument();
-    expect(within(first).getByText("Evidence references")).toBeInTheDocument();
+    expect(within(first).getByText("Similar case references")).toBeInTheDocument();
     expect(within(first).getByText("Degraded")).toBeInTheDocument();
   });
 

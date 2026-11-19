@@ -30,7 +30,7 @@ export const Degraded: Story = {
   args: {
     trace: makeTriageResult().trace.map((step, index) =>
       index === 5
-        ? { ...step, degraded_mode: true, output_summary: "Grounding check degraded; manual review is required." }
+        ? { ...step, degraded_mode: true, output_summary: "Policy check degraded; manual review is required." }
         : step,
     ),
   },

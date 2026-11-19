@@ -6,6 +6,8 @@ import { CaseList } from "./CaseList";
 
 const exampleCase: SimilarCase = {
   ticket_id: "demo-delivery",
+  evidence_type: "similar_past_case",
+  approved_policy: false,
   message: "Where is the card I ordered?",
   intent: "delivery_issue",
   response: "",
@@ -15,7 +17,7 @@ const exampleCase: SimilarCase = {
 };
 
 describe("CaseList", () => {
-  it("renders evidence identity, intent, score, and message", () => {
+  it("renders similar-case identity, intent, score, and message", () => {
     render(<CaseList cases={[exampleCase]} />);
 
     expect(screen.getByText("delivery issue")).toBeInTheDocument();
